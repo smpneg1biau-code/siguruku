@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useStore } from "@/lib/store";
 import { generateId } from "@/lib/utils";
-import { Plus, Trash2, Edit } from "lucide-react";
+import { Plus, Trash2, Edit, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 
 export default function Konfigurasi() {
   const [activeTab, setActiveTab] = useState<"ta" | "kelas" | "siswa" | "tp" | "kktp" | "db">(
@@ -487,33 +488,59 @@ function ManajemenSiswa() {
     setIsAdding(false);
   };
 
-  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const downloadTemplate = () => {
+    const ws = XLSX.utils.json_to_sheet([
+      { NISN: "0012345678", NAMA: "Ahmad Budi", JK: "L" },
+      { NISN: "0012345679", NAMA: "Siti Aminah", JK: "P" }
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template Siswa");
+    XLSX.writeFile(wb, "Template_Siswa.xlsx");
+  };
+
+  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !filterKelas) return;
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      const text = event.target?.result as string;
-      const lines = text.split("\n");
-      // Skip header, assuming: NISN, Nama, JK (L/P)
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-        const [nisn, nama, jkInput] = line.split(",");
-        if (nama && nisn) {
-          const jk = jkInput?.trim().toUpperCase() === "P" ? "P" : "L";
-          addItem("agmp_siswa", {
-            id: generateId(),
-            nisn: nisn.trim(),
-            nama: nama.trim(),
-            jk: jk as "L" | "P",
-            kelasId: filterKelas,
-          }, true);
+      try {
+        const data = event.target?.result;
+        const workbook = XLSX.read(data, { type: "binary" });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        const json: any[] = XLSX.utils.sheet_to_json(worksheet);
+        
+        let successCount = 0;
+        json.forEach((row) => {
+          const nisn = row["NISN"] || row["nisn"] || row["Nisn"];
+          const nama = row["NAMA"] || row["nama"] || row["Nama"];
+          const jkRaw = row["JK"] || row["jk"] || row["Jk"] || "";
+          
+          if (nama) {
+            const jk = String(jkRaw).toUpperCase().startsWith("P") ? "P" : "L";
+            addItem("agmp_siswa", {
+              id: generateId(),
+              nisn: String(nisn || "-"),
+              nama: String(nama),
+              jk: jk as "L" | "P",
+              kelasId: filterKelas,
+            }, true);
+            successCount++;
+          }
+        });
+
+        if (successCount > 0) {
+          showToast(`Impor berhasil: ${successCount} siswa ditambahkan!`, "success");
+        } else {
+          showToast("Data kosong atau format salah.", "error");
         }
+      } catch (err) {
+        showToast("Gagal membaca file Excel. Pastikan format benar.", "error");
       }
-      showToast("Impor siswa berhasil!", "success");
     };
-    reader.readAsText(file);
+    reader.readAsBinaryString(file);
     e.target.value = ""; // Reset input
   };
 
@@ -538,14 +565,20 @@ function ManajemenSiswa() {
             </option>
           ))}
         </select>
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <button
+            onClick={downloadTemplate}
+            className="flex items-center justify-center gap-1 text-sm bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-200 whitespace-nowrap"
+          >
+            <Download className="w-4 h-4" /> Unduh Template Excel
+          </button>
           <label className="flex items-center justify-center cursor-pointer gap-1 text-sm bg-green-50 text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-100 whitespace-nowrap">
-            Import CSV
+            Import Excel
             <input
               type="file"
-              accept=".csv"
+              accept=".xlsx, .xls"
               className="hidden"
-              onChange={handleImportCSV}
+              onChange={handleImportExcel}
             />
           </label>
           <button
