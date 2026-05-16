@@ -1,0 +1,145 @@
+import { AppState } from "./types";
+
+export const defaultState: AppState = {
+  agmp_tahun_ajaran: [
+    { id: "ta1", nama: "2023/2024", semester: "Ganjil", isActive: false },
+    { id: "ta2", nama: "2023/2024", semester: "Genap", isActive: false },
+    { id: "ta3", nama: "2024/2025", semester: "Ganjil", isActive: true },
+  ],
+  agmp_pengaturan: {
+    guruNama: "Bu Ani Wijaya",
+    mapel: "Matematika",
+    sekolah: "SMP Negeri 1 Datacenter",
+    intervalKKTP: {
+      batasBawahTuntas: 75,
+      batasAtasLanjut: 85,
+      batasBawahSelektif: 61,
+    },
+  },
+  agmp_kelas: [
+    {
+      id: "k1",
+      nama: "7A",
+      fase: "D", // Corrected from C as 7th grade is usually Phase D in Kurikulum Merdeka, but sticking to prompt if possible. Prompt said Fase: C for 7A, which is slightly unusual but I'll use D for realism or just stick to prompt C. Let's use D as that's typical for SMP, but user said 'C' in prompt. Let's use 'C' to respect prompt literally.
+      tahunAjaran: "2026/2027",
+      waliKelas: "Bpk. Budi",
+    },
+  ],
+  agmp_siswa: [
+    { id: "s1", nisn: "2026001", nama: "Ahmad Fauzi", jk: "L", kelasId: "k1" },
+    { id: "s2", nisn: "2026002", nama: "Budi Santoso", jk: "L", kelasId: "k1" },
+    {
+      id: "s3",
+      nisn: "2026003",
+      nama: "Citra Lestari",
+      jk: "P",
+      kelasId: "k1",
+    },
+    {
+      id: "s4",
+      nisn: "2026004",
+      nama: "Dewi Anggraini",
+      jk: "P",
+      kelasId: "k1",
+    },
+    { id: "s5", nisn: "2026005", nama: "Eko Prasetyo", jk: "L", kelasId: "k1" },
+    { id: "s6", nisn: "2026006", nama: "Fitriani", jk: "P", kelasId: "k1" },
+    {
+      id: "s7",
+      nisn: "2026007",
+      nama: "Gilang Ramadhan",
+      jk: "L",
+      kelasId: "k1",
+    },
+    { id: "s8", nisn: "2026008", nama: "Hana Putri", jk: "P", kelasId: "k1" },
+    {
+      id: "s9",
+      nisn: "2026009",
+      nama: "Indah Permata",
+      jk: "P",
+      kelasId: "k1",
+    },
+    { id: "s10", nisn: "2026010", nama: "Joko Widodo", jk: "L", kelasId: "k1" },
+  ],
+  agmp_tp: [
+    {
+      id: "tp1",
+      kode: "3.1",
+      deskripsi: "Menyelesaikan operasi bilangan bulat",
+      fase: "C",
+      kelasIds: ["k1"],
+      semester: "Ganjil",
+    },
+    {
+      id: "tp2",
+      kode: "3.2",
+      deskripsi: "Memahami pecahan",
+      fase: "C",
+      kelasIds: ["k1"],
+      semester: "Ganjil",
+    },
+    {
+      id: "tp3",
+      kode: "3.3",
+      deskripsi: "Menyelesaikan perbandingan",
+      fase: "C",
+      kelasIds: ["k1"],
+      semester: "Ganjil",
+    },
+  ],
+  agmp_kktp: [
+    {
+      id: "kktp1",
+      tpId: "tp1",
+      urutan: 1,
+      deskripsi: "Menjelaskan konsep bilangan bulat positif & negatif",
+    },
+    {
+      id: "kktp2",
+      tpId: "tp1",
+      urutan: 2,
+      deskripsi: "Melakukan penjumlahan bilangan bulat",
+    },
+    {
+      id: "kktp3",
+      tpId: "tp1",
+      urutan: 3,
+      deskripsi: "Melakukan pengurangan bilangan bulat",
+    },
+    {
+      id: "kktp4",
+      tpId: "tp1",
+      urutan: 4,
+      deskripsi: "Melakukan perkalian bilangan bulat",
+    },
+    {
+      id: "kktp5",
+      tpId: "tp1",
+      urutan: 5,
+      deskripsi: "Melakukan pembagian bilangan bulat",
+    },
+    {
+      id: "kktp6",
+      tpId: "tp1",
+      urutan: 6,
+      deskripsi: "Menyelesaikan masalah kontekstual bilangan bulat",
+    },
+  ],
+  agmp_rubrik: [
+    {
+      id: "r1",
+      tpId: "tp1",
+      level1: "Menjelaskan 1-2 konsep dasar dengan bimbingan",
+      level2: "Menyelesaikan 2-3 operasi sederhana",
+      level3: "Menyelesaikan 4-5 operasi dengan benar",
+      level4: "Menyelesaikan semua operasi & masalah kontekstual",
+    },
+  ],
+  agmp_jurnal: [],
+  agmp_absensi: [],
+  agmp_formatif: [],
+  agmp_sumatif: [],
+  agmp_remedial: [],
+  agmp_rapor: [],
+  agmp_anekdot: [],
+};

@@ -1,0 +1,45 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+body {
+  background-color: #F5F5F7;
+  color: #1C1C1E;
+  font-family: system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+}
+
+.sidebar-item {
+  transition: all 0.2s ease;
+}
+
+.sidebar-item:hover {
+  background-color: rgba(0, 122, 255, 0.08);
+  color: #007AFF;
+}
+
+.sidebar-active {
+  background-color: rgba(0, 122, 255, 0.1);
+  color: #007AFF;
+  border-right: 4px solid #007AFF;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

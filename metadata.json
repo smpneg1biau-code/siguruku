@@ -1,0 +1,8 @@
+{
+  "name": "S-IGURUKU V2",
+  "description": "Sistem Informasi Guru Sekolah untuk manajemen absensi, jurnal, formatif, sumatif, dan rapor.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

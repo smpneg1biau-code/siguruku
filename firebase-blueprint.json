@@ -1,0 +1,138 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile & Settings",
+      "description": "User document containing their settings (agmp_pengaturan)",
+      "type": "object",
+      "properties": {
+        "agmp_pengaturan": {
+          "type": "object",
+          "description": "User specific app configuration"
+        }
+      }
+    },
+    "TahunAjaran": {
+      "title": "Tahun Ajaran",
+      "description": "Tahun ajaran configuration",
+      "type": "object"
+    },
+    "Kelas": {
+      "title": "Kelas",
+      "description": "Class configuration",
+      "type": "object"
+    },
+    "Siswa": {
+      "title": "Siswa",
+      "description": "Student data",
+      "type": "object"
+    },
+    "TP": {
+      "title": "Tujuan Pembelajaran",
+      "description": "Tujuan Pembelajaran data",
+      "type": "object"
+    },
+    "KKTP": {
+      "title": "Criteria of Tujuan Pembelajaran",
+      "description": "KKTP data",
+      "type": "object"
+    },
+    "Rubrik": {
+      "title": "Rubrik",
+      "description": "Rubrik data",
+      "type": "object"
+    },
+    "Jurnal": {
+      "title": "Jurnal Mengajar",
+      "description": "Jurnal data",
+      "type": "object"
+    },
+    "Absensi": {
+      "title": "Absensi",
+      "description": "Absensi data",
+      "type": "object"
+    },
+    "Formatif": {
+      "title": "Nilai Formatif",
+      "description": "Formatif data",
+      "type": "object"
+    },
+    "Sumatif": {
+      "title": "Nilai Sumatif",
+      "description": "Sumatif data",
+      "type": "object"
+    },
+    "Remedial": {
+      "title": "Remedial",
+      "description": "Remedial data",
+      "type": "object"
+    },
+    "Rapor": {
+      "title": "Rapor",
+      "description": "Rapor data",
+      "type": "object"
+    },
+    "Anekdot": {
+      "title": "Catatan Anekdot",
+      "description": "Anekdot data",
+      "type": "object"
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User document containing the user settings"
+    },
+    "users/{userId}/agmp_tahun_ajaran/{docId}": {
+      "schema": { "$ref": "#/entities/TahunAjaran" },
+      "description": "User's Tahun Ajaran data"
+    },
+    "users/{userId}/agmp_kelas/{docId}": {
+      "schema": { "$ref": "#/entities/Kelas" },
+      "description": "User's Kelas data"
+    },
+    "users/{userId}/agmp_siswa/{docId}": {
+      "schema": { "$ref": "#/entities/Siswa" },
+      "description": "User's Siswa data"
+    },
+    "users/{userId}/agmp_tp/{docId}": {
+      "schema": { "$ref": "#/entities/TP" },
+      "description": "User's TP data"
+    },
+    "users/{userId}/agmp_kktp/{docId}": {
+      "schema": { "$ref": "#/entities/KKTP" },
+      "description": "User's KKTP data"
+    },
+    "users/{userId}/agmp_rubrik/{docId}": {
+      "schema": { "$ref": "#/entities/Rubrik" },
+      "description": "User's Rubrik data"
+    },
+    "users/{userId}/agmp_jurnal/{docId}": {
+      "schema": { "$ref": "#/entities/Jurnal" },
+      "description": "User's Jurnal data"
+    },
+    "users/{userId}/agmp_absensi/{docId}": {
+      "schema": { "$ref": "#/entities/Absensi" },
+      "description": "User's Absensi data"
+    },
+    "users/{userId}/agmp_formatif/{docId}": {
+      "schema": { "$ref": "#/entities/Formatif" },
+      "description": "User's Formatif data"
+    },
+    "users/{userId}/agmp_sumatif/{docId}": {
+      "schema": { "$ref": "#/entities/Sumatif" },
+      "description": "User's Sumatif data"
+    },
+    "users/{userId}/agmp_remedial/{docId}": {
+      "schema": { "$ref": "#/entities/Remedial" },
+      "description": "User's Remedial data"
+    },
+    "users/{userId}/agmp_rapor/{docId}": {
+      "schema": { "$ref": "#/entities/Rapor" },
+      "description": "User's Rapor data"
+    },
+    "users/{userId}/agmp_anekdot/{docId}": {
+      "schema": { "$ref": "#/entities/Anekdot" },
+      "description": "User's Anekdot data"
+    }
+  }
+}
