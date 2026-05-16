@@ -54,7 +54,7 @@ Saat mendeploy di Vercel, Anda perlu menambahkan variabel berikut di bagian **En
 | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | `siguruku.firebasestorage.app` |
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | `197968840922` |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | `1:197968840922:web:bd9775cd73e951c8cabde3` |
-| `NEXT_PUBLIC_FIRESTORE_DATABASE_ID` | `(default)` |
+| `NEXT_PUBLIC_FIRESTORE_DATABASE_ID` | `siguru` |
 | `GEMINI_API_KEY` | (Kunci API Gemini Anda dari AI Studio atau Google AI Studio) |
 
 > **Catatan**: `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` tidak wajib. Jika tidak ada di config Firebase Anda, kosongkan saja atau tidak perlu ditambahkan di Vercel.
