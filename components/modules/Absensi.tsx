@@ -30,7 +30,7 @@ export default function Absensi() {
            setLocalRecords(records);
        }
     } else if (existingRecord) {
-       // eslint-disable-next-line react-hooks/set-state-in-effect
+        
        setLocalRecords(existingRecord.records || {});
     }
   }, [tanggal, kelasId, existingRecord, addItem, state.agmp_siswa, activeTaId]);

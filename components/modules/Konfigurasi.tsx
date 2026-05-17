@@ -855,7 +855,7 @@ function ManajemenKKTP() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedTpId(tpOptions[0].id);
     } else if (tpOptions.length === 0 && selectedTpId !== "") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setSelectedTpId("");
     }
   }, [tpOptions, selectedTpId]);

@@ -33,7 +33,7 @@ export default function Sumatif() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setTpId(tpOptions[0].id);
     } else if (tpOptions.length === 0 && tpId !== "") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setTpId("");
     }
   }, [tpOptions, tpId]);
@@ -74,7 +74,7 @@ export default function Sumatif() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setMode("rekap");
     } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setMode("init");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -3,7 +3,9 @@ import { useStore } from "@/lib/store";
 import { DatabaseBackup, UploadCloud, Trash2 } from "lucide-react";
 
 export default function Database() {
-  const { state } = useStore();
+  const { state, clearAllData, restoreAllData } = useStore();
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [isRestoring, setIsRestoring] = React.useState(false);
 
   const handleBackup = () => {
     const dataStr =
@@ -18,25 +20,25 @@ export default function Database() {
     dlAnchorElem.click();
   };
 
-  const handleRestore = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (
-      confirm("Restore akan menimpa semua data Anda saat ini. Lanjutkan?")
+      confirm("Restore akan menimpa semua data Anda saat ini di database Firebase. Lanjutkan?")
     ) {
+      setIsRestoring(true);
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         try {
           const newData = JSON.parse(event.target?.result as string);
-          // Only process and restore existing keys from state
-          Object.keys(newData).forEach((key) => {
-            localStorage.setItem(key, JSON.stringify(newData[key]));
-          });
+          await restoreAllData(newData);
+          setIsRestoring(false);
           alert("Restore berhasil! Aplikasi akan disegarkan.");
           window.location.reload();
         } catch (err) {
-          alert("Gagal memuat file backup. Format tidak valid.");
+          setIsRestoring(false);
+          alert("Gagal memuat file backup. Format tidak valid atau error jaringan.");
         }
       };
       reader.readAsText(file);
@@ -44,32 +46,17 @@ export default function Database() {
     e.target.value = "";
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (
       confirm(
         "PERINGATAN! Anda akan menghapus seluruh data pada aplikasi ini. Tindakan ini tidak dapat dibatalkan. Lanjutkan?"
       )
     ) {
-      if (confirm("Apakah Anda benar-benar yakin ingin menghapus data? Semua akan hilang selamanya!")) {
-        // Clear all relevant app storage
-        const keysToRemove = [
-          "agmp_tahun_ajaran",
-          "agmp_kelas",
-          "agmp_siswa",
-          "agmp_tp",
-          "agmp_kktp",
-          "agmp_jurnal",
-          "agmp_absensi",
-          "agmp_formatif",
-          "agmp_sumatif",
-          "agmp_remedial",
-          "agmp_anekdot",
-          "agmp_rubrik",
-          "agmp_pengaturan"
-        ];
-        keysToRemove.forEach(key => localStorage.removeItem(key));
-        
-        alert("Semua data berhasil dihapus. Aplikasi akan disegarkan.");
+      if (confirm("Apakah Anda benar-benar yakin ingin menghapus data di database Firebase? Semua akan hilang selamanya!")) {
+        setIsDeleting(true);
+        await clearAllData();
+        setIsDeleting(false);
+        alert("Semua data berhasil dihapus dari database. Aplikasi akan disegarkan.");
         window.location.reload();
       }
     }
@@ -113,13 +100,14 @@ export default function Database() {
               Pulihkan data dari file backup JSON yang sebelumnya Anda unduh. <strong className="text-orange-900">Tindakan ini akan menimpa dan menghapus data Anda saat ini.</strong>
             </p>
           </div>
-          <label className="inline-block cursor-pointer px-5 py-2.5 whitespace-nowrap bg-orange-600 text-white text-sm font-bold rounded-xl hover:bg-orange-700 transition-colors shadow-sm">
-            Unggah File Backup
+          <label className={`inline-block cursor-pointer px-5 py-2.5 whitespace-nowrap text-white text-sm font-bold rounded-xl transition-colors shadow-sm ${isRestoring ? 'bg-orange-400 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700'}`}>
+            {isRestoring ? "Merestore..." : "Unggah File Backup"}
             <input
               type="file"
               accept=".json"
               className="hidden"
               onChange={handleRestore}
+              disabled={isRestoring}
             />
           </label>
         </div>
@@ -135,9 +123,10 @@ export default function Database() {
           </div>
           <button
             onClick={handleReset}
-            className="px-5 py-2.5 whitespace-nowrap bg-red-600 text-white text-sm font-bold rounded-xl hover:bg-red-700 transition-colors shadow-sm"
+            disabled={isDeleting}
+            className={`px-5 py-2.5 whitespace-nowrap text-white text-sm font-bold rounded-xl transition-colors shadow-sm ${isDeleting ? 'bg-red-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
           >
-            Hapus Semua Data
+            {isDeleting ? "Menghapus..." : "Hapus Semua Data"}
           </button>
         </div>
       </div>

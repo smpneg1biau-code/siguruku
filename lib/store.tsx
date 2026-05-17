@@ -19,6 +19,8 @@ type StoreContextType = {
     silent?: boolean
   ) => void;
   deleteItem: <K extends keyof AppState>(key: K, id: string, silent?: boolean) => void;
+  clearAllData: () => Promise<void>;
+  restoreAllData: (data: Partial<AppState>) => Promise<void>;
   showToast: (message: string, type?: "success" | "error") => void;
   logout: () => void;
 };
@@ -84,7 +86,7 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setLoadingData(true);
     let unsubscribes: (() => void)[] = [];
 
@@ -221,6 +223,88 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
       });
   };
 
+  const clearAllData = async () => {
+    if (!user) return;
+    
+    // We get all the lists from the state to delete the documents
+    const listKeys: (keyof AppState)[] = [
+      'agmp_tahun_ajaran', 'agmp_kelas', 'agmp_siswa', 'agmp_tp',
+      'agmp_kktp', 'agmp_rubrik', 'agmp_jurnal', 'agmp_absensi',
+      'agmp_formatif', 'agmp_sumatif', 'agmp_remedial', 'agmp_rapor', 'agmp_anekdot'
+    ];
+
+    try {
+      const deletePromises: Promise<void>[] = [];
+      
+      listKeys.forEach((key) => {
+        const items = state[key] as any[];
+        if (Array.isArray(items)) {
+          items.forEach(item => {
+            if (item.id) {
+              const docRef = doc(db, 'users', user.uid, key as string, item.id);
+              deletePromises.push(deleteDoc(docRef));
+            }
+          });
+        }
+      });
+      
+      // Also reset pengaturan
+      const userDocRef = doc(db, 'users', user.uid);
+      deletePromises.push(setDoc(userDocRef, { agmp_pengaturan: defaultState.agmp_pengaturan }, { merge: true }));
+
+      await Promise.all(deletePromises);
+      
+      // Clear local state optimistically
+      setState(defaultState);
+      
+      localStorage.clear();
+      showToast("Seluruh data berhasil dihapus dari database", "success");
+    } catch (err) {
+      console.error("Failed to delete everything", err);
+      showToast("Gagal menghapus data dari database", "error");
+    }
+  };
+
+  const restoreAllData = async (data: Partial<AppState>) => {
+    if (!user) return;
+    try {
+      // 1. Clear old data
+      await clearAllData();
+
+      // 2. Prepare promises for newly imported data
+      const restorePromises: Promise<void>[] = [];
+      const listKeys: (keyof AppState)[] = [
+        'agmp_tahun_ajaran', 'agmp_kelas', 'agmp_siswa', 'agmp_tp',
+        'agmp_kktp', 'agmp_rubrik', 'agmp_jurnal', 'agmp_absensi',
+        'agmp_formatif', 'agmp_sumatif', 'agmp_remedial', 'agmp_rapor', 'agmp_anekdot'
+      ];
+
+      listKeys.forEach((key) => {
+        const items = data[key];
+        if (Array.isArray(items)) {
+          items.forEach((item: any) => {
+            if (item && item.id) {
+              const docRef = doc(db, 'users', user.uid, key as string, item.id);
+              restorePromises.push(setDoc(docRef, item));
+            }
+          });
+        }
+      });
+
+      if (data.agmp_pengaturan) {
+        const userDocRef = doc(db, 'users', user.uid);
+        restorePromises.push(setDoc(userDocRef, { agmp_pengaturan: data.agmp_pengaturan }, { merge: true }));
+      }
+
+      await Promise.all(restorePromises);
+      showToast("Data berhasil direstore", "success");
+    } catch (error) {
+      console.error("Failed to restore data:", error);
+      showToast("Gagal melakukan restore data", "error");
+      throw error;
+    }
+  };
+
   if (loadingAuth || loadingData) {
     return (
       <div className="flex h-screen flex-col items-center justify-center space-y-4">
@@ -255,7 +339,7 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <StoreContext.Provider value={{ state, updateData, addItem, updateItem, deleteItem, showToast, logout }}>
+    <StoreContext.Provider value={{ state, updateData, addItem, updateItem, deleteItem, clearAllData, restoreAllData, showToast, logout }}>
       {children}
       {toast && (
         <div className={`fixed bottom-20 right-4 md:bottom-4 md:right-4 px-6 py-3 rounded-lg shadow-lg font-bold text-sm z-50 animate-in slide-in-from-bottom ${toast.type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}>
