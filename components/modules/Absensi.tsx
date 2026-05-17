@@ -14,8 +14,10 @@ export default function Absensi() {
   const [selectedSiswaId, setSelectedSiswaId] = useState<string | null>(null);
   
   // Find or create record for today & class
-  const existingRecord = state.agmp_absensi.find(a => a.tanggal === tanggal && a.kelasId === kelasId && (activeTaId ? a.taId === activeTaId : true));
-  
+  const existingRecord = state.agmp_absensi.find(a => a.tanggal === tanggal && a.kelasId === kelasId && (activeTaId ? (a.taId === activeTaId || !a.taId) : true));
+
+  const [localRecords, setLocalRecords] = useState<Record<string, AbsensiStatus>>({});
+
   useEffect(() => {
     if (!existingRecord && kelasId && activeTaId) {
        // Initialize all to Hadir if doesn't exist when we load this view
@@ -23,14 +25,17 @@ export default function Absensi() {
        if(siswaList.length > 0) {
            const records: Record<string, AbsensiStatus> = {};
            siswaList.forEach(s => records[s.id] = 'HADIR');
-           addItem('agmp_absensi', { id: generateId(), taId: activeTaId, tanggal, kelasId, records });
+           addItem('agmp_absensi', { id: generateId(), taId: activeTaId, tanggal, kelasId, records }, true);
+           setLocalRecords(records);
        }
+    } else if (existingRecord) {
+       setLocalRecords(existingRecord.records || {});
     }
   }, [tanggal, kelasId, existingRecord, addItem, state.agmp_siswa, activeTaId]);
 
   const siswaList = state.agmp_siswa.filter(s => s.kelasId === kelasId);
   const sortedSiswaList = [...siswaList].sort((a, b) => a.nama.localeCompare(b.nama));
-  const currentRecords = existingRecord?.records || {};
+  const currentRecords = localRecords;
   const currentNotes = existingRecord?.catatan || {};
 
   const handleToggle = (siswaId: string) => {
@@ -40,14 +45,19 @@ export default function Absensi() {
       'HADIR': 'SAKIT', 'SAKIT': 'IZIN', 'IZIN': 'ALPA', 'ALPA': 'BOLOS', 'BOLOS': 'HADIR'
     };
     const newRecords = { ...currentRecords, [siswaId]: cycle[currentStatus] };
-    updateItem('agmp_absensi', existingRecord.id, { records: newRecords });
+    setLocalRecords(newRecords);
   };
 
   const setAllHadir = () => {
     if (!existingRecord) return;
     const newRecords: Record<string, AbsensiStatus> = {};
     siswaList.forEach(s => newRecords[s.id] = 'HADIR');
-    updateItem('agmp_absensi', existingRecord.id, { records: newRecords });
+    setLocalRecords(newRecords);
+  };
+
+  const simpanAbsensi = () => {
+    if (!existingRecord) return;
+    updateItem('agmp_absensi', existingRecord.id, { records: localRecords }, false);
   };
 
   const getStatusColor = (status: AbsensiStatus) => {
@@ -88,9 +98,14 @@ export default function Absensi() {
         <select className="px-3 py-2 border rounded-lg text-sm bg-gray-50" value={kelasId} onChange={e => setKelasId(e.target.value)}>
           {state.agmp_kelas.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
         </select>
-        <button onClick={setAllHadir} className="ml-auto flex items-center gap-1.5 text-sm font-semibold bg-[#34C759]/10 text-[#34C759] px-4 py-2 rounded-lg">
-           <CheckCircle2 className="w-4 h-4" /> Tandai Semua Hadir
-        </button>
+        <div className="flex gap-2 ml-auto">
+          <button onClick={setAllHadir} className="flex items-center gap-1.5 text-sm font-semibold bg-[#34C759]/10 text-[#34C759] px-4 py-2 rounded-lg">
+             <CheckCircle2 className="w-4 h-4" /> Tandai Semua Hadir
+          </button>
+          <button onClick={simpanAbsensi} className="flex items-center gap-1.5 text-sm font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+             Simpan Kehadiran
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar text-xs font-semibold">

@@ -61,11 +61,13 @@ function ManajemenTA() {
     e.preventDefault();
     const newId = generateId();
     if (formData.isActive) {
-      const updatedTA = (state.agmp_tahun_ajaran || []).map(ta => ({ ...ta, isActive: false }));
-      updateData("agmp_tahun_ajaran", [...updatedTA, { id: newId, ...formData }]);
-    } else {
-      addItem("agmp_tahun_ajaran", { id: newId, ...formData });
+      (state.agmp_tahun_ajaran || []).forEach(ta => {
+        if (ta.isActive) {
+          updateItem("agmp_tahun_ajaran", ta.id, { isActive: false }, true);
+        }
+      });
     }
+    addItem("agmp_tahun_ajaran", { id: newId, ...formData });
     setIsAdding(false);
     setFormData({ nama: "", semester: "Ganjil", isActive: false });
   };
@@ -74,13 +76,13 @@ function ManajemenTA() {
     e.preventDefault();
     if (editingId) {
       if (formData.isActive) {
-        const updatedTA = (state.agmp_tahun_ajaran || []).map(ta => 
-          ta.id === editingId ? { ...ta, ...formData } : { ...ta, isActive: false }
-        );
-        updateData("agmp_tahun_ajaran", updatedTA);
-      } else {
-        updateItem("agmp_tahun_ajaran", editingId, formData);
+        (state.agmp_tahun_ajaran || []).forEach(ta => {
+          if (ta.isActive && ta.id !== editingId) {
+            updateItem("agmp_tahun_ajaran", ta.id, { isActive: false }, true);
+          }
+        });
       }
+      updateItem("agmp_tahun_ajaran", editingId, formData);
       setEditingId(null);
       setFormData({ nama: "", semester: "Ganjil", isActive: false });
     }
@@ -93,10 +95,12 @@ function ManajemenTA() {
   };
 
   const handleSetAktif = (ta: any) => {
-    const updatedTA = (state.agmp_tahun_ajaran || []).map(item => 
-      item.id === ta.id ? { ...item, isActive: true } : { ...item, isActive: false }
-    );
-    updateData("agmp_tahun_ajaran", updatedTA);
+    (state.agmp_tahun_ajaran || []).forEach(item => {
+      if (item.isActive && item.id !== ta.id) {
+        updateItem("agmp_tahun_ajaran", item.id, { isActive: false }, true);
+      }
+    });
+    updateItem("agmp_tahun_ajaran", ta.id, { isActive: true }, false);
   };
 
   return (

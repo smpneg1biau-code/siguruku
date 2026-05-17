@@ -648,9 +648,19 @@ export default function Sumatif() {
                     }
 
                     return (
-                      <tr key={s.id} className="hover:bg-gray-50">
+                      <tr 
+                        key={s.id} 
+                        className="hover:bg-gray-100 cursor-pointer transition-colors"
+                        onClick={() => {
+                          const idx = siswaList.findIndex(x => x.id === s.id);
+                          if (idx !== -1) {
+                            setActiveSiswaIdx(idx);
+                            setMode("wizard");
+                          }
+                        }}
+                      >
                         <td className="p-4">
-                          <div className="font-semibold text-gray-900">
+                          <div className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
                             {s.nama}
                           </div>
                           <div className="text-[10px] text-gray-500">

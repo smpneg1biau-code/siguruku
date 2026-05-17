@@ -103,7 +103,7 @@ export default function RekapAkhir({
     // A TP can have multiple sumatifs, but in our app we usually have 1 sumatif per TP per Kelas
     // Let's find the sumatif for this TP
     const sumatif = state.agmp_sumatif.find(
-      (s) => s.tpId === tpId && s.kelasId === selectedKelasId && (selectedTaId ? s.taId === selectedTaId : true),
+      (s) => s.tpId === tpId && s.kelasId === selectedKelasId && (selectedTaId ? (s.taId === selectedTaId || !s.taId) : true),
     );
     if (!sumatif) return { status: "BELUM DINILAI", nilai: 0, isLocked: false };
 
