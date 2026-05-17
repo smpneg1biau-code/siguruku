@@ -26,9 +26,11 @@ export default function Absensi() {
            const records: Record<string, AbsensiStatus> = {};
            siswaList.forEach(s => records[s.id] = 'HADIR');
            addItem('agmp_absensi', { id: generateId(), taId: activeTaId, tanggal, kelasId, records }, true);
+           // eslint-disable-next-line react-hooks/set-state-in-effect
            setLocalRecords(records);
        }
     } else if (existingRecord) {
+       // eslint-disable-next-line react-hooks/set-state-in-effect
        setLocalRecords(existingRecord.records || {});
     }
   }, [tanggal, kelasId, existingRecord, addItem, state.agmp_siswa, activeTaId]);

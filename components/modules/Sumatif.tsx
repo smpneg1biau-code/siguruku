@@ -20,7 +20,24 @@ export default function Sumatif() {
   const activeTaId = activeTA?.id || '';
 
   const [kelasId, setKelasId] = useState(state.agmp_kelas[0]?.id || "");
-  const [tpId, setTpId] = useState(state.agmp_tp[0]?.id || "");
+  
+  const tpOptions = useMemo(() => 
+    state.agmp_tp.filter((t) => t.kelasIds.includes(kelasId)),
+    [state.agmp_tp, kelasId]
+  );
+  
+  const [tpId, setTpId] = useState(tpOptions[0]?.id || "");
+
+  useEffect(() => {
+    if (tpOptions.length > 0 && !tpOptions.find((t) => t.id === tpId)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTpId(tpOptions[0].id);
+    } else if (tpOptions.length === 0 && tpId !== "") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTpId("");
+    }
+  }, [tpOptions, tpId]);
+
   const [teknik, setTeknik] = useState("Tes Tulis (PG/Esai)");
   const [mode, setMode] = useState<"init" | "wizard" | "rekap">("init");
   const [activeSiswaIdx, setActiveSiswaIdx] = useState(0);
@@ -230,7 +247,8 @@ export default function Sumatif() {
           value={tpId}
           onChange={(e) => setTpId(e.target.value)}
         >
-          {state.agmp_tp.map((t) => (
+          {tpOptions.length === 0 && <option value="" disabled>Tidak ada TP</option>}
+          {tpOptions.map((t) => (
             <option key={t.id} value={t.id}>
               TP {t.kode}
             </option>
