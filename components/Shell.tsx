@@ -22,7 +22,8 @@ import Sumatif from "@/components/modules/Sumatif";
 import Remedial from "@/components/modules/Remedial";
 import Rapor from "@/components/modules/Rapor";
 import RekapAkhir from "@/components/modules/RekapAkhir";
-import { BarChart2 } from "lucide-react";
+import Database from "@/components/modules/Database";
+import { BarChart2, Database as DatabaseIcon } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { auth } from "@/lib/firebase";
 
@@ -35,7 +36,8 @@ export type TabId =
   | "sumatif"
   | "remedial"
   | "rapor"
-  | "rekap-akhir";
+  | "rekap-akhir"
+  | "database";
 
 const NAV_ITEMS = [
   { id: "beranda", label: "Beranda", icon: Home },
@@ -47,6 +49,7 @@ const NAV_ITEMS = [
   { id: "rapor", label: "Rapor", icon: FileText },
   { id: "rekap-akhir", label: "Rekap Akhir", icon: BarChart2 },
   { id: "konfigurasi", label: "Pengaturan", icon: Settings },
+  { id: "database", label: "Database", icon: DatabaseIcon },
 ] as const;
 
 export default function Shell() {
@@ -99,6 +102,8 @@ export default function Shell() {
         return <Rapor />;
       case "rekap-akhir":
         return <RekapAkhir onNavigate={setActiveTab} />;
+      case "database":
+        return <Database />;
       default:
         return <Beranda onNavigate={setActiveTab} />;
     }

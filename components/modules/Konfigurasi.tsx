@@ -20,7 +20,7 @@ export default function Konfigurasi() {
 
       {/* Tabs */}
       <div className="flex overflow-x-auto hide-scrollbar gap-2 pb-2">
-        {[{id:"ta", label:"Tahun Ajaran"}, {id:"kelas", label:"Kelas"}, {id:"siswa", label: "Siswa"}, {id:"tp", label:"TP"}, {id:"kktp", label:"KKTP"}, {id:"db", label:"Database"}].map((tab) => (
+        {[{id:"ta", label:"Tahun Ajaran"}, {id:"kelas", label:"Kelas"}, {id:"siswa", label: "Siswa"}, {id:"tp", label:"TP"}, {id:"kktp", label:"KKTP"}].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
@@ -41,7 +41,6 @@ export default function Konfigurasi() {
         {activeTab === "siswa" && <ManajemenSiswa />}
         {activeTab === "tp" && <ManajemenTP />}
         {activeTab === "kktp" && <ManajemenKKTP />}
-        {activeTab === "db" && <ManajemenDB />}
       </div>
     </div>
   );
@@ -211,70 +210,6 @@ function ManajemenTA() {
             </div>
           </div>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function ManajemenDB() {
-  const { state } = useStore();
-
-  const handleBackup = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
-    const dlAnchorElem = document.createElement("a");
-    dlAnchorElem.setAttribute("href", dataStr);
-    dlAnchorElem.setAttribute("download", `agmp_backup_${new Date().toISOString()}.json`);
-    dlAnchorElem.click();
-  };
-
-  const handleRestore = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (confirm("Restore akan menimpa semua data Anda saat ini. Lanjutkan?")) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const newData = JSON.parse(event.target?.result as string);
-          Object.keys(newData).forEach((key) => {
-            localStorage.setItem(key, JSON.stringify(newData[key]));
-          });
-          alert("Restore berhasil! Aplikasi akan disegarkan.");
-          window.location.reload();
-        } catch (err) {
-          alert("Gagal memuat file backup.");
-        }
-      };
-      reader.readAsText(file);
-    }
-    e.target.value = "";
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl space-y-2">
-        <h3 className="font-bold text-blue-900">Backup Database</h3>
-        <p className="text-sm text-blue-800">Unduh seluruh data aplikasi ke dalam file JSON untuk mengamankan data Anda.</p>
-        <button
-          onClick={handleBackup}
-          className="px-4 py-2 bg-[#007AFF] text-white text-sm font-bold rounded-lg hover:bg-blue-600 transition-colors"
-        >
-          Download Backup
-        </button>
-      </div>
-
-      <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl space-y-2">
-        <h3 className="font-bold text-orange-900">Restore Database</h3>
-        <p className="text-sm text-orange-800">Unggah file JSON backup yang sebelumnya Anda unduh. <strong className="text-orange-900">Tindakan ini akan menimpa data Anda saat ini.</strong></p>
-        <label className="inline-block cursor-pointer px-4 py-2 bg-orange-600 text-white text-sm font-bold rounded-lg hover:bg-orange-700 transition-colors">
-          Unggah File Backup
-          <input
-            type="file"
-            accept=".json"
-            className="hidden"
-            onChange={handleRestore}
-          />
-        </label>
       </div>
     </div>
   );
