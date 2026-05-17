@@ -36,6 +36,7 @@ export default function RekapAkhir({
 
   const selectedTA = state.agmp_tahun_ajaran.find(ta => ta.id === selectedTaId);
   const selectedSemester = selectedTA?.semester || "Ganjil";
+  const tpSemesterToMatch = selectedSemester === "Ganjil" ? "1" : "2";
 
   const siswaList = useMemo(() => {
     return state.agmp_siswa
@@ -47,9 +48,9 @@ export default function RekapAkhir({
     return state.agmp_tp.filter(
       (tp) =>
         tp.kelasIds.includes(selectedKelasId) &&
-        tp.semester === selectedSemester,
+        (tp.semester === selectedSemester || tp.semester === tpSemesterToMatch),
     );
-  }, [state.agmp_tp, selectedKelasId, selectedSemester]);
+  }, [state.agmp_tp, selectedKelasId, selectedSemester, tpSemesterToMatch]);
 
   const interval = state.agmp_pengaturan.intervalKKTP || {
     batasBawahTuntas: 75,
@@ -106,10 +107,10 @@ export default function RekapAkhir({
     const sumatif = selectedTaId
       ? sumatifMatches.find((s) => s.taId === selectedTaId) || sumatifMatches.find((s) => !s.taId)
       : sumatifMatches[0];
-    if (!sumatif) return { status: "BELUM DINILAI", nilai: 0, isLocked: false };
+    if (!sumatif) return { status: "BELUM DINILAI", nilai: 0, isLocked: false, sumatifId: null };
 
     let record = sumatif.records[sId];
-    if (!record) return { status: "BELUM DINILAI", nilai: 0, isLocked: false };
+    if (!record) return { status: "BELUM DINILAI", nilai: 0, isLocked: false, sumatifId: sumatif.id };
 
     // Override with remedial
     const remedialMatches = state.agmp_remedial.filter((r) => r.sumatifId === sumatif.id && r.siswaId === sId);
