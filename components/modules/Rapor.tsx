@@ -44,19 +44,19 @@ export default function Rapor() {
 
     tps.forEach((tp) => {
       // Find sumatif
-      const sumatif = state.agmp_sumatif.find(
-        (s) => s.tpId === tp.id && s.kelasId === kelasId && (selectedTaId ? s.taId === selectedTaId : true),
-      );
+      const sumatifMatches = state.agmp_sumatif.filter((s) => s.tpId === tp.id && s.kelasId === kelasId);
+      const sumatif = selectedTaId
+        ? sumatifMatches.find((s) => s.taId === selectedTaId) || sumatifMatches.find((s) => !s.taId)
+        : sumatifMatches[0];
       if (sumatif) {
         let record = sumatif.records[siswaId];
         // Check remedial override
-        const remedial = state.agmp_remedial.find(
-          (r) =>
-            r.sumatifId === sumatif.id &&
-            r.siswaId === siswaId &&
-            r.status === "Selesai" &&
-            (selectedTaId ? r.taId === selectedTaId : true)
+        const remedialMatches = state.agmp_remedial.filter(
+          (r) => r.sumatifId === sumatif.id && r.siswaId === siswaId && r.status === "Selesai"
         );
+        const remedial = selectedTaId
+          ? remedialMatches.find((r) => r.taId === selectedTaId) || remedialMatches.find((r) => !r.taId)
+          : remedialMatches[0];
         if (remedial && remedial.nilaiBaru !== undefined) {
           record = {
             level: remedial.levelBaru!,

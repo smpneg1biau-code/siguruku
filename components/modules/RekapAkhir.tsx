@@ -102,18 +102,20 @@ export default function RekapAkhir({
   const calculateSumatifForTP = (sId: string, tpId: string) => {
     // A TP can have multiple sumatifs, but in our app we usually have 1 sumatif per TP per Kelas
     // Let's find the sumatif for this TP
-    const sumatif = state.agmp_sumatif.find(
-      (s) => s.tpId === tpId && s.kelasId === selectedKelasId && (selectedTaId ? (s.taId === selectedTaId || !s.taId) : true),
-    );
+    const sumatifMatches = state.agmp_sumatif.filter((s) => s.tpId === tpId && s.kelasId === selectedKelasId);
+    const sumatif = selectedTaId
+      ? sumatifMatches.find((s) => s.taId === selectedTaId) || sumatifMatches.find((s) => !s.taId)
+      : sumatifMatches[0];
     if (!sumatif) return { status: "BELUM DINILAI", nilai: 0, isLocked: false };
 
     let record = sumatif.records[sId];
     if (!record) return { status: "BELUM DINILAI", nilai: 0, isLocked: false };
 
     // Override with remedial
-    const remedial = state.agmp_remedial.find(
-      (r) => r.sumatifId === sumatif.id && r.siswaId === sId && (selectedTaId ? r.taId === selectedTaId : true),
-    );
+    const remedialMatches = state.agmp_remedial.filter((r) => r.sumatifId === sumatif.id && r.siswaId === sId);
+    const remedial = selectedTaId
+      ? remedialMatches.find((r) => r.taId === selectedTaId) || remedialMatches.find((r) => !r.taId)
+      : remedialMatches[0];
     let finalNilai = record.nilai;
     let finalLevel = record.level;
     if (

@@ -58,9 +58,10 @@ export default function Sumatif() {
     );
   };
 
-  const existingSumatif = state.agmp_sumatif.find(
-    (s) => s.kelasId === kelasId && s.tpId === tpId && (activeTaId ? s.taId === activeTaId : true)
-  );
+  const sumatifMatches = state.agmp_sumatif.filter((s) => s.kelasId === kelasId && s.tpId === tpId);
+  const existingSumatif = activeTaId
+    ? sumatifMatches.find((s) => s.taId === activeTaId) || sumatifMatches.find((s) => !s.taId)
+    : sumatifMatches[0];
   const sumatifId = existingSumatif?.id;
   const rubrik = state.agmp_rubrik.find((r) => r.tpId === tpId);
   const siswaList = state.agmp_siswa
