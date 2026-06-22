@@ -39,7 +39,34 @@
     "Rubrik": {
       "title": "Rubrik",
       "description": "Rubrik data",
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tpId": { "type": "string" },
+        "jenisKKTP": { "type": "string" },
+        "level1": { "type": "string" },
+        "level2": { "type": "string" },
+        "level3": { "type": "string" },
+        "level4": { "type": "string" },
+        "skalaPenilaian": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "aspekPenilaian": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "nama": { "type": "string" }
+            }
+          }
+        },
+        "aturanKetuntasan": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        }
+      }
     },
     "Jurnal": {
       "title": "Jurnal Mengajar",
