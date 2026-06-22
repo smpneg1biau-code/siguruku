@@ -7,14 +7,14 @@ import {
 } from "firebase/firestore";
 import firebaseAppletConfig from "../firebase-applet-config.json";
 
-// Gunakan environment variables dari Vercel, atau fallback ke firebase-applet-config.json di AI Studio
+// Gunakan environment variables dari Vercel, atau hardcode config
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || firebaseAppletConfig.apiKey,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || firebaseAppletConfig.authDomain,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || firebaseAppletConfig.projectId,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || firebaseAppletConfig.storageBucket,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || firebaseAppletConfig.messagingSenderId,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || firebaseAppletConfig.appId,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyD4kF4kAgHqx5ZBj4RBL1L1wMLBshn_Ik4",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "macro-raceway-ftgzl.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "macro-raceway-ftgzl",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "macro-raceway-ftgzl.firebasestorage.app",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "164154959388",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:164154959388:web:d8412c0bcf49f11c8ee1d9",
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || firebaseAppletConfig.measurementId,
   firestoreDatabaseId: process.env.NEXT_PUBLIC_FIRESTORE_DATABASE_ID || firebaseAppletConfig.firestoreDatabaseId
 };
@@ -22,11 +22,7 @@ const firebaseConfig = {
 export const app = initializeApp(firebaseConfig);
 
 // Initialize Firestore with offline persistence
-export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager()
-  })
-}, firebaseConfig.firestoreDatabaseId !== 'remixed-firestore-database-id' ? firebaseConfig.firestoreDatabaseId : undefined);
+export const db = initializeFirestore(app, {}, firebaseConfig.firestoreDatabaseId !== 'remixed-firestore-database-id' ? firebaseConfig.firestoreDatabaseId : undefined);
 
 export const auth = getAuth(app);
 

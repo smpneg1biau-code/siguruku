@@ -25,7 +25,7 @@ export default function Rapor() {
   const generateReportData = (siswaId: string) => {
     const tpSemesterToMatch = selectedTA ? (selectedTA.semester === "Ganjil" ? "1" : "2") : null;
     const tps = state.agmp_tp.filter((tp) => tp.kelasIds.includes(kelasId) && (selectedTA ? (tp.semester === selectedTA.semester || tp.semester === tpSemesterToMatch) : true));
-    const interval = state.agmp_pengaturan.intervalKKTP || {
+    const interval = {
       batasBawahTuntas: 75,
       batasAtasLanjut: 85,
       batasBawahSelektif: 61,

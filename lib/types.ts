@@ -31,13 +31,26 @@ export type KKTP = {
   bobot?: number;
 };
 
+export type KKTPType = "Daftar Ceklist" | "Rubrik Deskripsi" | "Interval Nilai" | "Persentase";
+
+export type AspekRubrik = {
+  id: string;
+  nama: string;
+};
+
 export type Rubrik = {
   id: string;
   tpId: string;
-  level1: string; // Baru Berkembang
-  level2: string; // Layak
-  level3: string; // Cakap
-  level4: string; // Mahir
+  jenisKKTP?: KKTPType;
+  level1?: string; // Baru Berkembang
+  level2?: string; // Layak
+  level3?: string; // Cakap
+  level4?: string; // Mahir
+  
+  // Rubrik Deskripsi specific
+  skalaPenilaian?: string[];
+  aspekPenilaian?: AspekRubrik[];
+  aturanKetuntasan?: Record<string, number>; // Maps aspekId to minimum skala index required
 };
 
 export type Jurnal = {
@@ -90,6 +103,7 @@ export type SumatifRecord = {
   status: "TUNTAS" | "BELUM TUNTAS";
   buktiUrl?: string;
   tesTulisScores?: Record<number, number>;
+  rubrikScores?: Record<string, number>; // Maps aspekId to selected skala index
 };
 
 export type AuditLogEntry = {
@@ -166,10 +180,5 @@ export type AppState = {
     guruNama: string;
     mapel: string;
     sekolah: string;
-    intervalKKTP?: {
-      batasBawahTuntas: number; // e.g. 75
-      batasAtasLanjut: number; // e.g. 85 (above this is pengayaan)
-      batasBawahSelektif: number; // e.g. 61 (below this is remedial total)
-    };
   };
 };

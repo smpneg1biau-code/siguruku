@@ -52,7 +52,7 @@ export default function RekapAkhir({
     );
   }, [state.agmp_tp, selectedKelasId, selectedSemester, tpSemesterToMatch]);
 
-  const interval = state.agmp_pengaturan.intervalKKTP || {
+  const interval = {
     batasBawahTuntas: 75,
     batasAtasLanjut: 85,
     batasBawahSelektif: 61,
@@ -128,7 +128,7 @@ export default function RekapAkhir({
       if (remedial.levelBaru) finalLevel = remedial.levelBaru;
     }
 
-    const interval = state.agmp_pengaturan.intervalKKTP || {
+    const interval = {
       batasBawahTuntas: 75,
       batasAtasLanjut: 85,
       batasBawahSelektif: 61,

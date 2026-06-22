@@ -10,11 +10,6 @@ export const defaultState: AppState = {
     guruNama: "Bu Ani Wijaya",
     mapel: "Matematika",
     sekolah: "SMP Negeri 1 Datacenter",
-    intervalKKTP: {
-      batasBawahTuntas: 75,
-      batasAtasLanjut: 85,
-      batasBawahSelektif: 61,
-    },
   },
   agmp_kelas: [
     {

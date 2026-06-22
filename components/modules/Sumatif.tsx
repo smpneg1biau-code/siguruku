@@ -117,7 +117,7 @@ export default function Sumatif() {
   const handleScoreUpdate = (sId: string, level: number) => {
     if (!existingSumatif) return;
 
-    const interval = state.agmp_pengaturan.intervalKKTP || {
+    const interval = {
       batasBawahTuntas: 75,
       batasAtasLanjut: 85,
       batasBawahSelektif: 61,
@@ -160,7 +160,7 @@ export default function Sumatif() {
     const newScores = { ...currentScores, [soalId]: val };
     const totalNilai = Object.values(newScores).reduce((a, b) => a + b, 0);
 
-    const interval = state.agmp_pengaturan.intervalKKTP || {
+    const interval = {
       batasBawahTuntas: 75,
       batasAtasLanjut: 85,
       batasBawahSelektif: 61,
@@ -182,6 +182,48 @@ export default function Sumatif() {
           ...existingSumatif.records[sId],
           tesTulisScores: newScores,
           nilai: totalNilai,
+          level,
+          status,
+        },
+      },
+    }, true);
+  };
+
+  const handleRubrikVal = (sId: string, aspekId: string, skalaIdx: number) => {
+    if (!existingSumatif) return;
+    const currentScores = existingSumatif.records[sId].rubrikScores || {};
+    const newScores = { ...currentScores, [aspekId]: skalaIdx };
+
+    const rubrik = state.agmp_rubrik.find((r) => r.tpId === tpId);
+    let status: "TUNTAS" | "BELUM TUNTAS" = "TUNTAS";
+    
+    if (rubrik && rubrik.jenisKKTP === "Rubrik Deskripsi" && rubrik.aspekPenilaian) {
+      for (const aspek of rubrik.aspekPenilaian) {
+        const requiredSkala = rubrik.aturanKetuntasan?.[aspek.id] ?? 0;
+        const actualSkala = newScores[aspek.id];
+        
+        if (actualSkala === undefined || actualSkala < requiredSkala) {
+          status = "BELUM TUNTAS";
+          break;
+        }
+      }
+    }
+
+    const level = status === "TUNTAS" ? 3 : 1; 
+    const interval = {
+      batasBawahTuntas: 75,
+      batasAtasLanjut: 85,
+      batasBawahSelektif: 61,
+    };
+    const nilai = status === "TUNTAS" ? interval.batasBawahTuntas : interval.batasBawahSelektif - 1;
+
+    updateItem("agmp_sumatif", sumatifId!, {
+      records: {
+        ...existingSumatif.records,
+        [sId]: {
+          ...existingSumatif.records[sId],
+          rubrikScores: newScores,
+          nilai,
           level,
           status,
         },
@@ -445,11 +487,18 @@ export default function Sumatif() {
                   {activeRecord.nilai > 0 ? activeRecord.nilai : "-"}
                 </span>
                 {activeRecord.level > 0 && (
-                  <p
-                    className={`text-[10px] font-bold mt-1 ${activeRecord.status === "TUNTAS" ? "text-green-600" : "text-red-500"}`}
-                  >
-                    {activeRecord.status}
-                  </p>
+                  <div>
+                    <p
+                      className={`text-[10px] font-bold mt-1 ${activeRecord.status === "TUNTAS" ? "text-green-600" : "text-red-500"}`}
+                    >
+                      {activeRecord.status}
+                    </p>
+                    {activeRecord.status === "BELUM TUNTAS" && rubrik?.jenisKKTP === "Rubrik Deskripsi" && rubrik.aspekPenilaian && (
+                      <p className="text-[10px] text-red-400 mt-0.5">
+                        Ada aspek yang tidak memenuhi batas minimum skala.
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -496,6 +545,41 @@ export default function Sumatif() {
                       })}
                     </div>
                   </div>
+                ) : rubrik?.jenisKKTP === "Rubrik Deskripsi" && rubrik.aspekPenilaian && rubrik.skalaPenilaian ? (
+                  <div className="space-y-4">
+                    <label className="text-sm font-bold text-gray-700">
+                      Penilaian Rubrik Deskripsi (Ketuntasan dievaluasi otomatis)
+                    </label>
+                    <div className="overflow-x-auto border rounded-xl border-gray-200">
+                      <table className="w-full text-sm text-left">
+                        <thead className="bg-gray-50 border-b border-gray-100/50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                          <tr>
+                            <th className="p-3 w-1/2">Aspek yang Dinilai</th>
+                            <th className="p-3 w-1/2">Pencapaian Siswa</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {rubrik.aspekPenilaian.map(aspek => (
+                            <tr key={aspek.id} className="hover:bg-gray-50/50">
+                              <td className="p-3 font-medium text-gray-900">{aspek.nama}</td>
+                              <td className="p-3">
+                                <select 
+                                  className="w-full p-2 border rounded-lg bg-white outline-none focus:ring-2 focus:ring-[#007AFF] transition-shadow text-sm"
+                                  value={activeRecord.rubrikScores?.[aspek.id] ?? ""}
+                                  onChange={(e) => handleRubrikVal(student.id, aspek.id, Number(e.target.value))}
+                                >
+                                  <option value="" disabled>Pilih Skala</option>
+                                  {rubrik.skalaPenilaian!.map((skala, idx) => (
+                                    <option key={idx} value={idx}>{skala}</option>
+                                  ))}
+                                </select>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 ) : (
                   <>
                     <label className="text-sm font-bold text-gray-700">
@@ -505,28 +589,28 @@ export default function Sumatif() {
                       {[
                         {
                           l: 1,
-                          label: `Baru Berkembang (0-${(state.agmp_pengaturan.intervalKKTP?.batasBawahSelektif || 61) - 1})`,
+                          label: `Baru Berkembang (0-60)`,
                           desc: rubrik?.level1,
                           bg: "bg-red-50",
                           active: "bg-red-500 text-white border-red-500",
                         },
                         {
                           l: 2,
-                          label: `Layak (${state.agmp_pengaturan.intervalKKTP?.batasBawahSelektif || 61}-${(state.agmp_pengaturan.intervalKKTP?.batasBawahTuntas || 75) - 1})`,
+                          label: `Layak (61-74)`,
                           desc: rubrik?.level2,
                           bg: "bg-orange-50",
                           active: "bg-orange-500 text-white border-orange-500",
                         },
                         {
                           l: 3,
-                          label: `Cakap (${state.agmp_pengaturan.intervalKKTP?.batasBawahTuntas || 75}-${state.agmp_pengaturan.intervalKKTP?.batasAtasLanjut || 85})`,
+                          label: `Cakap (75-85)`,
                           desc: rubrik?.level3,
                           bg: "bg-green-50",
                           active: "bg-green-500 text-white border-green-500",
                         },
                         {
                           l: 4,
-                          label: `Mahir (${(state.agmp_pengaturan.intervalKKTP?.batasAtasLanjut || 85) + 1}-100)`,
+                          label: `Mahir (86-100)`,
                           desc: rubrik?.level4,
                           bg: "bg-blue-50",
                           active: "bg-blue-500 text-white border-blue-500",
@@ -644,7 +728,7 @@ export default function Sumatif() {
                     const r = existingSumatif.records[s.id];
                     if (!r) return null;
 
-                    const interval = state.agmp_pengaturan.intervalKKTP || {
+                    const interval = {
                       batasBawahTuntas: 75,
                       batasAtasLanjut: 85,
                       batasBawahSelektif: 61,

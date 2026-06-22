@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useStore } from "@/lib/store";
 import { generateId } from "@/lib/utils";
+import { KKTPType, AspekRubrik } from "@/lib/types";
 import { Plus, Trash2, Edit, Download } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -817,7 +818,7 @@ function ManajemenTP() {
 }
 
 function ManajemenKKTP() {
-  const { state, addItem, updateItem, updateData } = useStore();
+  const { state, addItem, updateItem, updateData, showToast } = useStore();
   const [selectedKelasId, setSelectedKelasId] = useState<string>(
     state.agmp_kelas[0]?.id || "",
   );
@@ -834,13 +835,10 @@ function ManajemenKKTP() {
   const tp = state.agmp_tp.find((t) => t.id === selectedTpId);
   const existingRubrik = state.agmp_rubrik.find((r) => r.tpId === selectedTpId);
 
-  const [intervalData, setIntervalData] = useState({
-    batasBawahSelektif:
-      state.agmp_pengaturan.intervalKKTP?.batasBawahSelektif || 61,
-    batasBawahTuntas:
-      state.agmp_pengaturan.intervalKKTP?.batasBawahTuntas || 75,
-    batasAtasLanjut: state.agmp_pengaturan.intervalKKTP?.batasAtasLanjut || 85,
-  });
+  const [jenisKKTP, setJenisKKTP] = useState<KKTPType>("Interval Nilai");
+  const [skalaPenilaian, setSkalaPenilaian] = useState<string[]>(["Mulai Memahami", "Memahami", "Sangat Memahami"]);
+  const [aspekPenilaian, setAspekPenilaian] = useState<AspekRubrik[]>([]);
+  const [aturanKetuntasan, setAturanKetuntasan] = useState<Record<string, number>>({});
 
   const [formData, setFormData] = useState({
     level1: "", // Baru Berkembang
@@ -855,7 +853,6 @@ function ManajemenKKTP() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedTpId(tpOptions[0].id);
     } else if (tpOptions.length === 0 && selectedTpId !== "") {
-       
       setSelectedTpId("");
     }
   }, [tpOptions, selectedTpId]);
@@ -864,143 +861,94 @@ function ManajemenKKTP() {
   useEffect(() => {
     if (existingRubrik) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
+      setJenisKKTP(existingRubrik.jenisKKTP || "Interval Nilai");
       setFormData({
         level1: existingRubrik.level1 || "",
         level2: existingRubrik.level2 || "",
         level3: existingRubrik.level3 || "",
         level4: existingRubrik.level4 || "",
       });
+      setSkalaPenilaian(existingRubrik.skalaPenilaian || ["Mulai Memahami", "Memahami", "Sangat Memahami"]);
+      setAspekPenilaian(existingRubrik.aspekPenilaian || []);
+      setAturanKetuntasan(existingRubrik.aturanKetuntasan || {});
     } else {
+      setJenisKKTP("Interval Nilai");
       setFormData({ level1: "", level2: "", level3: "", level4: "" });
+      setSkalaPenilaian(["Mulai Memahami", "Memahami", "Sangat Memahami"]);
+      setAspekPenilaian([]);
+      setAturanKetuntasan({});
     }
   }, [existingRubrik]);
 
   const handleTpChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newTpId = e.target.value;
     setSelectedTpId(newTpId);
-    const rubrik = state.agmp_rubrik.find((r) => r.tpId === newTpId);
-    if (rubrik) {
-      setFormData({
-        level1: rubrik.level1,
-        level2: rubrik.level2,
-        level3: rubrik.level3,
-        level4: rubrik.level4,
-      });
-    } else {
-      setFormData({ level1: "", level2: "", level3: "", level4: "" });
-    }
   };
 
-  const handleSaveInterval = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateData("agmp_pengaturan", {
-      ...state.agmp_pengaturan,
-      intervalKKTP: intervalData,
-    });
+  const addSkala = () => setSkalaPenilaian([...skalaPenilaian, "Skala Baru"]);
+  const updateSkala = (index: number, val: string) => {
+    const n = [...skalaPenilaian]; n[index] = val; setSkalaPenilaian(n);
+  };
+  const removeSkala = (index: number) => setSkalaPenilaian(skalaPenilaian.filter((_, i) => i !== index));
+
+  const addAspek = () => setAspekPenilaian([...aspekPenilaian, { id: generateId(), nama: "Aspek Baru" }]);
+  const updateAspek = (index: number, val: string) => {
+    const n = [...aspekPenilaian]; n[index].nama = val; setAspekPenilaian(n);
+  };
+  const removeAspek = (index: number) => {
+    const id = aspekPenilaian[index].id;
+    setAspekPenilaian(aspekPenilaian.filter((_, i) => i !== index));
+    const newAturan = { ...aturanKetuntasan };
+    delete newAturan[id];
+    setAturanKetuntasan(newAturan);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const intervalData = {
+    batasBawahSelektif: 61,
+    batasBawahTuntas: 75,
+    batasAtasLanjut: 85,
+  };
+
+  const currentOptions = ["Interval Nilai", "Rubrik Deskripsi", "Daftar Ceklist", "Persentase"];
+
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTpId) return;
 
-    if (existingRubrik) {
-      updateItem("agmp_rubrik", existingRubrik.id, { ...formData });
-    } else {
-      addItem("agmp_rubrik", {
-        id: generateId(),
-        tpId: selectedTpId,
-        ...formData,
-      });
+    setIsSaving(true);
+    try {
+      if (existingRubrik) {
+        await updateItem("agmp_rubrik", existingRubrik.id, { 
+          ...formData, 
+          jenisKKTP, 
+          skalaPenilaian, 
+          aspekPenilaian, 
+          aturanKetuntasan 
+        }, true);
+      } else {
+        await addItem("agmp_rubrik", {
+          id: generateId(),
+          tpId: selectedTpId,
+          ...formData,
+          jenisKKTP,
+          skalaPenilaian,
+          aspekPenilaian,
+          aturanKetuntasan
+        }, true);
+      }
+      showToast("Rubrik KKTP berhasil disimpan ke dalam database", "success");
+    } catch (error) {
+      showToast("Gagal menyimpan Rubrik KKTP ke dalam database", "error");
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Pengaturan Interval Global */}
-      <form
-        onSubmit={handleSaveInterval}
-        className="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-4"
-      >
-        <h3 className="font-bold text-blue-900 border-b border-blue-100 pb-2">
-          Pengaturan Interval Nilai & Predikat (Global)
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className="text-xs font-bold text-gray-700 block mb-1">
-              Batas Minimal L2 (Layak)
-            </label>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              className="w-full px-3 py-2 border rounded-lg text-sm"
-              value={intervalData.batasBawahSelektif}
-              onChange={(e) =>
-                setIntervalData({
-                  ...intervalData,
-                  batasBawahSelektif: Number(e.target.value),
-                })
-              }
-            />
-            <p className="text-[10px] text-gray-500 mt-1">
-              Dibawah ini = L1 (Remedial Total)
-            </p>
-          </div>
-          <div>
-            <label className="text-xs font-bold text-gray-700 block mb-1">
-              Batas Minimal L3 (Cakap) / KKM
-            </label>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              className="w-full px-3 py-2 border rounded-lg text-sm"
-              value={intervalData.batasBawahTuntas}
-              onChange={(e) =>
-                setIntervalData({
-                  ...intervalData,
-                  batasBawahTuntas: Number(e.target.value),
-                })
-              }
-            />
-            <p className="text-[10px] text-gray-500 mt-1">
-              L2 (Remedial Selektif) ~ L3 (Tuntas)
-            </p>
-          </div>
-          <div>
-            <label className="text-xs font-bold text-gray-700 block mb-1">
-              Batas Maksimal L3 (Cakap)
-            </label>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              className="w-full px-3 py-2 border rounded-lg text-sm"
-              value={intervalData.batasAtasLanjut}
-              onChange={(e) =>
-                setIntervalData({
-                  ...intervalData,
-                  batasAtasLanjut: Number(e.target.value),
-                })
-              }
-            />
-            <p className="text-[10px] text-gray-500 mt-1">
-              Diatas ini = L4 (Pengayaan)
-            </p>
-          </div>
-        </div>
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold"
-          >
-            Simpan Interval
-          </button>
-        </div>
-      </form>
-
-      {/* Existing Rubrik Config */}
-      <div className="space-y-4 pt-4 border-t border-gray-100">
+      <div className="space-y-4 pt-4 border-gray-100">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-semibold block mb-2">
@@ -1045,80 +993,181 @@ function ManajemenKKTP() {
 
         {tp && (
           <form onSubmit={handleSave} className="space-y-4">
-            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-4">
-              <div>
-                <label className="text-sm font-bold text-gray-900 block mb-1">
-                  Level 1: Baru Berkembang (Skor 0-
-                  {intervalData.batasBawahSelektif - 1})
-                </label>
-                <textarea
-                  required
-                  rows={2}
-                  className="w-full px-3 py-2 border rounded-lg text-sm text-gray-700"
-                  value={formData.level1}
-                  onChange={(e) =>
-                    setFormData({ ...formData, level1: e.target.value })
-                  }
-                  placeholder="Siswa belum mampu..."
-                />
-              </div>
-              <div>
-                <label className="text-sm font-bold text-gray-900 block mb-1">
-                  Level 2: Layak (Skor {intervalData.batasBawahSelektif}-
-                  {intervalData.batasBawahTuntas - 1})
-                </label>
-                <textarea
-                  required
-                  rows={2}
-                  className="w-full px-3 py-2 border rounded-lg text-sm text-gray-700"
-                  value={formData.level2}
-                  onChange={(e) =>
-                    setFormData({ ...formData, level2: e.target.value })
-                  }
-                  placeholder="Siswa mampu secara terbatas..."
-                />
-              </div>
-              <div>
-                <label className="text-sm font-bold text-gray-900 block mb-1">
-                  Level 3: Cakap (Skor {intervalData.batasBawahTuntas}-
-                  {intervalData.batasAtasLanjut}){" "}
-                  <span className="text-xs text-green-600 ml-2 font-normal">
-                    Ketuntasan Minimal
-                  </span>
-                </label>
-                <textarea
-                  required
-                  rows={2}
-                  className="w-full px-3 py-2 border rounded-lg text-sm text-gray-700"
-                  value={formData.level3}
-                  onChange={(e) =>
-                    setFormData({ ...formData, level3: e.target.value })
-                  }
-                  placeholder="Siswa mampu menyelesaikan..."
-                />
-              </div>
-              <div>
-                <label className="text-sm font-bold text-gray-900 block mb-1">
-                  Level 4: Mahir (Skor {intervalData.batasAtasLanjut + 1}-100)
-                </label>
-                <textarea
-                  required
-                  rows={2}
-                  className="w-full px-3 py-2 border rounded-lg text-sm text-gray-700"
-                  value={formData.level4}
-                  onChange={(e) =>
-                    setFormData({ ...formData, level4: e.target.value })
-                  }
-                  placeholder="Siswa sangat mampu dan dapat..."
-                />
-              </div>
+            <div className="p-4 bg-gray-50 border rounded-xl border-gray-200">
+              <label className="text-sm font-bold text-gray-900 block mb-2">
+                Pilih Jenis KKTP
+              </label>
+              <select
+                className="w-full md:w-1/2 px-3 py-2 border rounded-lg text-sm"
+                value={jenisKKTP}
+                onChange={(e) => setJenisKKTP(e.target.value as KKTPType)}
+              >
+                {currentOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+              </select>
             </div>
+
+            {jenisKKTP === "Interval Nilai" && (
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-4">
+                <div>
+                  <label className="text-sm font-bold text-gray-900 block mb-1">
+                    Level 1: Baru Berkembang (Skor 0-
+                    {intervalData.batasBawahSelektif - 1})
+                  </label>
+                  <textarea
+                    required
+                    rows={2}
+                    className="w-full px-3 py-2 border rounded-lg text-sm text-gray-700"
+                    value={formData.level1}
+                    onChange={(e) =>
+                      setFormData({ ...formData, level1: e.target.value })
+                    }
+                    placeholder="Siswa belum mampu..."
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-bold text-gray-900 block mb-1">
+                    Level 2: Layak (Skor {intervalData.batasBawahSelektif}-
+                    {intervalData.batasBawahTuntas - 1})
+                  </label>
+                  <textarea
+                    required
+                    rows={2}
+                    className="w-full px-3 py-2 border rounded-lg text-sm text-gray-700"
+                    value={formData.level2}
+                    onChange={(e) =>
+                      setFormData({ ...formData, level2: e.target.value })
+                    }
+                    placeholder="Siswa mampu secara terbatas..."
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-bold text-gray-900 block mb-1">
+                    Level 3: Cakap (Skor {intervalData.batasBawahTuntas}-
+                    {intervalData.batasAtasLanjut}){" "}
+                    <span className="text-xs text-green-600 ml-2 font-normal">
+                      Ketuntasan Minimal
+                    </span>
+                  </label>
+                  <textarea
+                    required
+                    rows={2}
+                    className="w-full px-3 py-2 border rounded-lg text-sm text-gray-700"
+                    value={formData.level3}
+                    onChange={(e) =>
+                      setFormData({ ...formData, level3: e.target.value })
+                    }
+                    placeholder="Siswa mampu menyelesaikan..."
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-bold text-gray-900 block mb-1">
+                    Level 4: Mahir (Skor {intervalData.batasAtasLanjut + 1}-100)
+                  </label>
+                  <textarea
+                    required
+                    rows={2}
+                    className="w-full px-3 py-2 border rounded-lg text-sm text-gray-700"
+                    value={formData.level4}
+                    onChange={(e) =>
+                      setFormData({ ...formData, level4: e.target.value })
+                    }
+                    placeholder="Siswa sangat mampu dan dapat..."
+                  />
+                </div>
+              </div>
+            )}
+
+            {jenisKKTP === "Rubrik Deskripsi" && (
+              <div className="space-y-6">
+                {/* 1. Skala Penilaian */}
+                <div className="bg-white p-4 border rounded-xl shadow-sm">
+                  <h4 className="font-bold text-gray-900 mb-2">1. Skala Penilaian</h4>
+                  <p className="text-xs text-gray-500 mb-4">Mulai dari level terendah hingga tertinggi.</p>
+                  <div className="space-y-2">
+                    {skalaPenilaian.map((s, idx) => (
+                      <div key={idx} className="flex gap-2 items-center">
+                        <span className="text-sm w-6 text-gray-400">{idx+1}.</span>
+                        <input
+                          type="text"
+                          value={s}
+                          onChange={(e) => updateSkala(idx, e.target.value)}
+                          className="flex-1 px-3 py-2 border rounded text-sm"
+                          required
+                        />
+                        <button type="button" onClick={() => removeSkala(idx)} className="p-2 text-red-500 hover:bg-red-50 rounded">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button type="button" onClick={addSkala} className="mt-3 flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700">
+                    <Plus className="w-4 h-4" /> Tambah Skala
+                  </button>
+                </div>
+
+                {/* 2. Aspek yang Dinilai */}
+                <div className="bg-white p-4 border rounded-xl shadow-sm">
+                  <h4 className="font-bold text-gray-900 mb-2">2. Aspek yang Dinilai</h4>
+                  <div className="space-y-2">
+                    {aspekPenilaian.map((aspek, idx) => (
+                      <div key={aspek.id} className="flex gap-2 items-center">
+                        <span className="text-sm w-6 text-gray-400">{idx+1}.</span>
+                        <input
+                          type="text"
+                          value={aspek.nama}
+                          onChange={(e) => updateAspek(idx, e.target.value)}
+                          className="flex-1 px-3 py-2 border rounded text-sm"
+                          placeholder="Contoh: Mengembangkan Ide"
+                          required
+                        />
+                        <button type="button" onClick={() => removeAspek(idx)} className="p-2 text-red-500 hover:bg-red-50 rounded">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button type="button" onClick={addAspek} className="mt-3 flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700">
+                    <Plus className="w-4 h-4" /> Tambah Aspek
+                  </button>
+                </div>
+
+                {/* 3. Aturan Ketuntasan */}
+                <div className="bg-white p-4 border rounded-xl shadow-sm">
+                  <h4 className="font-bold text-gray-900 mb-2">3. Aturan Ketuntasan (Logika)</h4>
+                  <p className="text-xs text-gray-500 mb-4">Siswa dinyatakan <b>Tuntas</b> JIKA mencapai minimal skala berikut untuk setiap aspek:</p>
+                  {aspekPenilaian.length === 0 ? (
+                    <p className="text-sm text-yellow-600 bg-yellow-50 p-2 rounded">Tambahkan Aspek Penilaian terlebih dahulu.</p>
+                  ) : skalaPenilaian.length === 0 ? (
+                    <p className="text-sm text-yellow-600 bg-yellow-50 p-2 rounded">Tambahkan Skala Penilaian terlebih dahulu.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {aspekPenilaian.map((aspek) => (
+                        <div key={aspek.id} className="flex flex-col sm:flex-row sm:items-center gap-2">
+                          <span className="text-sm font-medium w-full sm:w-1/2">{aspek.nama}</span>
+                          <span className="text-sm text-gray-500">minimal dinilai</span>
+                          <select
+                            className="px-3 py-1.5 border rounded text-sm flex-1 bg-gray-50"
+                            value={aturanKetuntasan[aspek.id] ?? 0}
+                            onChange={(e) => setAturanKetuntasan({ ...aturanKetuntasan, [aspek.id]: Number(e.target.value) })}
+                          >
+                            {skalaPenilaian.map((skala, idx) => (
+                              <option key={idx} value={idx}>{skala}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             <button
               type="submit"
-              className="w-full py-3 bg-[#007AFF] text-white rounded-xl font-bold"
+              disabled={isSaving}
+              className="w-full py-3 bg-[#007AFF] text-white rounded-xl font-bold disabled:opacity-50"
             >
-              Simpan Rubrik KKTP
+              {isSaving ? "Menyimpan ke Database..." : "Simpan Rubrik KKTP"}
             </button>
           </form>
         )}
