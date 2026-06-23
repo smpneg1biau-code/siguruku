@@ -65,7 +65,8 @@
         "aturanKetuntasan": {
           "type": "object",
           "additionalProperties": { "type": "number" }
-        }
+        },
+        "syaratKetuntasanDaftarCeklis": { "type": "number" }
       }
     },
     "Jurnal": {

@@ -51,6 +51,8 @@ export type Rubrik = {
   skalaPenilaian?: string[];
   aspekPenilaian?: AspekRubrik[];
   aturanKetuntasan?: Record<string, number>; // Maps aspekId to minimum skala index required
+  // Daftar Ceklist specific
+  syaratKetuntasanDaftarCeklis?: number; // Minimal indikator/kriteria yang harus tercapai
 };
 
 export type Jurnal = {
@@ -104,6 +106,7 @@ export type SumatifRecord = {
   buktiUrl?: string;
   tesTulisScores?: Record<number, number>;
   rubrikScores?: Record<string, number>; // Maps aspekId to selected skala index
+  ceklistScores?: Record<string, boolean>; // Maps aspekId to boolean (tercapai atau belum)
 };
 
 export type AuditLogEntry = {

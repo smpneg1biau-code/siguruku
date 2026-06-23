@@ -839,6 +839,7 @@ function ManajemenKKTP() {
   const [skalaPenilaian, setSkalaPenilaian] = useState<string[]>(["Mulai Memahami", "Memahami", "Sangat Memahami"]);
   const [aspekPenilaian, setAspekPenilaian] = useState<AspekRubrik[]>([]);
   const [aturanKetuntasan, setAturanKetuntasan] = useState<Record<string, number>>({});
+  const [syaratKetuntasanDaftarCeklis, setSyaratKetuntasanDaftarCeklis] = useState<number>(0);
 
   const [formData, setFormData] = useState({
     level1: "", // Baru Berkembang
@@ -871,12 +872,14 @@ function ManajemenKKTP() {
       setSkalaPenilaian(existingRubrik.skalaPenilaian || ["Mulai Memahami", "Memahami", "Sangat Memahami"]);
       setAspekPenilaian(existingRubrik.aspekPenilaian || []);
       setAturanKetuntasan(existingRubrik.aturanKetuntasan || {});
+      setSyaratKetuntasanDaftarCeklis(existingRubrik.syaratKetuntasanDaftarCeklis || 0);
     } else {
       setJenisKKTP("Interval Nilai");
       setFormData({ level1: "", level2: "", level3: "", level4: "" });
       setSkalaPenilaian(["Mulai Memahami", "Memahami", "Sangat Memahami"]);
       setAspekPenilaian([]);
       setAturanKetuntasan({});
+      setSyaratKetuntasanDaftarCeklis(0);
     }
   }, [existingRubrik]);
 
@@ -925,7 +928,8 @@ function ManajemenKKTP() {
           jenisKKTP, 
           skalaPenilaian, 
           aspekPenilaian, 
-          aturanKetuntasan 
+          aturanKetuntasan,
+          syaratKetuntasanDaftarCeklis
         }, true);
       } else {
         await addItem("agmp_rubrik", {
@@ -935,7 +939,8 @@ function ManajemenKKTP() {
           jenisKKTP,
           skalaPenilaian,
           aspekPenilaian,
-          aturanKetuntasan
+          aturanKetuntasan,
+          syaratKetuntasanDaftarCeklis
         }, true);
       }
       showToast("Rubrik KKTP berhasil disimpan ke dalam database", "success");
@@ -1158,6 +1163,57 @@ function ManajemenKKTP() {
                       ))}
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {jenisKKTP === "Daftar Ceklist" && (
+              <div className="space-y-6">
+                <div className="bg-white p-4 border rounded-xl shadow-sm">
+                  <h4 className="font-bold text-gray-900 mb-2">1. Daftar Kriteria / Indikator</h4>
+                  <p className="text-xs text-gray-500 mb-4">Tambahkan indikator yang harus dicapai siswa.</p>
+                  <div className="space-y-2">
+                    {aspekPenilaian.map((aspek, idx) => (
+                      <div key={aspek.id} className="flex gap-2 items-center">
+                        <span className="text-sm w-6 text-gray-400">{idx+1}.</span>
+                        <input
+                          type="text"
+                          value={aspek.nama}
+                          onChange={(e) => updateAspek(idx, e.target.value)}
+                          className="flex-1 px-3 py-2 border rounded text-sm"
+                          placeholder="Contoh: Menyelesaikan tugas tepat waktu"
+                          required
+                        />
+                        <button type="button" onClick={() => removeAspek(idx)} className="p-2 text-red-500 hover:bg-red-50 rounded">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button type="button" onClick={addAspek} className="mt-3 flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700">
+                    <Plus className="w-4 h-4" /> Tambah Indikator
+                  </button>
+                </div>
+
+                <div className="bg-white p-4 border rounded-xl shadow-sm">
+                  <h4 className="font-bold text-gray-900 mb-2">2. Syarat Ketuntasan</h4>
+                  <p className="text-xs text-gray-500 mb-4">Tentukan minimal jumlah kriteria yang harus tercapai agar siswa dianggap tuntas.</p>
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm font-medium">Minimal tercapai:</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max={Math.max(1, aspekPenilaian.length)}
+                      value={syaratKetuntasanDaftarCeklis || 1}
+                      onChange={(e) => {
+                        let val = parseInt(e.target.value) || 1;
+                        if (val > aspekPenilaian.length) val = aspekPenilaian.length;
+                        setSyaratKetuntasanDaftarCeklis(val);
+                      }}
+                      className="w-20 px-3 py-2 border rounded text-sm text-center"
+                    />
+                    <span className="text-sm text-gray-500">dari {aspekPenilaian.length} kriteria</span>
+                  </div>
                 </div>
               </div>
             )}

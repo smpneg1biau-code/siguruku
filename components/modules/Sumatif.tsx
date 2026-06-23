@@ -231,6 +231,40 @@ export default function Sumatif() {
     }, true);
   };
 
+  const handleDaftarCeklistVal = (sId: string, aspekId: string, isTercapai: boolean) => {
+    if (!existingSumatif) return;
+    const currentScores = existingSumatif.records[sId].ceklistScores || {};
+    const newScores = { ...currentScores, [aspekId]: isTercapai };
+
+    const rubrik = state.agmp_rubrik.find((r) => r.tpId === tpId);
+    let status: "TUNTAS" | "BELUM TUNTAS" = "BELUM TUNTAS";
+    let nilai = 0;
+    
+    if (rubrik && rubrik.jenisKKTP === "Daftar Ceklist" && rubrik.aspekPenilaian) {
+      const totalKriteria = rubrik.aspekPenilaian.length;
+      const tercapaiCount = Object.values(newScores).filter(Boolean).length;
+      const syaratMinimal = rubrik.syaratKetuntasanDaftarCeklis || 1;
+      
+      nilai = totalKriteria > 0 ? Math.round((tercapaiCount / totalKriteria) * 100) : 0;
+      status = tercapaiCount >= syaratMinimal ? "TUNTAS" : "BELUM TUNTAS";
+    }
+
+    const level = status === "TUNTAS" ? 3 : 1; 
+
+    updateItem("agmp_sumatif", sumatifId!, {
+      records: {
+        ...existingSumatif.records,
+        [sId]: {
+          ...existingSumatif.records[sId],
+          ceklistScores: newScores,
+          nilai,
+          level,
+          status,
+        },
+      },
+    }, true);
+  };
+
   const handleCatatanUpdate = (sId: string, catatan: string) => {
     if (!existingSumatif) return;
     updateItem("agmp_sumatif", sumatifId!, {
@@ -580,6 +614,40 @@ export default function Sumatif() {
                       </table>
                     </div>
                   </div>
+                ) : rubrik?.jenisKKTP === "Daftar Ceklist" && rubrik.aspekPenilaian ? (
+                  <div className="space-y-4">
+                    <label className="text-sm font-bold text-gray-700">
+                      Penilaian Daftar Ceklist
+                      <span className="ml-2 font-normal text-xs text-gray-500">
+                        (Syarat Ketuntasan: Minimal {rubrik.syaratKetuntasanDaftarCeklis || 1} Kriteria Tercapai)
+                      </span>
+                    </label>
+                    <div className="overflow-x-auto border rounded-xl border-gray-200">
+                      <table className="w-full text-sm text-left">
+                        <thead className="bg-gray-50 border-b border-gray-100/50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                          <tr>
+                            <th className="p-3 w-3/4">Kriteria / Indikator</th>
+                            <th className="p-3 w-1/4 text-center">Tercapai</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {rubrik.aspekPenilaian.map(aspek => (
+                            <tr key={aspek.id} className="hover:bg-gray-50/50">
+                              <td className="p-3 font-medium text-gray-900">{aspek.nama}</td>
+                              <td className="p-3 text-center">
+                                <input 
+                                  type="checkbox"
+                                  className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                  checked={activeRecord.ceklistScores?.[aspek.id] || false}
+                                  onChange={(e) => handleDaftarCeklistVal(student.id, aspek.id, e.target.checked)}
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 ) : (
                   <>
                     <label className="text-sm font-bold text-gray-700">
@@ -736,18 +804,22 @@ export default function Sumatif() {
 
                     let tindakLanjut = "";
                     let tlBadge = "";
-                    if (r.nilai < interval.batasBawahSelektif) {
-                      tindakLanjut = "Remedial Total";
-                      tlBadge = "bg-red-100 text-red-700";
-                    } else if (r.nilai < interval.batasBawahTuntas) {
-                      tindakLanjut = "Remedial Selektif";
-                      tlBadge = "bg-orange-100 text-orange-700";
-                    } else if (r.nilai <= interval.batasAtasLanjut) {
-                      tindakLanjut = "Lanjut Materi";
-                      tlBadge = "bg-green-100 text-green-700";
+                    if (r.status === "TUNTAS") {
+                      if (r.nilai <= interval.batasAtasLanjut) {
+                        tindakLanjut = "Lanjut Materi";
+                        tlBadge = "bg-green-100 text-green-700";
+                      } else {
+                        tindakLanjut = "Pengayaan";
+                        tlBadge = "bg-blue-100 text-blue-700";
+                      }
                     } else {
-                      tindakLanjut = "Pengayaan";
-                      tlBadge = "bg-blue-100 text-blue-700";
+                      if (r.nilai < interval.batasBawahSelektif) {
+                        tindakLanjut = "Remedial Total";
+                        tlBadge = "bg-red-100 text-red-700";
+                      } else {
+                        tindakLanjut = "Remedial Selektif";
+                        tlBadge = "bg-orange-100 text-orange-700";
+                      }
                     }
 
                     return (
