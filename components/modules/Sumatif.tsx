@@ -559,47 +559,7 @@ export default function Sumatif() {
 
             <div className="p-6 space-y-6">
               <div className="space-y-3">
-                {existingSumatif?.teknik === "Tes Tulis (PG/Esai)" ? (
-                  <div className="space-y-3">
-                    <label className="text-sm font-bold text-gray-700">
-                      Input Nilai Per Soal (Pilih dari{" "}
-                      {existingSumatif?.tesTulisConfig?.length || 0} Soal)
-                    </label>
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                      {existingSumatif?.tesTulisConfig?.map((config, idx) => {
-                        const val =
-                          activeRecord.tesTulisScores?.[config.id] || 0;
-                        return (
-                          <div
-                            key={config.id}
-                            className="p-3 border rounded-xl bg-gray-50 flex flex-col gap-1 shadow-sm border-gray-200"
-                          >
-                            <span className="text-xs font-bold text-gray-600">
-                              Soal {idx + 1}{" "}
-                              <span className="font-normal text-gray-400">
-                                (Max: {config.bobotMaksimal})
-                              </span>
-                            </span>
-                            <input
-                              type="number"
-                              min="0"
-                              max={config.bobotMaksimal}
-                              value={val === 0 ? "" : val}
-                              onChange={(e) =>
-                                handleTesTulisVal(
-                                  student.id,
-                                  config.id,
-                                  Number(e.target.value),
-                                )
-                              }
-                              className="w-full border p-2 rounded bg-white text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : rubrik?.jenisKKTP === "Rubrik Deskripsi" && rubrik.aspekPenilaian && rubrik.skalaPenilaian ? (
+                {rubrik?.jenisKKTP === "Rubrik Deskripsi" && rubrik.aspekPenilaian && rubrik.skalaPenilaian ? (
                   <div className="space-y-4">
                     <label className="text-sm font-bold text-gray-700">
                       Penilaian Rubrik Deskripsi (Ketuntasan dievaluasi otomatis)
@@ -666,6 +626,46 @@ export default function Sumatif() {
                           ))}
                         </tbody>
                       </table>
+                    </div>
+                  </div>
+                ) : existingSumatif?.teknik === "Tes Tulis (PG/Esai)" ? (
+                  <div className="space-y-3">
+                    <label className="text-sm font-bold text-gray-700">
+                      Input Nilai Per Soal (Pilih dari{" "}
+                      {existingSumatif?.tesTulisConfig?.length || 0} Soal)
+                    </label>
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                      {existingSumatif?.tesTulisConfig?.map((config, idx) => {
+                        const val =
+                          activeRecord.tesTulisScores?.[config.id] || 0;
+                        return (
+                          <div
+                            key={config.id}
+                            className="p-3 border rounded-xl bg-gray-50 flex flex-col gap-1 shadow-sm border-gray-200"
+                          >
+                            <span className="text-xs font-bold text-gray-600">
+                              Soal {idx + 1}{" "}
+                              <span className="font-normal text-gray-400">
+                                (Max: {config.bobotMaksimal})
+                              </span>
+                            </span>
+                            <input
+                              type="number"
+                              min="0"
+                              max={config.bobotMaksimal}
+                              value={val === 0 ? "" : val}
+                              onChange={(e) =>
+                                handleTesTulisVal(
+                                  student.id,
+                                  config.id,
+                                  Number(e.target.value),
+                                )
+                              }
+                              className="w-full border p-2 rounded bg-white text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ) : (
