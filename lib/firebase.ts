@@ -1,28 +1,33 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { 
-  initializeFirestore, 
-  persistentLocalCache, 
-  persistentMultipleTabManager 
+  initializeFirestore,
+  getFirestore
 } from "firebase/firestore";
 import firebaseAppletConfig from "../firebase-applet-config.json";
 
 // Gunakan environment variables dari Vercel, atau hardcode config
 const firebaseConfig = {
-  apiKey: firebaseAppletConfig.apiKey,
-  authDomain: firebaseAppletConfig.authDomain,
-  projectId: firebaseAppletConfig.projectId,
-  storageBucket: firebaseAppletConfig.storageBucket,
-  messagingSenderId: firebaseAppletConfig.messagingSenderId,
-  appId: firebaseAppletConfig.appId,
-  measurementId: firebaseAppletConfig.measurementId,
-  firestoreDatabaseId: firebaseAppletConfig.firestoreDatabaseId
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || firebaseAppletConfig.apiKey,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || firebaseAppletConfig.authDomain,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || firebaseAppletConfig.projectId,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || firebaseAppletConfig.storageBucket,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || firebaseAppletConfig.messagingSenderId,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || firebaseAppletConfig.appId,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || firebaseAppletConfig.measurementId,
+  firestoreDatabaseId: process.env.NEXT_PUBLIC_FIRESTORE_DATABASE_ID || firebaseAppletConfig.firestoreDatabaseId
 };
 
 export const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore with offline persistence
-export const db = initializeFirestore(app, {}, firebaseConfig.firestoreDatabaseId !== 'remixed-firestore-database-id' ? firebaseConfig.firestoreDatabaseId : undefined);
+// Initialize Firestore
+export const db = (() => {
+  const dbId = firebaseConfig.firestoreDatabaseId;
+  if (dbId && dbId !== 'remixed-firestore-database-id' && dbId !== 'default' && dbId !== '(default)') {
+    return initializeFirestore(app, {}, dbId);
+  }
+  return getFirestore(app);
+})();
 
 export const auth = getAuth(app);
 
