@@ -64,6 +64,7 @@ export default function Sumatif() {
     : sumatifMatches[0];
   const sumatifId = existingSumatif?.id;
   const rubrik = state.agmp_rubrik.find((r) => r.tpId === tpId);
+  const kktpList = state.agmp_kktp.filter((k) => k.tpId === tpId).sort((a, b) => a.urutan - b.urutan);
   const siswaList = state.agmp_siswa
     .filter((s) => s.kelasId === kelasId)
     .sort((a, b) => a.nama.localeCompare(b.nama));
@@ -409,11 +410,27 @@ export default function Sumatif() {
 
           <div>
             <label className="text-sm font-semibold block mb-3">
-              Langkah 2: Review Rubrik
+              Langkah 2: Review KKTP & Rubrik
             </label>
-            <div className="p-5 bg-gray-50 border border-gray-200 rounded-xl">
+            <div className="p-5 bg-gray-50 border border-gray-200 rounded-xl space-y-4">
+              {kktpList.length > 0 ? (
+                <div>
+                  <h4 className="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">Indikator KKTP:</h4>
+                  <ul className="list-disc pl-5 text-sm text-gray-600 space-y-1">
+                    {kktpList.map((kktp, idx) => (
+                      <li key={kktp.id}>{kktp.deskripsi}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <div className="text-sm text-orange-600 italic">Belum ada KKTP yang dikonfigurasi untuk Tujuan Pembelajaran ini.</div>
+              )}
+              
+              <hr className="border-gray-200" />
+              
               {rubrik ? (
                 <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wide">Rubrik Penilaian ({rubrik.jenisKKTP || "Rubrik Deskripsi"}):</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="bg-red-50 p-3 rounded-lg border border-red-100">
                       <p className="text-xs font-bold text-red-800 mb-1">
@@ -445,7 +462,7 @@ export default function Sumatif() {
                 <div className="flex flex-col items-center py-6 text-gray-500 gap-2">
                   <AlertTriangle className="w-8 h-8 text-orange-400" />
                   <p className="text-sm text-center">
-                    Rubrik KKTP belum dikonfigurasi untuk TP ini.
+                    Rubrik belum dikonfigurasi untuk TP ini.
                     <br />
                     Atur di menu Konfigurasi terlebih dahulu.
                   </p>
