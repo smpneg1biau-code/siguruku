@@ -206,26 +206,43 @@ export default function Sumatif() {
 
     const rubrik = state.agmp_rubrik.find((r) => r.tpId === tpId);
     let status: "TUNTAS" | "BELUM TUNTAS" = "TUNTAS";
+    let nilai = 0;
+    let level = 1;
     
-    if (rubrik && rubrik.jenisKKTP === "Rubrik Deskripsi" && rubrik.aspekPenilaian) {
-      for (const aspek of rubrik.aspekPenilaian) {
-        const requiredSkala = rubrik.aturanKetuntasan?.[aspek.id] ?? 0;
-        const actualSkala = newScores[aspek.id];
-        
-        if (actualSkala === undefined || actualSkala < requiredSkala) {
-          status = "BELUM TUNTAS";
-          break;
-        }
-      }
-    }
-
-    const level = status === "TUNTAS" ? 3 : 1; 
     const interval = {
       batasBawahTuntas: 75,
       batasAtasLanjut: 85,
       batasBawahSelektif: 61,
     };
-    const nilai = status === "TUNTAS" ? interval.batasBawahTuntas : interval.batasBawahSelektif - 1;
+
+    if (rubrik && rubrik.jenisKKTP === "Rubrik Deskripsi" && rubrik.aspekPenilaian) {
+      let totalSkor = 0;
+
+      for (const aspek of rubrik.aspekPenilaian) {
+        const requiredSkala = rubrik.aturanKetuntasan?.[aspek.id] ?? 0;
+        const actualSkala = newScores[aspek.id];
+        
+        if (actualSkala !== undefined) {
+          totalSkor += (actualSkala + 1);
+        }
+
+        if (actualSkala === undefined || actualSkala < requiredSkala) {
+          status = "BELUM TUNTAS";
+        }
+      }
+
+      const maxSkala = rubrik.skalaPenilaian?.length || 4;
+      const skorMaksimal = rubrik.aspekPenilaian.length * maxSkala;
+      
+      if (skorMaksimal > 0) {
+        nilai = Number(((totalSkor / skorMaksimal) * 100).toFixed(2));
+      }
+    }
+
+    if (nilai >= interval.batasAtasLanjut) level = 4;
+    else if (nilai >= interval.batasBawahTuntas) level = 3;
+    else if (nilai >= interval.batasBawahSelektif) level = 2;
+    else level = 1;
 
     updateItem("agmp_sumatif", sumatifId!, {
       records: {
