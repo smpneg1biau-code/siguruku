@@ -64,7 +64,6 @@ export default function Sumatif() {
     : sumatifMatches[0];
   const sumatifId = existingSumatif?.id;
   const rubrik = state.agmp_rubrik.find((r) => r.tpId === tpId);
-  const kktpList = state.agmp_kktp.filter((k) => k.tpId === tpId).sort((a, b) => a.urutan - b.urutan);
   const siswaList = state.agmp_siswa
     .filter((s) => s.kelasId === kelasId)
     .sort((a, b) => a.nama.localeCompare(b.nama));
@@ -86,6 +85,16 @@ export default function Sumatif() {
       showToast('Tidak ada Tahun Ajaran yang aktif!', 'error');
       return;
     }
+
+    if (existingSumatif) {
+      updateItem("agmp_sumatif", existingSumatif.id, {
+        teknik,
+        tesTulisConfig: teknik === "Tes Tulis (PG/Esai)" ? tesTulisConfig : undefined,
+      });
+      setMode("rekap");
+      return;
+    }
+
     const newId = generateId();
     const records: any = {};
     siswaList.forEach(
@@ -413,56 +422,50 @@ export default function Sumatif() {
               Langkah 2: Review KKTP & Rubrik
             </label>
             <div className="p-5 bg-gray-50 border border-gray-200 rounded-xl space-y-4">
-              {kktpList.length > 0 ? (
-                <div>
-                  <h4 className="text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">Indikator KKTP:</h4>
-                  <ul className="list-disc pl-5 text-sm text-gray-600 space-y-1">
-                    {kktpList.map((kktp, idx) => (
-                      <li key={kktp.id}>{kktp.deskripsi}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : (
-                <div className="text-sm text-orange-600 italic">Belum ada KKTP yang dikonfigurasi untuk Tujuan Pembelajaran ini.</div>
-              )}
-              
-              <hr className="border-gray-200" />
-              
               {rubrik ? (
                 <div className="space-y-4">
-                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wide">Rubrik Penilaian ({rubrik.jenisKKTP || "Rubrik Deskripsi"}):</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-red-50 p-3 rounded-lg border border-red-100">
-                      <p className="text-xs font-bold text-red-800 mb-1">
-                        Baru Berkembang (L1)
-                      </p>
-                      <p className="text-xs text-red-700">{rubrik.level1}</p>
+                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wide">Konfigurasi KKTP ({rubrik.jenisKKTP || "Interval Nilai"}):</h4>
+                  
+                  {rubrik.aspekPenilaian && rubrik.aspekPenilaian.length > 0 && (
+                    <div>
+                      <h5 className="text-xs font-bold text-gray-600 mb-2">Aspek/Indikator yang dinilai:</h5>
+                      <ul className="list-disc pl-5 text-sm text-gray-600 space-y-1 mb-4">
+                        {rubrik.aspekPenilaian.map((aspek) => (
+                          <li key={aspek.id}>{aspek.nama}</li>
+                        ))}
+                      </ul>
                     </div>
-                    <div className="bg-orange-50 p-3 rounded-lg border border-orange-100">
-                      <p className="text-xs font-bold text-orange-800 mb-1">
-                        Layak (L2)
-                      </p>
-                      <p className="text-xs text-orange-700">{rubrik.level2}</p>
+                  )}
+
+                  {rubrik.level1 && rubrik.level4 && (
+                    <div>
+                      <h5 className="text-xs font-bold text-gray-600 mb-2">Deskripsi Level:</h5>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="bg-red-50 p-3 rounded-lg border border-red-100">
+                          <p className="text-xs font-bold text-red-800 mb-1">Baru Berkembang (L1)</p>
+                          <p className="text-xs text-red-700">{rubrik.level1}</p>
+                        </div>
+                        <div className="bg-orange-50 p-3 rounded-lg border border-orange-100">
+                          <p className="text-xs font-bold text-orange-800 mb-1">Layak (L2)</p>
+                          <p className="text-xs text-orange-700">{rubrik.level2}</p>
+                        </div>
+                        <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                          <p className="text-xs font-bold text-green-800 mb-1">Cakap (L3)</p>
+                          <p className="text-xs text-green-700">{rubrik.level3}</p>
+                        </div>
+                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                          <p className="text-xs font-bold text-blue-800 mb-1">Mahir (L4)</p>
+                          <p className="text-xs text-blue-700">{rubrik.level4}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="bg-green-50 p-3 rounded-lg border border-green-100">
-                      <p className="text-xs font-bold text-green-800 mb-1">
-                        Cakap (L3)
-                      </p>
-                      <p className="text-xs text-green-700">{rubrik.level3}</p>
-                    </div>
-                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                      <p className="text-xs font-bold text-blue-800 mb-1">
-                        Mahir (L4)
-                      </p>
-                      <p className="text-xs text-blue-700">{rubrik.level4}</p>
-                    </div>
-                  </div>
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-col items-center py-6 text-gray-500 gap-2">
                   <AlertTriangle className="w-8 h-8 text-orange-400" />
                   <p className="text-sm text-center">
-                    Rubrik belum dikonfigurasi untuk TP ini.
+                    Rubrik / KKTP belum dikonfigurasi untuk TP ini.
                     <br />
                     Atur di menu Konfigurasi terlebih dahulu.
                   </p>
@@ -476,7 +479,7 @@ export default function Sumatif() {
             disabled={!rubrik || siswaList.length === 0}
             className="w-full bg-[#007AFF] text-white py-3 rounded-xl font-bold disabled:opacity-50 hover:bg-blue-600 transition-colors"
           >
-            Mulai Penilaian ({siswaList.length} Murid)
+            {existingSumatif ? "Simpan Perubahan & Kembali" : `Mulai Penilaian (${siswaList.length} Murid)`}
           </button>
         </div>
       )}
@@ -770,6 +773,12 @@ export default function Sumatif() {
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <div className="flex gap-2">
+                <button
+                  onClick={() => setMode("init")}
+                  className="px-4 py-2 bg-blue-50 text-blue-700 font-bold rounded-lg text-sm hover:bg-blue-100 transition-colors"
+                >
+                  Ubah Konfigurasi Asesmen
+                </button>
                 <button
                   onClick={() => setMode("wizard")}
                   className="px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded-lg text-sm hover:bg-gray-200 transition-colors"
