@@ -29,9 +29,9 @@ const StoreContext = createContext<StoreContextType | null>(null);
 
 export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, setState] = useState<AppState>(defaultState);
-  const [user, setUser] = useState<any>({ uid: 'dev-local-123', email: 'dev@local.com' });
-  const [loadingAuth, setLoadingAuth] = useState(false);
-  const [loadingData, setLoadingData] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+  const [loadingData, setLoadingData] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(true);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
@@ -48,9 +48,11 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // Auth bypass for development
-    // const unsubscribe = onAuthStateChanged(auth, async (currentUser) => { ... });
-    // return unsubscribe;
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      setLoadingAuth(false);
+    });
+    return unsubscribe;
   }, []);
 
   useEffect(() => {
