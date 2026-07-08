@@ -101,10 +101,13 @@ export default function Sumatif() {
     }
 
     if (existingSumatif) {
-      updateItem("agmp_sumatif", existingSumatif.id, {
-        teknik,
-        tesTulisConfig: teknik === "Tes Tulis (PG/Esai)" ? tesTulisConfig : undefined,
-      });
+      const updates: any = { teknik };
+      if (teknik === "Tes Tulis (PG/Esai)") {
+        updates.tesTulisConfig = tesTulisConfig;
+      } else {
+        updates.tesTulisConfig = null;
+      }
+      updateItem("agmp_sumatif", existingSumatif.id, updates);
       setMode("rekap");
       return;
     }
@@ -122,7 +125,7 @@ export default function Sumatif() {
         }),
     );
 
-    addItem("agmp_sumatif", {
+    const itemData: any = {
       id: newId,
       taId: activeTaId,
       tpId,
@@ -131,9 +134,11 @@ export default function Sumatif() {
       isLocked: false,
       records,
       auditLog: [],
-      tesTulisConfig:
-        teknik === "Tes Tulis (PG/Esai)" ? tesTulisConfig : undefined,
-    });
+    };
+    if (teknik === "Tes Tulis (PG/Esai)") {
+      itemData.tesTulisConfig = tesTulisConfig;
+    }
+    addItem("agmp_sumatif", itemData);
     setMode("wizard");
     setActiveSiswaIdx(0);
   };

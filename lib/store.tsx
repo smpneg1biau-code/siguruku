@@ -167,14 +167,23 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
     if (!user) return;
 
     // Optimistic UI
+    let fullItem: any = null;
+
     setState((prev) => {
       const list = prev[key] as any[];
-      const nextList = list.map((item) => (item.id === id ? { ...item, ...updates } : item));
+      const nextList = list.map((item) => {
+        if (item.id === id) {
+          fullItem = { ...item, ...updates };
+          return fullItem;
+        }
+        return item;
+      });
       return { ...prev, [key]: nextList };
     });
 
     const docRef = doc(db, 'users', user.uid, key as string, id);
-    return setDoc(docRef, updates, { merge: true })
+    const payload = fullItem || updates;
+    return setDoc(docRef, payload, { merge: true })
       .then(() => { if (!silent) showToast("Data berhasil diupdate", "success"); })
       .catch(err => {
         handleFirestoreError(err, OperationType.UPDATE, `users/${user.uid}/${key as string}/${id}`);
