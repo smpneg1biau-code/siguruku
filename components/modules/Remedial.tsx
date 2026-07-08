@@ -95,9 +95,12 @@ export default function Remedial() {
 
     if (rubrik && rubrik.jenisKKTP === "Rubrik Deskripsi" && rubrik.aspekPenilaian) {
       let totalSkor = 0;
+      let skorMaksimal = 0;
       for (const aspek of rubrik.aspekPenilaian) {
         const requiredSkala = rubrik.aturanKetuntasan?.[aspek.id] ?? 0;
         const actualSkala = newScores[aspek.id];
+        const maxSkalaAspek = (aspek.skalaPenilaian?.length || rubrik.skalaPenilaian?.length || 4);
+        skorMaksimal += maxSkalaAspek;
         
         if (actualSkala !== undefined) {
           totalSkor += (actualSkala + 1);
@@ -108,9 +111,6 @@ export default function Remedial() {
         }
       }
 
-      const maxSkala = rubrik.skalaPenilaian?.length || 4;
-      const skorMaksimal = rubrik.aspekPenilaian.length * maxSkala;
-      
       if (skorMaksimal > 0) {
         nilai = Number(((totalSkor / skorMaksimal) * 100).toFixed(2));
       }
@@ -587,7 +587,7 @@ export default function Remedial() {
                         siswa setelah program selesai. Hanya menampilkan indikator yang belum tercapai.
                       </p>
 
-                      {rubrik?.jenisKKTP === "Rubrik Deskripsi" && rubrik.aspekPenilaian && rubrik.skalaPenilaian ? (
+                      {rubrik?.jenisKKTP === "Rubrik Deskripsi" && rubrik.aspekPenilaian ? (
                         <div className="overflow-x-auto border rounded-xl border-gray-200 mb-4">
                           <table className="w-full text-sm text-left">
                             <thead className="bg-gray-50 border-b border-gray-100/50 text-xs font-bold text-gray-500 uppercase tracking-wider">
@@ -601,7 +601,9 @@ export default function Remedial() {
                                 const required = rubrik.aturanKetuntasan?.[aspek.id] ?? 0;
                                 const actual = sumatifAsli?.rubrikScores?.[aspek.id];
                                 return actual === undefined || actual < required;
-                              }).map(aspek => (
+                              }).map(aspek => {
+                                const skalaOptions = aspek.skalaPenilaian || rubrik.skalaPenilaian || [];
+                                return (
                                 <tr key={aspek.id} className="hover:bg-gray-50/50">
                                   <td className="p-3 font-medium text-gray-900">{aspek.nama}</td>
                                   <td className="p-3">
@@ -611,13 +613,13 @@ export default function Remedial() {
                                       onChange={(e) => handleRemedialRubrikVal(r, sumatifAsli, rubrik, aspek.id, Number(e.target.value))}
                                     >
                                       <option value="" disabled>Pilih Skala</option>
-                                      {rubrik.skalaPenilaian!.map((skala, idx) => (
+                                      {skalaOptions.map((skala, idx) => (
                                         <option key={idx} value={idx}>{skala}</option>
                                       ))}
                                     </select>
                                   </td>
                                 </tr>
-                              ))}
+                              )})}
                               {rubrik.aspekPenilaian.filter(aspek => {
                                 const required = rubrik.aturanKetuntasan?.[aspek.id] ?? 0;
                                 const actual = sumatifAsli?.rubrikScores?.[aspek.id];

@@ -217,10 +217,13 @@ export default function Sumatif() {
 
     if (rubrik && rubrik.jenisKKTP === "Rubrik Deskripsi" && rubrik.aspekPenilaian) {
       let totalSkor = 0;
+      let skorMaksimal = 0;
 
       for (const aspek of rubrik.aspekPenilaian) {
         const requiredSkala = rubrik.aturanKetuntasan?.[aspek.id] ?? 0;
         const actualSkala = newScores[aspek.id];
+        const maxSkalaAspek = (aspek.skalaPenilaian?.length || rubrik.skalaPenilaian?.length || 4);
+        skorMaksimal += maxSkalaAspek;
         
         if (actualSkala !== undefined) {
           totalSkor += (actualSkala + 1);
@@ -230,9 +233,6 @@ export default function Sumatif() {
           status = "BELUM TUNTAS";
         }
       }
-
-      const maxSkala = rubrik.skalaPenilaian?.length || 4;
-      const skorMaksimal = rubrik.aspekPenilaian.length * maxSkala;
       
       if (skorMaksimal > 0) {
         nilai = Number(((totalSkor / skorMaksimal) * 100).toFixed(2));
@@ -576,7 +576,7 @@ export default function Sumatif() {
 
             <div className="p-6 space-y-6">
               <div className="space-y-3">
-                {rubrik?.jenisKKTP === "Rubrik Deskripsi" && rubrik.aspekPenilaian && rubrik.skalaPenilaian ? (
+                {rubrik?.jenisKKTP === "Rubrik Deskripsi" && rubrik.aspekPenilaian ? (
                   <div className="space-y-4">
                     <label className="text-sm font-bold text-gray-700">
                       Penilaian Rubrik Deskripsi (Ketuntasan dievaluasi otomatis)
@@ -590,7 +590,9 @@ export default function Sumatif() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                          {rubrik.aspekPenilaian.map(aspek => (
+                          {rubrik.aspekPenilaian.map(aspek => {
+                            const skalaOptions = aspek.skalaPenilaian || rubrik.skalaPenilaian || [];
+                            return (
                             <tr key={aspek.id} className="hover:bg-gray-50/50">
                               <td className="p-3 font-medium text-gray-900">{aspek.nama}</td>
                               <td className="p-3">
@@ -600,13 +602,13 @@ export default function Sumatif() {
                                   onChange={(e) => handleRubrikVal(student.id, aspek.id, Number(e.target.value))}
                                 >
                                   <option value="" disabled>Pilih Skala</option>
-                                  {rubrik.skalaPenilaian!.map((skala, idx) => (
+                                  {skalaOptions.map((skala, idx) => (
                                     <option key={idx} value={idx}>{skala}</option>
                                   ))}
                                 </select>
                               </td>
                             </tr>
-                          ))}
+                          )})}
                         </tbody>
                       </table>
                     </div>

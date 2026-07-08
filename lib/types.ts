@@ -36,6 +36,7 @@ export type KKTPType = "Daftar Ceklist" | "Rubrik Deskripsi" | "Interval Nilai" 
 export type AspekRubrik = {
   id: string;
   nama: string;
+  skalaPenilaian?: string[];
 };
 
 export type Rubrik = {

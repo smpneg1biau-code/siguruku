@@ -870,7 +870,10 @@ function ManajemenKKTP() {
         level4: existingRubrik.level4 || "",
       });
       setSkalaPenilaian(existingRubrik.skalaPenilaian || ["Mulai Memahami", "Memahami", "Sangat Memahami"]);
-      setAspekPenilaian(existingRubrik.aspekPenilaian || []);
+      setAspekPenilaian((existingRubrik.aspekPenilaian || []).map(a => ({
+        ...a,
+        skalaPenilaian: a.skalaPenilaian || existingRubrik.skalaPenilaian || ["Mulai Memahami", "Memahami", "Sangat Memahami"]
+      })));
       setAturanKetuntasan(existingRubrik.aturanKetuntasan || {});
       setSyaratKetuntasanDaftarCeklis(existingRubrik.syaratKetuntasanDaftarCeklis || 0);
     } else {
@@ -894,9 +897,29 @@ function ManajemenKKTP() {
   };
   const removeSkala = (index: number) => setSkalaPenilaian(skalaPenilaian.filter((_, i) => i !== index));
 
-  const addAspek = () => setAspekPenilaian([...aspekPenilaian, { id: generateId(), nama: "Aspek Baru" }]);
+  const addAspek = () => setAspekPenilaian([...aspekPenilaian, { id: generateId(), nama: "Aspek Baru", skalaPenilaian: ["Mulai Memahami", "Memahami", "Sangat Memahami"] }]);
   const updateAspek = (index: number, val: string) => {
     const n = [...aspekPenilaian]; n[index].nama = val; setAspekPenilaian(n);
+  };
+  const addAspekSkala = (aspekIndex: number) => {
+    const n = [...aspekPenilaian];
+    const sk = n[aspekIndex].skalaPenilaian || [];
+    n[aspekIndex].skalaPenilaian = [...sk, "Skala Baru"];
+    setAspekPenilaian(n);
+  };
+  const updateAspekSkala = (aspekIndex: number, skalaIndex: number, val: string) => {
+    const n = [...aspekPenilaian];
+    const sk = n[aspekIndex].skalaPenilaian || [];
+    const newSk = [...sk];
+    newSk[skalaIndex] = val;
+    n[aspekIndex].skalaPenilaian = newSk;
+    setAspekPenilaian(n);
+  };
+  const removeAspekSkala = (aspekIndex: number, skalaIndex: number) => {
+    const n = [...aspekPenilaian];
+    const sk = n[aspekIndex].skalaPenilaian || [];
+    n[aspekIndex].skalaPenilaian = sk.filter((_, i) => i !== skalaIndex);
+    setAspekPenilaian(n);
   };
   const removeAspek = (index: number) => {
     const id = aspekPenilaian[index].id;
@@ -1084,83 +1107,87 @@ function ManajemenKKTP() {
 
             {jenisKKTP === "Rubrik Deskripsi" && (
               <div className="space-y-6">
-                {/* 1. Skala Penilaian */}
+                {/* 1. Aspek & Skala Penilaian */}
                 <div className="bg-white p-4 border rounded-xl shadow-sm">
-                  <h4 className="font-bold text-gray-900 mb-2">1. Skala Penilaian</h4>
-                  <p className="text-xs text-gray-500 mb-4">Mulai dari level terendah hingga tertinggi.</p>
-                  <div className="space-y-2">
-                    {skalaPenilaian.map((s, idx) => (
-                      <div key={idx} className="flex gap-2 items-center">
-                        <span className="text-sm w-6 text-gray-400">{idx+1}.</span>
-                        <input
-                          type="text"
-                          value={s}
-                          onChange={(e) => updateSkala(idx, e.target.value)}
-                          className="flex-1 px-3 py-2 border rounded text-sm"
-                          required
-                        />
-                        <button type="button" onClick={() => removeSkala(idx)} className="p-2 text-red-500 hover:bg-red-50 rounded">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <button type="button" onClick={addSkala} className="mt-3 flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700">
-                    <Plus className="w-4 h-4" /> Tambah Skala
-                  </button>
-                </div>
-
-                {/* 2. Aspek yang Dinilai */}
-                <div className="bg-white p-4 border rounded-xl shadow-sm">
-                  <h4 className="font-bold text-gray-900 mb-2">2. Aspek yang Dinilai</h4>
-                  <div className="space-y-2">
+                  <h4 className="font-bold text-gray-900 mb-2">1. Aspek & Skala Penilaian</h4>
+                  <p className="text-xs text-gray-500 mb-4">Tambahkan indikator dan tentukan skala pencapaian untuk masing-masing indikator.</p>
+                  <div className="space-y-6">
                     {aspekPenilaian.map((aspek, idx) => (
-                      <div key={aspek.id} className="flex gap-2 items-center">
-                        <span className="text-sm w-6 text-gray-400">{idx+1}.</span>
-                        <input
-                          type="text"
-                          value={aspek.nama}
-                          onChange={(e) => updateAspek(idx, e.target.value)}
-                          className="flex-1 px-3 py-2 border rounded text-sm"
-                          placeholder="Contoh: Mengembangkan Ide"
-                          required
-                        />
-                        <button type="button" onClick={() => removeAspek(idx)} className="p-2 text-red-500 hover:bg-red-50 rounded">
+                      <div key={aspek.id} className="p-4 border border-gray-100 rounded-xl bg-gray-50/50 relative">
+                        <button type="button" onClick={() => removeAspek(idx)} className="absolute top-4 right-4 p-2 text-red-500 hover:bg-red-50 rounded">
                           <Trash2 className="w-4 h-4" />
                         </button>
+                        <div className="flex gap-2 items-center mb-4 mr-10">
+                          <span className="text-sm font-bold text-gray-400">Indikator {idx+1}.</span>
+                          <input
+                            type="text"
+                            value={aspek.nama}
+                            onChange={(e) => updateAspek(idx, e.target.value)}
+                            className="flex-1 px-3 py-2 border rounded text-sm font-medium"
+                            placeholder="Contoh: Mengembangkan Ide"
+                            required
+                          />
+                        </div>
+                        <div className="ml-0 sm:ml-6 bg-white p-3 border rounded-lg">
+                          <p className="text-xs font-semibold text-gray-700 mb-2">Skala Penilaian (terendah ke tertinggi)</p>
+                          <div className="space-y-2">
+                            {(aspek.skalaPenilaian || []).map((s, sIdx) => (
+                              <div key={sIdx} className="flex gap-2 items-center">
+                                <span className="text-xs w-5 text-gray-400">{sIdx+1}.</span>
+                                <input
+                                  type="text"
+                                  value={s}
+                                  onChange={(e) => updateAspekSkala(idx, sIdx, e.target.value)}
+                                  className="flex-1 px-3 py-1.5 border rounded text-xs"
+                                  required
+                                />
+                                <button type="button" onClick={() => removeAspekSkala(idx, sIdx)} className="p-1 text-red-500 hover:bg-red-50 rounded">
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                          <button type="button" onClick={() => addAspekSkala(idx)} className="mt-2 flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium">
+                            <Plus className="w-3.5 h-3.5" /> Tambah Skala
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
-                  <button type="button" onClick={addAspek} className="mt-3 flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700">
-                    <Plus className="w-4 h-4" /> Tambah Aspek
+                  <button type="button" onClick={addAspek} className="mt-4 flex items-center justify-center w-full py-2 border-2 border-dashed border-gray-200 rounded-xl gap-1 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">
+                    <Plus className="w-4 h-4" /> Tambah Aspek / Indikator Baru
                   </button>
                 </div>
 
-                {/* 3. Aturan Ketuntasan */}
+                {/* 2. Aturan Ketuntasan */}
                 <div className="bg-white p-4 border rounded-xl shadow-sm">
-                  <h4 className="font-bold text-gray-900 mb-2">3. Aturan Ketuntasan (Logika)</h4>
+                  <h4 className="font-bold text-gray-900 mb-2">2. Aturan Ketuntasan (Logika)</h4>
                   <p className="text-xs text-gray-500 mb-4">Siswa dinyatakan <b>Tuntas</b> JIKA mencapai minimal skala berikut untuk setiap aspek:</p>
                   {aspekPenilaian.length === 0 ? (
                     <p className="text-sm text-yellow-600 bg-yellow-50 p-2 rounded">Tambahkan Aspek Penilaian terlebih dahulu.</p>
-                  ) : skalaPenilaian.length === 0 ? (
-                    <p className="text-sm text-yellow-600 bg-yellow-50 p-2 rounded">Tambahkan Skala Penilaian terlebih dahulu.</p>
                   ) : (
                     <div className="space-y-3">
-                      {aspekPenilaian.map((aspek) => (
-                        <div key={aspek.id} className="flex flex-col sm:flex-row sm:items-center gap-2">
-                          <span className="text-sm font-medium w-full sm:w-1/2">{aspek.nama}</span>
-                          <span className="text-sm text-gray-500">minimal dinilai</span>
-                          <select
-                            className="px-3 py-1.5 border rounded text-sm flex-1 bg-gray-50"
-                            value={aturanKetuntasan[aspek.id] ?? 0}
-                            onChange={(e) => setAturanKetuntasan({ ...aturanKetuntasan, [aspek.id]: Number(e.target.value) })}
-                          >
-                            {skalaPenilaian.map((skala, idx) => (
-                              <option key={idx} value={idx}>{skala}</option>
-                            ))}
-                          </select>
-                        </div>
-                      ))}
+                      {aspekPenilaian.map((aspek) => {
+                        const skala = aspek.skalaPenilaian || [];
+                        if (skala.length === 0) return (
+                          <div key={aspek.id} className="text-xs text-red-500 italic">Indikator "{aspek.nama}" belum memiliki skala.</div>
+                        );
+                        return (
+                          <div key={aspek.id} className="flex flex-col sm:flex-row sm:items-center gap-2">
+                            <span className="text-sm font-medium w-full sm:w-1/2 line-clamp-1">{aspek.nama}</span>
+                            <span className="text-sm text-gray-500 shrink-0">minimal dinilai</span>
+                            <select
+                              className="px-3 py-1.5 border rounded text-sm flex-1 bg-gray-50 max-w-full"
+                              value={aturanKetuntasan[aspek.id] ?? 0}
+                              onChange={(e) => setAturanKetuntasan({ ...aturanKetuntasan, [aspek.id]: Number(e.target.value) })}
+                            >
+                              {skala.map((s, idx) => (
+                                <option key={idx} value={idx}>{s}</option>
+                              ))}
+                            </select>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
