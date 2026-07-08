@@ -1170,7 +1170,7 @@ function ManajemenKKTP() {
                       {aspekPenilaian.map((aspek) => {
                         const skala = aspek.skalaPenilaian || [];
                         if (skala.length === 0) return (
-                          <div key={aspek.id} className="text-xs text-red-500 italic">Indikator "{aspek.nama}" belum memiliki skala.</div>
+                          <div key={aspek.id} className="text-xs text-red-500 italic">Indikator &quot;{aspek.nama}&quot; belum memiliki skala.</div>
                         );
                         return (
                           <div key={aspek.id} className="flex flex-col sm:flex-row sm:items-center gap-2">

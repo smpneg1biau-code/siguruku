@@ -168,7 +168,7 @@ export default function Sumatif() {
     if (!existingSumatif) return;
     const currentScores = existingSumatif.records[sId].tesTulisScores || {};
     const newScores = { ...currentScores, [soalId]: val };
-    const totalNilai = Object.values(newScores).reduce((a, b) => a + b, 0);
+    const totalNilai = Object.values(newScores).reduce((a: number, b: any) => a + Number(b), 0);
 
     const interval = {
       batasBawahTuntas: 75,
