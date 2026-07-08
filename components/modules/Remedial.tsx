@@ -79,6 +79,123 @@ export default function Remedial() {
     });
   };
 
+  const handleRemedialRubrikVal = (r: TRemedial, sumatifAsli: any, rubrik: any, aspekId: string, skalaIdx: number) => {
+    const currentScores = r.rubrikScoresBaru || { ...sumatifAsli?.rubrikScores };
+    const newScores = { ...currentScores, [aspekId]: skalaIdx };
+
+    let status: "TUNTAS" | "BELUM TUNTAS" = "TUNTAS";
+    let nilai = 0;
+    let level = 1;
+
+    const interval = {
+      batasBawahTuntas: 75,
+      batasAtasLanjut: 85,
+      batasBawahSelektif: 61,
+    };
+
+    if (rubrik && rubrik.jenisKKTP === "Rubrik Deskripsi" && rubrik.aspekPenilaian) {
+      let totalSkor = 0;
+      for (const aspek of rubrik.aspekPenilaian) {
+        const requiredSkala = rubrik.aturanKetuntasan?.[aspek.id] ?? 0;
+        const actualSkala = newScores[aspek.id];
+        
+        if (actualSkala !== undefined) {
+          totalSkor += (actualSkala + 1);
+        }
+
+        if (actualSkala === undefined || actualSkala < requiredSkala) {
+          status = "BELUM TUNTAS";
+        }
+      }
+
+      const maxSkala = rubrik.skalaPenilaian?.length || 4;
+      const skorMaksimal = rubrik.aspekPenilaian.length * maxSkala;
+      
+      if (skorMaksimal > 0) {
+        nilai = Number(((totalSkor / skorMaksimal) * 100).toFixed(2));
+      }
+    }
+
+    if (nilai >= interval.batasAtasLanjut) level = 4;
+    else if (nilai >= interval.batasBawahTuntas) level = 3;
+    else if (nilai >= interval.batasBawahSelektif) level = 2;
+    else level = 1;
+
+    updateItem("agmp_remedial", r.id, {
+      rubrikScoresBaru: newScores,
+      nilaiBaru: nilai,
+      levelBaru: level,
+      statusBaru: status,
+      status: "Selesai",
+    });
+  };
+
+  const handleRemedialDaftarCeklistVal = (r: TRemedial, sumatifAsli: any, rubrik: any, aspekId: string, isTercapai: boolean) => {
+    const currentScores = r.ceklistScoresBaru || { ...sumatifAsli?.ceklistScores };
+    const newScores = { ...currentScores, [aspekId]: isTercapai };
+
+    let status: "TUNTAS" | "BELUM TUNTAS" = "BELUM TUNTAS";
+    let nilai = 0;
+    let level = 1;
+    
+    if (rubrik && rubrik.jenisKKTP === "Daftar Ceklist" && rubrik.aspekPenilaian) {
+      const totalKriteria = rubrik.aspekPenilaian.length;
+      const tercapaiCount = Object.values(newScores).filter(Boolean).length;
+      const syaratMinimal = rubrik.syaratKetuntasanDaftarCeklis || 1;
+      
+      nilai = totalKriteria > 0 ? Math.round((tercapaiCount / totalKriteria) * 100) : 0;
+      status = tercapaiCount >= syaratMinimal ? "TUNTAS" : "BELUM TUNTAS";
+    }
+
+    const interval = {
+      batasBawahTuntas: 75,
+      batasAtasLanjut: 85,
+      batasBawahSelektif: 61,
+    };
+
+    if (nilai >= interval.batasAtasLanjut) level = 4;
+    else if (nilai >= interval.batasBawahTuntas) level = 3;
+    else if (nilai >= interval.batasBawahSelektif) level = 2;
+    else level = 1;
+
+    updateItem("agmp_remedial", r.id, {
+      ceklistScoresBaru: newScores,
+      nilaiBaru: nilai,
+      levelBaru: level,
+      statusBaru: status,
+      status: "Selesai",
+    });
+  };
+
+  const handleRemedialTesTulisVal = (r: TRemedial, sumatifAsli: any, soalId: number, val: number) => {
+    const currentScores = r.tesTulisScoresBaru || { ...sumatifAsli?.tesTulisScores };
+    const newScores = { ...currentScores, [soalId]: val };
+    const totalNilai: number = Object.values(newScores).reduce((a: any, b: any) => Number(a) + Number(b), 0) as number;
+
+    const interval = {
+      batasBawahTuntas: 75,
+      batasAtasLanjut: 85,
+      batasBawahSelektif: 61,
+    };
+
+    let level = 1;
+    if (totalNilai > interval.batasAtasLanjut) level = 4;
+    else if (totalNilai >= interval.batasBawahTuntas) level = 3;
+    else if (totalNilai >= interval.batasBawahSelektif) level = 2;
+    else level = 1;
+
+    const status: "TUNTAS" | "BELUM TUNTAS" =
+      totalNilai >= interval.batasBawahTuntas ? "TUNTAS" : "BELUM TUNTAS";
+
+    updateItem("agmp_remedial", r.id, {
+      tesTulisScoresBaru: newScores,
+      nilaiBaru: totalNilai,
+      levelBaru: level,
+      statusBaru: status,
+      status: "Selesai",
+    });
+  };
+
   return (
     <div className="space-y-6 pb-20">
       <header>
@@ -292,9 +409,8 @@ export default function Remedial() {
           remedialList.map((r) => {
             const siswa = state.agmp_siswa.find((s) => s.id === r.siswaId);
             const tp = state.agmp_tp.find((t) => t.id === r.tpId);
-            const sumatifAsli = state.agmp_sumatif.find(
-              (s) => s.id === r.sumatifId,
-            )?.records[r.siswaId];
+            const existingSumatif = state.agmp_sumatif.find((s) => s.id === r.sumatifId);
+            const sumatifAsli = existingSumatif?.records[r.siswaId];
             const rubrik = state.agmp_rubrik.find((rub) => rub.tpId === r.tpId);
             const isExpanded = expandedId === r.id;
 
@@ -468,10 +584,112 @@ export default function Remedial() {
 
                       <p className="text-sm font-medium text-gray-600 mb-4">
                         Gunakan kembali rubrik TP {tp?.kode} untuk menilai ulang
-                        siswa setelah program selesai.
+                        siswa setelah program selesai. Hanya menampilkan indikator yang belum tercapai.
                       </p>
 
-                      {rubrik ? (
+                      {rubrik?.jenisKKTP === "Rubrik Deskripsi" && rubrik.aspekPenilaian && rubrik.skalaPenilaian ? (
+                        <div className="overflow-x-auto border rounded-xl border-gray-200 mb-4">
+                          <table className="w-full text-sm text-left">
+                            <thead className="bg-gray-50 border-b border-gray-100/50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                              <tr>
+                                <th className="p-3 w-1/2">Aspek yang Belum Tercapai</th>
+                                <th className="p-3 w-1/2">Pencapaian Baru</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {rubrik.aspekPenilaian.filter(aspek => {
+                                const required = rubrik.aturanKetuntasan?.[aspek.id] ?? 0;
+                                const actual = sumatifAsli?.rubrikScores?.[aspek.id];
+                                return actual === undefined || actual < required;
+                              }).map(aspek => (
+                                <tr key={aspek.id} className="hover:bg-gray-50/50">
+                                  <td className="p-3 font-medium text-gray-900">{aspek.nama}</td>
+                                  <td className="p-3">
+                                    <select 
+                                      className="w-full p-2 border rounded-lg bg-white outline-none focus:ring-2 focus:ring-[#007AFF] transition-shadow text-sm"
+                                      value={r.rubrikScoresBaru?.[aspek.id] ?? (sumatifAsli?.rubrikScores?.[aspek.id] ?? "")}
+                                      onChange={(e) => handleRemedialRubrikVal(r, sumatifAsli, rubrik, aspek.id, Number(e.target.value))}
+                                    >
+                                      <option value="" disabled>Pilih Skala</option>
+                                      {rubrik.skalaPenilaian!.map((skala, idx) => (
+                                        <option key={idx} value={idx}>{skala}</option>
+                                      ))}
+                                    </select>
+                                  </td>
+                                </tr>
+                              ))}
+                              {rubrik.aspekPenilaian.filter(aspek => {
+                                const required = rubrik.aturanKetuntasan?.[aspek.id] ?? 0;
+                                const actual = sumatifAsli?.rubrikScores?.[aspek.id];
+                                return actual === undefined || actual < required;
+                              }).length === 0 && (
+                                <tr>
+                                  <td colSpan={2} className="p-4 text-center text-gray-500">
+                                    Semua aspek sudah tercapai di asesmen sebelumnya.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : rubrik?.jenisKKTP === "Daftar Ceklist" && rubrik.aspekPenilaian ? (
+                        <div className="overflow-x-auto border rounded-xl border-gray-200 mb-4">
+                          <table className="w-full text-sm text-left">
+                            <thead className="bg-gray-50 border-b border-gray-100/50 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                              <tr>
+                                <th className="p-3 w-3/4">Kriteria / Indikator Belum Tercapai</th>
+                                <th className="p-3 w-1/4 text-center">Tercapai</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {rubrik.aspekPenilaian.filter(aspek => !sumatifAsli?.ceklistScores?.[aspek.id]).map(aspek => (
+                                <tr key={aspek.id} className="hover:bg-gray-50/50">
+                                  <td className="p-3 font-medium text-gray-900">{aspek.nama}</td>
+                                  <td className="p-3 text-center">
+                                    <input 
+                                      type="checkbox"
+                                      className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                      checked={r.ceklistScoresBaru?.[aspek.id] ?? (sumatifAsli?.ceklistScores?.[aspek.id] || false)}
+                                      onChange={(e) => handleRemedialDaftarCeklistVal(r, sumatifAsli, rubrik, aspek.id, e.target.checked)}
+                                    />
+                                  </td>
+                                </tr>
+                              ))}
+                              {rubrik.aspekPenilaian.filter(aspek => !sumatifAsli?.ceklistScores?.[aspek.id]).length === 0 && (
+                                <tr>
+                                  <td colSpan={2} className="p-4 text-center text-gray-500">
+                                    Semua kriteria sudah tercapai di asesmen sebelumnya.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : existingSumatif?.teknik === "Tes Tulis (PG/Esai)" && existingSumatif.tesTulisConfig ? (
+                        <div className="mb-4">
+                          <label className="text-sm font-bold text-gray-700 block mb-2">Soal yang belum maksimal:</label>
+                          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                            {existingSumatif.tesTulisConfig.filter(config => (sumatifAsli?.tesTulisScores?.[config.id] || 0) < config.bobotMaksimal).map((config, idx) => {
+                              const val = r.tesTulisScoresBaru?.[config.id] ?? (sumatifAsli?.tesTulisScores?.[config.id] || 0);
+                              return (
+                                <div key={config.id} className="p-3 border rounded-xl bg-gray-50 flex flex-col gap-1 shadow-sm">
+                                  <span className="text-xs font-bold text-gray-600">
+                                    Soal {idx + 1} <span className="font-normal text-gray-400">(Max: {config.bobotMaksimal})</span>
+                                  </span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max={config.bobotMaksimal}
+                                    value={val === 0 ? "" : val}
+                                    onChange={(e) => handleRemedialTesTulisVal(r, sumatifAsli, config.id, Number(e.target.value))}
+                                    className="w-full border p-2 rounded bg-white text-sm outline-none"
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : rubrik ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                           {[
                             {
@@ -522,7 +740,7 @@ export default function Remedial() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-red-500">
+                        <p className="text-sm text-red-500 mb-4">
                           Rubrik TP tidak ditemukan. Silakan atur di menu
                           Konfigurasi.
                         </p>

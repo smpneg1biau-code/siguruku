@@ -148,6 +148,9 @@ export type Remedial = {
   levelBaru?: number;
   nilaiBaru?: number;
   statusBaru?: "TUNTAS" | "BELUM TUNTAS";
+  rubrikScoresBaru?: Record<string, number>;
+  ceklistScoresBaru?: Record<string, boolean>;
+  tesTulisScoresBaru?: Record<string, number>;
 };
 
 export type Rapor = {
