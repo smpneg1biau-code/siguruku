@@ -41,6 +41,8 @@ export default function Sumatif() {
   const [teknik, setTeknik] = useState("Tes Tulis (PG/Esai)");
   const [mode, setMode] = useState<"init" | "wizard" | "rekap">("init");
   const [activeSiswaIdx, setActiveSiswaIdx] = useState(0);
+  const [localRecords, setLocalRecords] = useState<any>(null);
+
 
   const [jumlahSoal, setJumlahSoal] = useState(5);
   const [tesTulisConfig, setTesTulisConfig] = useState<TesTulisConfig[]>(
@@ -67,6 +69,18 @@ export default function Sumatif() {
   const siswaList = state.agmp_siswa
     .filter((s) => s.kelasId === kelasId)
     .sort((a, b) => a.nama.localeCompare(b.nama));
+
+  // Sync local records when entering wizard mode
+  useEffect(() => {
+    if (mode === "wizard" && existingSumatif) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLocalRecords(JSON.parse(JSON.stringify(existingSumatif.records)));
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLocalRecords(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, existingSumatif?.id]);
 
   // Set default state based on existing data
   useEffect(() => {
@@ -125,48 +139,43 @@ export default function Sumatif() {
   };
 
   const handleScoreUpdate = (sId: string, level: number) => {
-    if (!existingSumatif) return;
-
+    if (!existingSumatif || !localRecords) return;
     const interval = {
       batasBawahTuntas: 75,
       batasAtasLanjut: 85,
       batasBawahSelektif: 61,
     };
-
-    // Auto calculate value based on action requirements
     let nilai = 0;
     if (level === 1)
-      nilai = Math.floor(interval.batasBawahSelektif / 2); // default logic for 0-60
+      nilai = Math.floor(interval.batasBawahSelektif / 2);
     else if (level === 2)
       nilai = Math.floor(
         (interval.batasBawahTuntas + interval.batasBawahSelektif) / 2,
-      ); // default logic for L2
+      );
     else if (level === 3)
       nilai = Math.floor(
         (interval.batasAtasLanjut + interval.batasBawahTuntas) / 2,
-      ); // default logic for L3
+      );
     else if (level === 4)
-      nilai = Math.floor((100 + interval.batasAtasLanjut) / 2); // default logic for L4
+      nilai = Math.floor((100 + interval.batasAtasLanjut) / 2);
 
     const status: "TUNTAS" | "BELUM TUNTAS" =
       nilai >= interval.batasBawahTuntas ? "TUNTAS" : "BELUM TUNTAS";
 
-    const newRecords = {
-      ...existingSumatif.records,
+    setLocalRecords((prev: any) => ({
+      ...prev,
       [sId]: {
-        ...existingSumatif.records[sId],
+        ...prev[sId],
         level,
         nilai,
         status,
       },
-    };
-
-    updateItem("agmp_sumatif", sumatifId!, { records: newRecords });
+    }));
   };
 
   const handleTesTulisVal = (sId: string, soalId: number, val: number) => {
-    if (!existingSumatif) return;
-    const currentScores = existingSumatif.records[sId].tesTulisScores || {};
+    if (!existingSumatif || !localRecords) return;
+    const currentScores = localRecords[sId]?.tesTulisScores || {};
     const newScores = { ...currentScores, [soalId]: val };
     const totalNilai = Object.values(newScores).reduce((a: number, b: any) => a + Number(b), 0);
 
@@ -185,23 +194,21 @@ export default function Sumatif() {
     const status: "TUNTAS" | "BELUM TUNTAS" =
       totalNilai >= interval.batasBawahTuntas ? "TUNTAS" : "BELUM TUNTAS";
 
-    updateItem("agmp_sumatif", sumatifId!, {
-      records: {
-        ...existingSumatif.records,
-        [sId]: {
-          ...existingSumatif.records[sId],
-          tesTulisScores: newScores,
-          nilai: totalNilai,
-          level,
-          status,
-        },
+    setLocalRecords((prev: any) => ({
+      ...prev,
+      [sId]: {
+        ...prev[sId],
+        tesTulisScores: newScores,
+        nilai: totalNilai,
+        level,
+        status,
       },
-    }, true);
+    }));
   };
 
   const handleRubrikVal = (sId: string, aspekId: string, skalaIdx: number) => {
-    if (!existingSumatif) return;
-    const currentScores = existingSumatif.records[sId].rubrikScores || {};
+    if (!existingSumatif || !localRecords) return;
+    const currentScores = localRecords[sId]?.rubrikScores || {};
     const newScores = { ...currentScores, [aspekId]: skalaIdx };
 
     const rubrik = state.agmp_rubrik.find((r) => r.tpId === tpId);
@@ -244,23 +251,21 @@ export default function Sumatif() {
     else if (nilai >= interval.batasBawahSelektif) level = 2;
     else level = 1;
 
-    updateItem("agmp_sumatif", sumatifId!, {
-      records: {
-        ...existingSumatif.records,
-        [sId]: {
-          ...existingSumatif.records[sId],
-          rubrikScores: newScores,
-          nilai,
-          level,
-          status,
-        },
+    setLocalRecords((prev: any) => ({
+      ...prev,
+      [sId]: {
+        ...prev[sId],
+        rubrikScores: newScores,
+        nilai,
+        level,
+        status,
       },
-    }, true);
+    }));
   };
 
   const handleDaftarCeklistVal = (sId: string, aspekId: string, isTercapai: boolean) => {
-    if (!existingSumatif) return;
-    const currentScores = existingSumatif.records[sId].ceklistScores || {};
+    if (!existingSumatif || !localRecords) return;
+    const currentScores = localRecords[sId]?.ceklistScores || {};
     const newScores = { ...currentScores, [aspekId]: isTercapai };
 
     const rubrik = state.agmp_rubrik.find((r) => r.tpId === tpId);
@@ -278,47 +283,47 @@ export default function Sumatif() {
 
     const level = status === "TUNTAS" ? 3 : 1; 
 
-    updateItem("agmp_sumatif", sumatifId!, {
-      records: {
-        ...existingSumatif.records,
-        [sId]: {
-          ...existingSumatif.records[sId],
-          ceklistScores: newScores,
-          nilai,
-          level,
-          status,
-        },
+    setLocalRecords((prev: any) => ({
+      ...prev,
+      [sId]: {
+        ...prev[sId],
+        ceklistScores: newScores,
+        nilai,
+        level,
+        status,
       },
-    }, true);
+    }));
   };
 
   const handleCatatanUpdate = (sId: string, catatan: string) => {
-    if (!existingSumatif) return;
-    updateItem("agmp_sumatif", sumatifId!, {
-      records: {
-        ...existingSumatif.records,
-        [sId]: { ...existingSumatif.records[sId], catatan },
-      },
-    }, true);
+    if (!existingSumatif || !localRecords) return;
+    setLocalRecords((prev: any) => ({
+      ...prev,
+      [sId]: { ...prev[sId], catatan },
+    }));
   };
 
   const simulateUpload = (sId: string) => {
-    if (!existingSumatif) return;
-    updateItem("agmp_sumatif", sumatifId!, {
-      records: {
-        ...existingSumatif.records,
-        [sId]: {
-          ...existingSumatif.records[sId],
-          buktiUrl: "simulated-base64-url",
-        },
-      },
-    }, true);
+    if (!existingSumatif || !localRecords) return;
+    setLocalRecords((prev: any) => ({
+      ...prev,
+      [sId]: { ...prev[sId], buktiUrl: "https://example.com/simulated-upload.jpg" },
+    }));
     alert("Bukti berhasil diunggah (Simulasi)");
   };
 
+  const handleSimpanData = async () => {
+    if (!existingSumatif || !localRecords) return;
+    try {
+      await updateItem("agmp_sumatif", sumatifId!, { records: localRecords }, false);
+      showToast("Data berhasil disimpan!", "success");
+    } catch(err) {
+      showToast("Gagal menyimpan data.", "error");
+    }
+  };
+
   const student = siswaList[activeSiswaIdx];
-  const activeRecord =
-    student && existingSumatif ? existingSumatif.records[student.id] : null;
+  const activeRecord = student && localRecords ? localRecords[student.id] : null;
 
   return (
     <div className="space-y-6 pb-20">
@@ -539,6 +544,14 @@ export default function Sumatif() {
             >
               {activeSiswaIdx === siswaList.length - 1 ? "Selesai" : "Lanjut"}{" "}
               <ChevronRight className="w-5 h-5 ml-1" />
+            </button>
+          </div>
+          <div className="flex justify-end mt-4">
+            <button
+              onClick={handleSimpanData}
+              className="p-2 bg-green-500 rounded-lg text-white font-bold flex items-center text-sm px-4 mr-2 hover:bg-green-600"
+            >
+              <Save className="w-5 h-5 mr-1" /> Simpan
             </button>
           </div>
 
