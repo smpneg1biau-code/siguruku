@@ -119,26 +119,20 @@ export default function RekapAkhir({
       : remedialMatches[0];
     let finalNilai = record.nilai;
     let finalLevel = record.level;
+    let finalStatus: string = record.status || "BELUM TUNTAS";
+
     if (
       remedial &&
-      remedial.nilaiBaru !== undefined &&
       remedial.status === "Selesai"
     ) {
-      finalNilai = remedial.nilaiBaru;
-      if (remedial.levelBaru) finalLevel = remedial.levelBaru;
+      if (remedial.nilaiBaru !== undefined) finalNilai = remedial.nilaiBaru;
+      if (remedial.levelBaru !== undefined) finalLevel = remedial.levelBaru;
+      if (remedial.statusBaru) finalStatus = remedial.statusBaru;
     }
 
-    const interval = {
-      batasBawahTuntas: 75,
-      batasAtasLanjut: 85,
-      batasBawahSelektif: 61,
-    };
-    
-    let finalStatus = finalNilai >= interval.batasBawahTuntas ? "TUNTAS" : "BELUM TUNTAS";
-
     if (
-      record.nilai < interval.batasBawahTuntas &&
-      finalNilai >= interval.batasBawahTuntas &&
+      record.status === "BELUM TUNTAS" &&
+      finalStatus === "TUNTAS" &&
       remedial &&
       remedial.status === "Selesai"
     ) {
