@@ -937,7 +937,7 @@ function ManajemenKKTP() {
     n[aspekIndex].deskripsiSkala = ds;
     setAspekPenilaian(n);
   };
-  const updateAspekEkivalen = (aspekIndex: number, skalaIndex: number, val: number) => {
+  const updateAspekEkivalen = (aspekIndex: number, skalaIndex: number, val: string | number) => {
     const n = [...aspekPenilaian];
     const sk = n[aspekIndex].skalaPenilaian || [];
     const es = [...(n[aspekIndex].ekivalenSkala || Array(sk.length).fill(0))];
@@ -1187,17 +1187,16 @@ function ManajemenKKTP() {
                                     value={aspek.deskripsiSkala?.[sIdx] || ""}
                                     onChange={(e) => updateAspekDeskripsi(idx, sIdx, e.target.value)}
                                     className="flex-[2] px-3 py-1.5 border rounded text-xs"
-                                    placeholder="Deskripsi Capaian"
+                                    placeholder="Deskripsi Capaian (misal: Menguasai dasar)"
                                   />
                                   <div className="flex items-center gap-1 flex-1">
-                                    <span className="text-xs text-gray-500">Nilai Ekivalen:</span>
+                                    <span className="text-xs text-gray-500 whitespace-nowrap">Rentang Ekivalen:</span>
                                     <input
-                                      type="number"
-                                      value={aspek.ekivalenSkala?.[sIdx] || 0}
-                                      onChange={(e) => updateAspekEkivalen(idx, sIdx, Number(e.target.value))}
-                                      className="w-16 px-2 py-1.5 border rounded text-xs"
-                                      placeholder="0-100"
-                                      min="0" max="100"
+                                      type="text"
+                                      value={aspek.ekivalenSkala?.[sIdx] || ""}
+                                      onChange={(e) => updateAspekEkivalen(idx, sIdx, e.target.value)}
+                                      className="w-full px-2 py-1.5 border rounded text-xs"
+                                      placeholder="Misal: 70-80"
                                     />
                                   </div>
                                 </div>

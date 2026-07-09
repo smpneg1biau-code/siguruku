@@ -38,7 +38,7 @@ export type AspekRubrik = {
   nama: string;
   skalaPenilaian?: string[];
   deskripsiSkala?: string[];
-  ekivalenSkala?: number[];
+  ekivalenSkala?: string[] | number[];
 };
 
 export type Rubrik = {

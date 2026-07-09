@@ -239,7 +239,14 @@ export default function Sumatif() {
           totalAspekDinilai++;
           let ekivalen = 0;
           if (aspek.ekivalenSkala && aspek.ekivalenSkala[actualSkala] !== undefined) {
-            ekivalen = aspek.ekivalenSkala[actualSkala];
+            const val = aspek.ekivalenSkala[actualSkala];
+            if (typeof val === 'string') {
+              const parts = val.split('-').map(s => Number(s.trim())).filter(n => !isNaN(n));
+              if (parts.length === 2) ekivalen = (parts[0] + parts[1]) / 2;
+              else if (parts.length === 1) ekivalen = parts[0];
+            } else if (typeof val === 'number') {
+              ekivalen = val;
+            }
           } else {
             const maxSkalaAspek = (aspek.skalaPenilaian?.length || rubrik.skalaPenilaian?.length || 4);
             ekivalen = ((actualSkala + 1) / maxSkalaAspek) * 100;
