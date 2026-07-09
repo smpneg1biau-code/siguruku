@@ -228,17 +228,23 @@ export default function Sumatif() {
     };
 
     if (rubrik && rubrik.jenisKKTP === "Rubrik Deskripsi" && rubrik.aspekPenilaian) {
-      let totalSkor = 0;
-      let skorMaksimal = 0;
+      let totalNilaiEkivalen = 0;
+      let totalAspekDinilai = 0;
 
       for (const aspek of rubrik.aspekPenilaian) {
         const requiredSkala = rubrik.aturanKetuntasan?.[aspek.id] ?? 0;
         const actualSkala = newScores[aspek.id];
-        const maxSkalaAspek = (aspek.skalaPenilaian?.length || rubrik.skalaPenilaian?.length || 4);
-        skorMaksimal += maxSkalaAspek;
         
         if (actualSkala !== undefined) {
-          totalSkor += (actualSkala + 1);
+          totalAspekDinilai++;
+          let ekivalen = 0;
+          if (aspek.ekivalenSkala && aspek.ekivalenSkala[actualSkala] !== undefined) {
+            ekivalen = aspek.ekivalenSkala[actualSkala];
+          } else {
+            const maxSkalaAspek = (aspek.skalaPenilaian?.length || rubrik.skalaPenilaian?.length || 4);
+            ekivalen = ((actualSkala + 1) / maxSkalaAspek) * 100;
+          }
+          totalNilaiEkivalen += ekivalen;
         }
 
         if (actualSkala === undefined || actualSkala < requiredSkala) {
@@ -246,8 +252,10 @@ export default function Sumatif() {
         }
       }
       
-      if (skorMaksimal > 0) {
-        nilai = Number(((totalSkor / skorMaksimal) * 100).toFixed(2));
+      if (totalAspekDinilai > 0) {
+        nilai = Number((totalNilaiEkivalen / totalAspekDinilai).toFixed(2));
+      } else {
+        nilai = 0;
       }
     }
 
@@ -620,9 +628,15 @@ export default function Sumatif() {
                                   onChange={(e) => handleRubrikVal(student.id, aspek.id, Number(e.target.value))}
                                 >
                                   <option value="" disabled>Pilih Skala</option>
-                                  {skalaOptions.map((skala, idx) => (
-                                    <option key={idx} value={idx}>{skala}</option>
-                                  ))}
+                                  {skalaOptions.map((skala, idx) => {
+                                    const desc = aspek.deskripsiSkala?.[idx] ? ` - ${aspek.deskripsiSkala[idx]}` : "";
+                                    const val = aspek.ekivalenSkala?.[idx] !== undefined ? ` (${aspek.ekivalenSkala[idx]})` : "";
+                                    return (
+                                      <option key={idx} value={idx}>
+                                        {skala}{desc}{val}
+                                      </option>
+                                    );
+                                  })}
                                 </select>
                               </td>
                             </tr>
