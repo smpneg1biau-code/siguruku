@@ -119,6 +119,9 @@ export default function RekapAkhir({
       : remedialMatches[0];
     let finalNilai = record.nilai;
     let finalLevel = record.level;
+    let finalStatus = record.status;
+    let isRemedialSelesai = false;
+
     if (
       remedial &&
       remedial.nilaiBaru !== undefined &&
@@ -126,15 +129,22 @@ export default function RekapAkhir({
     ) {
       finalNilai = remedial.nilaiBaru;
       if (remedial.levelBaru) finalLevel = remedial.levelBaru;
+      if (remedial.statusBaru) finalStatus = remedial.statusBaru;
+      isRemedialSelesai = true;
     }
 
-    const interval = {
-      batasBawahTuntas: 75,
-      batasAtasLanjut: 85,
-      batasBawahSelektif: 61,
-    };
-    
-    let finalStatus = finalNilai >= interval.batasBawahTuntas ? "TUNTAS" : "BELUM TUNTAS";
+    if (!finalStatus) {
+      const interval = {
+        batasBawahTuntas: 75,
+        batasAtasLanjut: 85,
+        batasBawahSelektif: 61,
+      };
+      finalStatus = finalNilai >= interval.batasBawahTuntas ? "TUNTAS" : "BELUM TUNTAS";
+    }
+
+    if (isRemedialSelesai && finalStatus === "TUNTAS") {
+      finalStatus = "TUNTAS (Remedial)";
+    }
 
     return {
       isLocked: false,
@@ -303,7 +313,7 @@ export default function RekapAkhir({
                               >
                                 ➖
                               </span>
-                            ) : res.status === "TUNTAS" ? (
+                            ) : res.status === "TUNTAS" || res.status === "TUNTAS (Remedial)" ? (
                               <span
                                 className="text-green-500 font-bold"
                                 title={`Tuntas: ${res.nilai}`}
@@ -417,7 +427,7 @@ export default function RekapAkhir({
                       selectedSiswa.id,
                       tp.id,
                     ).status;
-                    if (st === "TUNTAS") tuntas++;
+                    if (st === "TUNTAS" || st === "TUNTAS (Remedial)") tuntas++;
                     else if (st === "BELUM TUNTAS") blmTuntas++;
                     else blmDinilai++;
                   });
@@ -720,7 +730,7 @@ export default function RekapAkhir({
                             </p>
                           </div>
                           <span
-                            className={`shrink-0 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${res.status === "TUNTAS" ? "bg-[#E8F5E9] text-[#34C759] border border-[#34C759]/20" : res.status === "BELUM TUNTAS" ? "bg-[#FFEBEE] text-[#FF3B30] border border-[#FF3B30]/20" : "bg-[#F5F5F7] text-[#8E8E93] border border-[#E5E5EA]"}`}
+                            className={`shrink-0 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${res.status === "TUNTAS" || res.status === "TUNTAS (Remedial)" ? "bg-[#E8F5E9] text-[#34C759] border border-[#34C759]/20" : res.status === "BELUM TUNTAS" ? "bg-[#FFEBEE] text-[#FF3B30] border border-[#FF3B30]/20" : "bg-[#F5F5F7] text-[#8E8E93] border border-[#E5E5EA]"}`}
                           >
                             {res.status}
                           </span>
