@@ -136,6 +136,15 @@ export default function RekapAkhir({
     
     let finalStatus = finalNilai >= interval.batasBawahTuntas ? "TUNTAS" : "BELUM TUNTAS";
 
+    if (
+      record.nilai < interval.batasBawahTuntas &&
+      finalNilai >= interval.batasBawahTuntas &&
+      remedial &&
+      remedial.status === "Selesai"
+    ) {
+      finalStatus = "TUNTAS REMEDIAL";
+    }
+
     return {
       isLocked: false,
       level: finalLevel,
@@ -310,6 +319,13 @@ export default function RekapAkhir({
                               >
                                 ✅
                               </span>
+                            ) : res.status === "TUNTAS REMEDIAL" ? (
+                              <span
+                                className="text-green-600 font-bold"
+                                title={`Tuntas Remedial: ${res.nilai}`}
+                              >
+                                ✅ (R)
+                              </span>
                             ) : (
                               <span
                                 className="text-red-500 font-bold"
@@ -417,7 +433,7 @@ export default function RekapAkhir({
                       selectedSiswa.id,
                       tp.id,
                     ).status;
-                    if (st === "TUNTAS") tuntas++;
+                    if (st === "TUNTAS" || st === "TUNTAS REMEDIAL") tuntas++;
                     else if (st === "BELUM TUNTAS") blmTuntas++;
                     else blmDinilai++;
                   });
@@ -720,7 +736,7 @@ export default function RekapAkhir({
                             </p>
                           </div>
                           <span
-                            className={`shrink-0 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${res.status === "TUNTAS" ? "bg-[#E8F5E9] text-[#34C759] border border-[#34C759]/20" : res.status === "BELUM TUNTAS" ? "bg-[#FFEBEE] text-[#FF3B30] border border-[#FF3B30]/20" : "bg-[#F5F5F7] text-[#8E8E93] border border-[#E5E5EA]"}`}
+                            className={`shrink-0 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${res.status === "TUNTAS" || res.status === "TUNTAS REMEDIAL" ? "bg-[#E8F5E9] text-[#34C759] border border-[#34C759]/20" : res.status === "BELUM TUNTAS" ? "bg-[#FFEBEE] text-[#FF3B30] border border-[#FF3B30]/20" : "bg-[#F5F5F7] text-[#8E8E93] border border-[#E5E5EA]"}`}
                           >
                             {res.status}
                           </span>
