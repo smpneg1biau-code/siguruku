@@ -12,11 +12,24 @@ export default function LoginScreen() {
         
         <button
           onClick={signInWithGoogle}
-          className="flex items-center justify-center w-full gap-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl px-4 py-3 font-semibold hover:opacity-90 transition shadow-md"
+          className="flex items-center justify-center w-full gap-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl px-4 py-3 font-semibold hover:opacity-90 transition shadow-md mb-4"
         >
           <LogIn size={20} />
           Masuk dengan Google
         </button>
+        
+        <div className="relative flex py-3 items-center">
+          <div className="flex-grow border-t border-gray-200"></div>
+          <span className="flex-shrink-0 mx-4 text-gray-400 text-sm font-medium">Atau</span>
+          <div className="flex-grow border-t border-gray-200"></div>
+        </div>
+
+        <a
+          href="/publik"
+          className="flex items-center justify-center w-full gap-2 text-indigo-600 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 rounded-xl px-4 py-3 font-semibold transition"
+        >
+          Cek Perkembangan Siswa (Publik)
+        </a>
       </div>
     </div>
   );
