@@ -24,17 +24,19 @@ export default function PublikPage() {
     setResults([]);
 
     try {
-      const q = query(collectionGroup(db, 'agmp_siswa'), where('nisn', '==', nisn.trim()));
+      const q = collectionGroup(db, 'agmp_siswa');
       const querySnapshot = await getDocs(q);
+      
+      const studentDocs = querySnapshot.docs.filter(doc => doc.data().nisn === nisn.trim());
 
-      if (querySnapshot.empty) {
+      if (studentDocs.length === 0) {
         setError('Data siswa dengan NISN tersebut tidak ditemukan.');
         setLoading(false);
         return;
       }
 
       // We might find the student in multiple teachers' classes
-      const studentDocs = querySnapshot.docs;
+      // studentDocs already filtered above
       
       // Assume the student details (name, nisn) are the same across all records
       const firstSiswa = studentDocs[0].data() as Siswa;
