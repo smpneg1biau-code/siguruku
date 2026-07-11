@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Search, Loader2, BookOpen, User, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { collectionGroup, query, where, getDocs, doc, getDoc, collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Siswa, TP, Sumatif, Remedial, Absensi } from '@/lib/types';
+import { Siswa, TP, Sumatif, Remedial, Absensi, Anekdot } from '@/lib/types';
 import Link from 'next/link';
 
 export default function PublikPage() {
@@ -112,12 +112,18 @@ export default function PublikPage() {
           };
         });
 
+        // Get Anekdot
+        const anekdotRef = collection(db, 'users', userId, 'agmp_anekdot');
+        const anekdotSnap = await getDocs(anekdotRef);
+        const anekdots = anekdotSnap.docs.map(d => d.data() as Anekdot).filter(a => a.siswaId === siswa.id).sort((a,b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime());
+
         // Get Absensi
         const absensiRef = collection(db, 'users', userId, 'agmp_absensi');
         const absensiSnap = await getDocs(absensiRef);
         const absensis = absensiSnap.docs.map(d => d.data() as Absensi).filter(a => a.kelasId === siswa.kelasId);
 
         let hadir = 0, sakit = 0, izin = 0, alpa = 0, bolos = 0;
+        const catatanKehadiran: {tanggal: string, catatan: string}[] = [];
         absensis.forEach(ab => {
           const st = ab.records?.[siswa.id];
           if (st === 'HADIR') hadir++;
@@ -125,7 +131,13 @@ export default function PublikPage() {
           else if (st === 'IZIN') izin++;
           else if (st === 'ALPA') alpa++;
           else if (st === 'BOLOS') bolos++;
+
+          if (ab.catatan && ab.catatan[siswa.id]) {
+            catatanKehadiran.push({ tanggal: ab.tanggal, catatan: ab.catatan[siswa.id] });
+          }
         });
+        
+        catatanKehadiran.sort((a,b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime());
 
         const totalPertemuan = absensis.length;
         const persentaseHadir = totalPertemuan > 0 ? Math.round((hadir / totalPertemuan) * 100) : 100;
@@ -136,7 +148,9 @@ export default function PublikPage() {
           tpStatuses,
           kehadiran: {
             hadir, sakit, izin, alpa, bolos, totalPertemuan, persentaseHadir
-          }
+          },
+          anekdots,
+          catatanKehadiran
         });
       }
 
@@ -151,7 +165,7 @@ export default function PublikPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans">
+    <div className="h-screen overflow-y-auto bg-gray-50 font-sans">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -290,6 +304,41 @@ export default function PublikPage() {
                           ))}
                         </div>
                       )}
+                    </div>
+
+                    <div className="p-5 border-t border-gray-100">
+                      <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Catatan Kehadiran & Anekdot</h5>
+                      <div className="space-y-4">
+                        {(!res.catatanKehadiran || res.catatanKehadiran.length === 0) && (!res.anekdots || res.anekdots.length === 0) ? (
+                          <p className="text-sm text-gray-500 italic">Belum ada catatan.</p>
+                        ) : (
+                          <>
+                            {res.catatanKehadiran && res.catatanKehadiran.length > 0 && (
+                              <div className="space-y-2">
+                                <h6 className="text-xs font-semibold text-gray-700">Catatan Kehadiran</h6>
+                                {res.catatanKehadiran.map((ck: any, i: number) => (
+                                  <div key={`ck-${i}`} className="p-3 bg-blue-50/50 rounded-xl border border-blue-100">
+                                    <p className="text-[10px] text-gray-500 font-medium mb-1">{new Date(ck.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</p>
+                                    <p className="text-sm text-gray-700">{ck.catatan}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {res.anekdots && res.anekdots.length > 0 && (
+                              <div className="space-y-2 mt-4">
+                                <h6 className="text-xs font-semibold text-gray-700">Catatan Anekdot (Sikap/Perilaku)</h6>
+                                {res.anekdots.map((an: any, i: number) => (
+                                  <div key={`an-${i}`} className="p-3 bg-orange-50/50 rounded-xl border border-orange-100">
+                                    <p className="text-[10px] text-gray-500 font-medium mb-1">{new Date(an.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute:'2-digit'})}</p>
+                                    <p className="text-sm text-gray-700">{an.teks}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
                     
                   </div>
