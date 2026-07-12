@@ -226,9 +226,11 @@ export default function RekapAkhir({
         <div className="overflow-x-auto flex-1 p-0 print:p-0 print:overflow-visible print:block">
           <style>{`
             @media print {
-              @page { size: landscape; margin: 1cm; }
+              @page { size: 215.9mm 330.2mm portrait; margin: 1cm; }
               body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
               main { padding: 0 !important; }
+              table { width: 100%; table-layout: fixed; word-wrap: break-word; font-size: 9px !important; }
+              th, td { padding: 4px 2px !important; white-space: normal !important; }
             }
           `}</style>
           

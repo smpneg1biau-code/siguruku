@@ -124,7 +124,7 @@ export default function Shell() {
   const userInitials = userName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
 
   return (
-    <div className="flex h-screen w-full bg-[#F5F5F7]">
+    <div className="flex h-screen w-full bg-[#F5F5F7] print:h-auto print:block">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 flex-shrink-0 z-20 relative print:hidden">
         <div className="p-6 flex items-center gap-3 border-b border-gray-100">
@@ -175,7 +175,7 @@ export default function Shell() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative pb-16 md:pb-0">
+      <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative pb-16 md:pb-0 print:h-auto print:overflow-visible print:block">
         <header className="hidden md:flex h-16 bg-white border-b border-gray-200 px-8 items-center justify-between flex-shrink-0 print:hidden">
           <div>
             <h2 className="text-lg font-semibold">
@@ -197,8 +197,8 @@ export default function Shell() {
           </div>
         </header>
 
-        <div className="flex-1 p-4 md:p-6 print:p-0 space-y-6 overflow-y-auto no-scrollbar flex flex-col items-center">
-          <div className="max-w-6xl w-full h-full">{renderContent()}</div>
+        <div className="flex-1 p-4 md:p-6 print:p-0 space-y-6 overflow-y-auto no-scrollbar flex flex-col items-center print:h-auto print:overflow-visible print:block">
+          <div className="max-w-6xl w-full h-full print:h-auto print:max-w-none print:block">{renderContent()}</div>
         </div>
 
         <footer className="hidden md:flex h-10 bg-white border-t border-gray-200 px-6 items-center justify-between text-[10px] text-gray-400 flex-shrink-0 print:hidden">
