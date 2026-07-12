@@ -70,7 +70,7 @@ const MENU_CATEGORIES: MenuCategory[] = [
     ],
   },
   {
-    category: "Penilaian & Evaluasi",
+    category: "Penilaian & Tindak lanjut",
     items: [
       { id: "formatif", label: "Formatif", icon: CheckSquare },
       { id: "sumatif", label: "Sumatif", icon: Award },
