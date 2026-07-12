@@ -44,20 +44,56 @@ export type TabId =
   | "rekap-akhir"
   | "database";
 
-const NAV_ITEMS = [
-  { id: "beranda", label: "Beranda", icon: Home },
-  { id: "jurnal", label: "Jurnal", icon: BookOpen },
-  { id: "rekap-jurnal", label: "Rekap Jurnal", icon: Printer },
-  { id: "absensi", label: "Absensi", icon: Users },
-  { id: "rekap-absensi", label: "Rekap Absensi", icon: Printer },
-  { id: "formatif", label: "Formatif", icon: CheckSquare },
-  { id: "sumatif", label: "Sumatif", icon: Award },
-  { id: "remedial", label: "Remedial", icon: LifeBuoy },
-  { id: "rapor", label: "Rapor", icon: FileText },
-  { id: "rekap-akhir", label: "Rekap Akhir", icon: BarChart2 },
-  { id: "konfigurasi", label: "Pengaturan", icon: Settings },
-  { id: "database", label: "Database", icon: DatabaseIcon },
-] as const;
+type MenuItem = {
+  id: TabId;
+  label: string;
+  icon: React.ElementType;
+};
+
+type MenuCategory = {
+  category: string;
+  items: MenuItem[];
+};
+
+const MENU_CATEGORIES: MenuCategory[] = [
+  {
+    category: "Menu Utama",
+    items: [{ id: "beranda", label: "Beranda", icon: Home }],
+  },
+  {
+    category: "Administrasi Kelas",
+    items: [
+      { id: "jurnal", label: "Jurnal Harian", icon: BookOpen },
+      { id: "rekap-jurnal", label: "Rekap Jurnal", icon: Printer },
+      { id: "absensi", label: "Kehadiran", icon: Users },
+      { id: "rekap-absensi", label: "Rekap Absensi", icon: Printer },
+    ],
+  },
+  {
+    category: "Penilaian & Evaluasi",
+    items: [
+      { id: "formatif", label: "Formatif", icon: CheckSquare },
+      { id: "sumatif", label: "Sumatif", icon: Award },
+      { id: "remedial", label: "Remedial", icon: LifeBuoy },
+    ],
+  },
+  {
+    category: "Laporan Hasil Belajar",
+    items: [
+      { id: "rapor", label: "Rapor", icon: FileText },
+      { id: "rekap-akhir", label: "Rekap Akhir", icon: BarChart2 },
+    ],
+  },
+  {
+    category: "Sistem & Pengaturan",
+    items: [
+      { id: "konfigurasi", label: "Pengaturan", icon: Settings },
+      { id: "database", label: "Database", icon: DatabaseIcon },
+    ],
+  },
+];
+
+const NAV_ITEMS = MENU_CATEGORIES.flatMap((c) => c.items);
 
 export default function Shell() {
   const [activeTab, setActiveTab] = useState<TabId>("beranda");
@@ -138,22 +174,28 @@ export default function Shell() {
             </p>
           </div>
         </div>
-        <nav className="flex-1 py-4 space-y-1 overflow-y-auto no-scrollbar">
-          <div className="px-4 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-            Navigasi
-          </div>
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={cn(
-                "sidebar-item flex items-center w-full px-6 py-3 text-sm font-medium",
-                activeTab === item.id ? "sidebar-active" : "text-gray-600",
-              )}
-            >
-              <item.icon className="w-5 h-5 mr-3" />
-              {item.label}
-            </button>
+        <nav className="flex-1 py-2 overflow-y-auto no-scrollbar">
+          {MENU_CATEGORIES.map((category) => (
+            <div key={category.category} className="mb-4">
+              <div className="px-6 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                {category.category}
+              </div>
+              <div className="space-y-0.5">
+                {category.items.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={cn(
+                      "sidebar-item flex items-center w-full px-6 py-2.5 text-sm font-medium",
+                      activeTab === item.id ? "sidebar-active" : "text-gray-600 hover:bg-gray-50",
+                    )}
+                  >
+                    <item.icon className="w-5 h-5 mr-3" />
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
         <div className="p-4 border-t border-gray-100">
