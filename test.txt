@@ -1,0 +1,1 @@
+const adminEmail = "smpneg1biau@gmail.com";

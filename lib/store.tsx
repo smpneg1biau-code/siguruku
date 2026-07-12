@@ -9,6 +9,8 @@ import { collection, doc, onSnapshot, setDoc, deleteDoc, getDoc } from 'firebase
 import LoginScreen from '@/components/LoginScreen';
 
 type StoreContextType = {
+  isAdmin: boolean;
+  isAuthorized: boolean | null;
   state: AppState;
   updateData: <K extends keyof AppState>(key: K, data: AppState[K], silent?: boolean) => Promise<void>;
   addItem: <K extends keyof AppState>(key: K, item: AppState[K] extends (infer U)[] ? U : never, silent?: boolean) => Promise<void>;
@@ -32,7 +34,8 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [loadingData, setLoadingData] = useState(false);
-  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(true);
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const showToast = (message: string, type: "success" | "error" = "success") => {
@@ -59,12 +62,37 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
     if (!user) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoadingData(false);
+      setIsAuthorized(null);
+      setIsAdmin(false);
       return;
-    }
-
-     
+    } 
+    
+    const adminEmail = "smpneg1biau@gmail.com";
+    const userIsAdmin = user.email === adminEmail;
+    setIsAdmin(userIsAdmin);
+    
     setLoadingData(true);
     let unsubscribes: (() => void)[] = [];
+
+    // Authorization check
+    const appUserRef = doc(db, 'app_users', user.uid);
+    const unsubAuth = onSnapshot(appUserRef, (docSnap) => {
+      if (!docSnap.exists()) {
+        // Register new user
+        setDoc(appUserRef, {
+          email: user.email,
+          name: user.displayName || user.email,
+          isAuthorized: userIsAdmin, // admin is automatically authorized
+          createdAt: new Date().toISOString()
+        }, { merge: true }).catch(console.error);
+        
+        setIsAuthorized(userIsAdmin);
+      } else {
+        const data = docSnap.data();
+        setIsAuthorized(userIsAdmin ? true : !!data?.isAuthorized);
+      }
+    });
+    unsubscribes.push(unsubAuth);
 
     // Sync `agmp_pengaturan` doc
     const userDocRef = doc(db, 'users', user.uid);
@@ -328,7 +356,7 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <StoreContext.Provider value={{ state, updateData, addItem, updateItem, deleteItem, clearAllData, restoreAllData, showToast, logout }}>
+    <StoreContext.Provider value={{ state, updateData, addItem, updateItem, deleteItem, clearAllData, restoreAllData, showToast, logout, isAdmin, isAuthorized }}>
       {children}
       {toast && (
         <div className={`fixed bottom-20 right-4 md:bottom-4 md:right-4 px-6 py-3 rounded-lg shadow-lg font-bold text-sm z-50 animate-in slide-in-from-bottom ${toast.type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}>

@@ -1,0 +1,12 @@
+  useEffect(() => {
+    if (!user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLoadingData(false);
+      return;
+    }
+
+     
+    setLoadingData(true);
+    let unsubscribes: (() => void)[] = [];
+
+    // Sync `agmp_pengaturan` doc

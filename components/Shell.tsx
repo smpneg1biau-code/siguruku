@@ -26,7 +26,8 @@ import Remedial from "@/components/modules/Remedial";
 import Rapor from "@/components/modules/Rapor";
 import RekapAkhir from "@/components/modules/RekapAkhir";
 import Database from "@/components/modules/Database";
-import { BarChart2, Database as DatabaseIcon } from "lucide-react";
+import ManajemenPengguna from "@/components/modules/ManajemenPengguna";
+import { BarChart2, Database as DatabaseIcon, Shield } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { auth } from "@/lib/firebase";
 
@@ -42,9 +43,11 @@ export type TabId =
   | "remedial"
   | "rapor"
   | "rekap-akhir"
-  | "database";
+  | "database"
+  | "pengguna";
 
 type MenuItem = {
+  adminOnly?: boolean;
   id: TabId;
   label: string;
   icon: React.ElementType;
@@ -89,6 +92,7 @@ const MENU_CATEGORIES: MenuCategory[] = [
     items: [
       { id: "konfigurasi", label: "Pengaturan", icon: Settings },
       { id: "database", label: "Database", icon: DatabaseIcon },
+      { id: "pengguna", label: "Pengguna", icon: Shield, adminOnly: true },
     ],
   },
 ];
@@ -97,7 +101,7 @@ const NAV_ITEMS = MENU_CATEGORIES.flatMap((c) => c.items);
 
 export default function Shell() {
   const [activeTab, setActiveTab] = useState<TabId>("beranda");
-  const { state, logout } = useStore();
+  const { state, logout, isAdmin } = useStore();
   const [isOnline, setIsOnline] = useState(true);
 
   useEffect(() => {
@@ -151,6 +155,8 @@ export default function Shell() {
         return <RekapAkhir onNavigate={setActiveTab} />;
       case "database":
         return <Database />;
+      case "pengguna":
+        return isAdmin ? <ManajemenPengguna /> : <Beranda onNavigate={setActiveTab} />;
       default:
         return <Beranda onNavigate={setActiveTab} />;
     }
@@ -175,13 +181,16 @@ export default function Shell() {
           </div>
         </div>
         <nav className="flex-1 py-2 overflow-y-auto no-scrollbar">
-          {MENU_CATEGORIES.map((category) => (
+          {MENU_CATEGORIES.map((category) => {
+            const filteredItems = category.items.filter(item => !item.adminOnly || isAdmin);
+            if (filteredItems.length === 0) return null;
+            return (
             <div key={category.category} className="mb-4">
               <div className="px-6 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                 {category.category}
               </div>
               <div className="space-y-0.5">
-                {category.items.map((item) => (
+                {filteredItems.map((item) => (
                   <button
                     key={item.id}
                     onClick={() => setActiveTab(item.id)}
@@ -196,7 +205,8 @@ export default function Shell() {
                 ))}
               </div>
             </div>
-          ))}
+          ); 
+          })}
         </nav>
         <div className="p-4 border-t border-gray-100">
           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl mb-2">
