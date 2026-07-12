@@ -152,7 +152,7 @@ export default function RekapAkhir({
   const selectedSiswa = siswaList.find((s) => s.id === selectedSiswaId);
 
   return (
-    <div className="space-y-6 h-full flex flex-col pt-4 sm:pt-0 print:space-y-0 print:pt-0">
+    <div className="space-y-6 h-full flex flex-col pt-4 sm:pt-0 print:space-y-0 print:pt-0 print:block print:h-auto">
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-shrink-0 print:hidden px-4 sm:px-0">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">
@@ -210,7 +210,7 @@ export default function RekapAkhir({
       </div>
 
       {/* REKAP TABLE */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex-1 flex flex-col min-h-[400px] overflow-hidden mx-4 sm:mx-0 print:border-none print:shadow-none print:min-h-0 print:m-0 print:rounded-none">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex-1 flex flex-col min-h-[400px] overflow-hidden mx-4 sm:mx-0 print:border-none print:shadow-none print:min-h-0 print:m-0 print:rounded-none print:overflow-visible print:block">
         <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 print:hidden">
           <h3 className="font-bold text-gray-900">Data Rekap Kelas</h3>
           <div className="flex gap-2">
@@ -223,8 +223,27 @@ export default function RekapAkhir({
           </div>
         </div>
 
-        <div className="overflow-x-auto flex-1 p-0 print:p-4">
-          <table className="w-full text-left border-collapse whitespace-nowrap min-w-max">
+        <div className="overflow-x-auto flex-1 p-0 print:p-0 print:overflow-visible print:block">
+          <style>{`
+            @media print {
+              @page { size: landscape; margin: 1cm; }
+              body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              main { padding: 0 !important; }
+            }
+          `}</style>
+          
+          <div className="hidden print:block text-center mb-6">
+            <h2 className="text-xl font-bold uppercase">
+              REKAP AKHIR SEMESTER {state.agmp_kelas.find(k => k.id === selectedKelasId) ? `KELAS ${state.agmp_kelas.find(k => k.id === selectedKelasId)?.nama}` : ''}
+            </h2>
+            {selectedTA && (
+              <p className="text-sm font-semibold uppercase text-gray-700 mt-1">
+                TAHUN AJARAN: {selectedTA.nama} | SEMESTER: {selectedTA.semester}
+              </p>
+            )}
+          </div>
+
+          <table className="w-full text-left border-collapse whitespace-nowrap min-w-max print:min-w-0">
             <thead className="bg-gray-100 text-[10px] sm:text-xs text-gray-600 uppercase tracking-widest sticky top-0 z-10 print:static">
               <tr>
                 <th className="px-4 py-3 font-bold border-b border-gray-200">
