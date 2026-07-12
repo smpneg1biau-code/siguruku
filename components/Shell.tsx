@@ -11,12 +11,14 @@ import {
   LifeBuoy,
   FileText,
   LogOut,
+  Printer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Beranda from "@/components/modules/Beranda";
 import Konfigurasi from "@/components/modules/Konfigurasi";
 import Jurnal from "@/components/modules/Jurnal";
 import Absensi from "@/components/modules/Absensi";
+import RekapAbsensi from "@/components/modules/RekapAbsensi";
 import Formatif from "@/components/modules/Formatif";
 import Sumatif from "@/components/modules/Sumatif";
 import Remedial from "@/components/modules/Remedial";
@@ -32,6 +34,7 @@ export type TabId =
   | "konfigurasi"
   | "jurnal"
   | "absensi"
+  | "rekap-absensi"
   | "formatif"
   | "sumatif"
   | "remedial"
@@ -43,6 +46,7 @@ const NAV_ITEMS = [
   { id: "beranda", label: "Beranda", icon: Home },
   { id: "jurnal", label: "Jurnal", icon: BookOpen },
   { id: "absensi", label: "Absensi", icon: Users },
+  { id: "rekap-absensi", label: "Rekap Absensi", icon: Printer },
   { id: "formatif", label: "Formatif", icon: CheckSquare },
   { id: "sumatif", label: "Sumatif", icon: Award },
   { id: "remedial", label: "Remedial", icon: LifeBuoy },
@@ -92,6 +96,8 @@ export default function Shell() {
         return <Jurnal onNavigate={setActiveTab} />;
       case "absensi":
         return <Absensi />;
+      case "rekap-absensi":
+        return <RekapAbsensi />;
       case "formatif":
         return <Formatif />;
       case "sumatif":
