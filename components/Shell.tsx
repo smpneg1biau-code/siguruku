@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import Beranda from "@/components/modules/Beranda";
 import Konfigurasi from "@/components/modules/Konfigurasi";
 import Jurnal from "@/components/modules/Jurnal";
+import RekapJurnal from "@/components/modules/RekapJurnal";
 import Absensi from "@/components/modules/Absensi";
 import RekapAbsensi from "@/components/modules/RekapAbsensi";
 import Formatif from "@/components/modules/Formatif";
@@ -33,6 +34,7 @@ export type TabId =
   | "beranda"
   | "konfigurasi"
   | "jurnal"
+  | "rekap-jurnal"
   | "absensi"
   | "rekap-absensi"
   | "formatif"
@@ -45,6 +47,7 @@ export type TabId =
 const NAV_ITEMS = [
   { id: "beranda", label: "Beranda", icon: Home },
   { id: "jurnal", label: "Jurnal", icon: BookOpen },
+  { id: "rekap-jurnal", label: "Rekap Jurnal", icon: Printer },
   { id: "absensi", label: "Absensi", icon: Users },
   { id: "rekap-absensi", label: "Rekap Absensi", icon: Printer },
   { id: "formatif", label: "Formatif", icon: CheckSquare },
@@ -94,6 +97,8 @@ export default function Shell() {
         return <Konfigurasi />;
       case "jurnal":
         return <Jurnal onNavigate={setActiveTab} />;
+      case "rekap-jurnal":
+        return <RekapJurnal />;
       case "absensi":
         return <Absensi />;
       case "rekap-absensi":
