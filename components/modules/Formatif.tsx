@@ -6,8 +6,6 @@ import { TP, Siswa } from '@/lib/types';
 
 export default function Formatif() {
   const { state, addItem, updateItem, showToast } = useStore();
-  const currentMapel = state.agmp_pengaturan?.mapel || "";
-  const filteredFormatif = state.agmp_formatif.filter(f => !f.mapel || f.mapel === currentMapel);
   const activeTA = state.agmp_tahun_ajaran.find(ta => ta.isActive);
   const activeTaId = activeTA?.id || '';
 
@@ -19,13 +17,13 @@ export default function Formatif() {
   const [teknikTengah, setTeknikTengah] = useState('Exit Ticket');
 
   const siswaList = state.agmp_siswa.filter(s => s.kelasId === kelasId).sort((a,b) => a.nama.localeCompare(b.nama));
-  const tpList = state.agmp_tp.filter(tp => !tp.mapel || tp.mapel === currentMapel).filter(t => t.kelasIds.includes(kelasId));
+  const tpList = state.agmp_tp.filter(t => t.kelasIds.includes(kelasId));
 
   // Determine actual selected TP id (resolving ESLint direct setState loop)
   const tpId = tpList.find(t => t.id === tpIdState) ? tpIdState : (tpList[0]?.id || '');
 
   // Cari existing formatif record for this TP and type
-  const existingFormatif = filteredFormatif.find(
+  const existingFormatif = state.agmp_formatif.find(
     f => f.jurnalId === `${kelasId}_${tpId}` && f.jenis === (activeTab === 'awal' ? 'AWAL' : 'TENGAH') && (activeTaId ? f.taId === activeTaId : true)
   );
 

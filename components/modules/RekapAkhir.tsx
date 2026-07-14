@@ -20,13 +20,6 @@ export default function RekapAkhir({
   onNavigate: (tab: TabId) => void;
 }) {
   const { state } = useStore();
-  const currentMapel = state.agmp_pengaturan?.mapel || '';
-  const filteredFormatif = state.agmp_formatif.filter(f => !f.mapel || f.mapel === currentMapel);
-  const filteredSumatif = state.agmp_sumatif.filter(s => !s.mapel || s.mapel === currentMapel);
-  const filteredTP = state.agmp_tp.filter(tp => !tp.mapel || tp.mapel === currentMapel);
-  const filteredRemedial = state.agmp_remedial.filter(r => !r.mapel || r.mapel === currentMapel);
-  const filteredAbsensi = state.agmp_absensi.filter(a => !a.mapel || a.mapel === currentMapel);
-  const filteredRapor = state.agmp_rapor.filter(r => !r.mapel || r.mapel === currentMapel);
 
   const [selectedKelasId, setSelectedKelasId] = useState(
     state.agmp_kelas[0]?.id || "",
@@ -52,12 +45,12 @@ export default function RekapAkhir({
   }, [state.agmp_siswa, selectedKelasId]);
 
   const tpList = useMemo(() => {
-    return filteredTP.filter(
+    return state.agmp_tp.filter(
       (tp) =>
         tp.kelasIds.includes(selectedKelasId) &&
         (tp.semester === selectedSemester || tp.semester === tpSemesterToMatch),
     );
-  }, [filteredTP, selectedKelasId, selectedSemester, tpSemesterToMatch]);
+  }, [state.agmp_tp, selectedKelasId, selectedSemester, tpSemesterToMatch]);
 
   const interval = {
     batasBawahTuntas: 75,
@@ -110,7 +103,7 @@ export default function RekapAkhir({
   const calculateSumatifForTP = (sId: string, tpId: string) => {
     // A TP can have multiple sumatifs, but in our app we usually have 1 sumatif per TP per Kelas
     // Let's find the sumatif for this TP
-    const sumatifMatches = filteredSumatif.filter((s) => s.tpId === tpId && s.kelasId === selectedKelasId);
+    const sumatifMatches = state.agmp_sumatif.filter((s) => s.tpId === tpId && s.kelasId === selectedKelasId);
     const sumatif = selectedTaId
       ? sumatifMatches.find((s) => s.taId === selectedTaId) || sumatifMatches.find((s) => !s.taId)
       : sumatifMatches[0];
@@ -606,11 +599,11 @@ export default function RekapAkhir({
 
               {activeTab === "formatif" &&
                 (() => {
-                  const studentFormatifs = filteredFormatif.filter(
+                  const studentFormatifs = state.agmp_formatif.filter(
                     (f) => f.hasil[selectedSiswa.id],
                   );
                   const tpKodeMap: Record<string, string> = {};
-                  filteredTP.forEach((t) => (tpKodeMap[t.id] = t.kode));
+                  state.agmp_tp.forEach((t) => (tpKodeMap[t.id] = t.kode));
 
                   if (studentFormatifs.length === 0)
                     return (
@@ -737,7 +730,7 @@ export default function RekapAkhir({
                 <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
                   {tpList.map((tp) => {
                     const res = calculateSumatifForTP(selectedSiswa.id, tp.id);
-                    const sumatifObj = filteredSumatif.find(
+                    const sumatifObj = state.agmp_sumatif.find(
                       (s) => s.id === res.sumatifId,
                     );
                     const record = sumatifObj?.records[selectedSiswa.id];

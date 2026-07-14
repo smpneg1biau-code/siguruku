@@ -101,7 +101,7 @@ const NAV_ITEMS = MENU_CATEGORIES.flatMap((c) => c.items);
 
 export default function Shell() {
   const [activeTab, setActiveTab] = useState<TabId>("beranda");
-  const { state, updateData, logout, isAdmin } = useStore();
+  const { state, logout, isAdmin } = useStore();
   const [isOnline, setIsOnline] = useState(true);
 
   useEffect(() => {
@@ -215,21 +215,9 @@ export default function Shell() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold text-gray-900 truncate">{userName}</p>
-              {(state.agmp_pengaturan.mapels && state.agmp_pengaturan.mapels.length > 1) ? (
-                <select 
-                  className="text-[10px] text-gray-500 bg-transparent border-none p-0 cursor-pointer focus:ring-0 max-w-full"
-                  value={state.agmp_pengaturan.mapel || ""}
-                  onChange={(e) => updateData("agmp_pengaturan", { ...state.agmp_pengaturan, mapel: e.target.value })}
-                >
-                  {state.agmp_pengaturan.mapels.map(m => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
-              ) : (
-                <p className="text-[10px] text-gray-500 truncate">
-                  {state.agmp_pengaturan.mapel || "Guru Mata Pelajaran"}
-                </p>
-              )}
+              <p className="text-[10px] text-gray-500 truncate">
+                {state.agmp_pengaturan.mapel || "Guru Mata Pelajaran"}
+              </p>
             </div>
             <button onClick={logout} className="p-1 hover:bg-gray-200 rounded text-red-500 transition-colors" title="Keluar">
               <LogOut size={16} />

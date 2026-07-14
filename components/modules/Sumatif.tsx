@@ -16,17 +16,14 @@ import { TesTulisConfig } from "@/lib/types";
 
 export default function Sumatif() {
   const { state, addItem, updateItem, showToast } = useStore();
-  const currentMapel = state.agmp_pengaturan?.mapel || "";
-  const filteredSumatif = state.agmp_sumatif.filter(s => !s.mapel || s.mapel === currentMapel);
-  const filteredTP = state.agmp_tp.filter(tp => !tp.mapel || tp.mapel === currentMapel);
   const activeTA = state.agmp_tahun_ajaran.find(ta => ta.isActive);
   const activeTaId = activeTA?.id || '';
 
   const [kelasId, setKelasId] = useState(state.agmp_kelas[0]?.id || "");
   
   const tpOptions = useMemo(() => 
-    filteredTP.filter((t) => t.kelasIds.includes(kelasId)),
-    [filteredTP, kelasId]
+    state.agmp_tp.filter((t) => t.kelasIds.includes(kelasId)),
+    [state.agmp_tp, kelasId]
   );
   
   const [tpId, setTpId] = useState(tpOptions[0]?.id || "");

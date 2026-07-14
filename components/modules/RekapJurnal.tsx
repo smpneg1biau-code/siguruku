@@ -4,9 +4,6 @@ import { Printer } from 'lucide-react';
 
 export default function RekapJurnal() {
   const { state } = useStore();
-  const currentMapel = state.agmp_pengaturan?.mapel || "";
-  const mapelJurnal = state.agmp_jurnal.filter(j => !j.mapel || j.mapel === currentMapel);
-  const filteredTP = state.agmp_tp.filter(tp => !tp.mapel || tp.mapel === currentMapel);
   const [kelasId, setKelasId] = useState('ALL');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -15,14 +12,14 @@ export default function RekapJurnal() {
 
   const filteredJurnal = useMemo(() => {
     if (!startDate || !endDate) return [];
-    return mapelJurnal
+    return state.agmp_jurnal
       .filter(j => {
         const matchDate = j.tanggal >= startDate && j.tanggal <= endDate;
         const matchKelas = kelasId === 'ALL' || j.kelasId === kelasId;
         return matchDate && matchKelas;
       })
       .sort((a, b) => a.tanggal.localeCompare(b.tanggal));
-  }, [mapelJurnal, kelasId, startDate, endDate]);
+  }, [state.agmp_jurnal, kelasId, startDate, endDate]);
 
   const handlePrint = () => {
     window.print();
@@ -33,12 +30,12 @@ export default function RekapJurnal() {
   };
 
   const getTpKode = (tId: string) => {
-    const tp = filteredTP.find(t => t.id === tId);
+    const tp = state.agmp_tp.find(t => t.id === tId);
     return tp ? tp.kode : '-';
   };
   
   const getTpDeskripsi = (tId: string) => {
-    const tp = filteredTP.find(t => t.id === tId);
+    const tp = state.agmp_tp.find(t => t.id === tId);
     return tp ? tp.deskripsi : '-';
   };
 

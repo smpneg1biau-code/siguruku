@@ -6,14 +6,13 @@ import { Save, Lock, ArrowRight, CheckCircle, Target } from 'lucide-react';
 
 export default function Jurnal({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const { state, addItem, updateItem, showToast } = useStore();
-  const currentMapel = state.agmp_pengaturan?.mapel || "";
   const activeTA = state.agmp_tahun_ajaran.find(ta => ta.isActive);
   const activeTaId = activeTA?.id || '';
 
   const [formData, setFormData] = useState({
     tanggal: new Date().toISOString().split('T')[0],
     kelasId: state.agmp_kelas[0]?.id || '',
-    tpId: (state.agmp_tp.filter(tp => !tp.mapel || tp.mapel === currentMapel))[0]?.id || '',
+    tpId: state.agmp_tp[0]?.id || '',
     materi: '',
     kegiatan: '',
     refleksi: '',
@@ -29,7 +28,6 @@ export default function Jurnal({ onNavigate }: { onNavigate: (tab: TabId) => voi
     const newJurnal = {
       id: generateId(),
       taId: activeTaId,
-      mapel: currentMapel,
       ...formData,
       cekAwalDone: false,
       cekTengahDone: false,
@@ -40,7 +38,7 @@ export default function Jurnal({ onNavigate }: { onNavigate: (tab: TabId) => voi
     setFormData({...formData, materi: '', kegiatan: '', refleksi: ''});
   };
 
-  const recentJurnals = state.agmp_jurnal.filter(j => !j.mapel || j.mapel === currentMapel)
+  const recentJurnals = state.agmp_jurnal
     .filter(j => j.taId === activeTaId || !j.taId)
     .reverse()
     .slice(0, 5);
@@ -69,7 +67,7 @@ export default function Jurnal({ onNavigate }: { onNavigate: (tab: TabId) => voi
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-gray-700">Tujuan Pembelajaran (TP)</label>
           <select className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white" value={formData.tpId} onChange={e => setFormData({...formData, tpId: e.target.value})}>
-            {state.agmp_tp.filter(tp => !tp.mapel || tp.mapel === currentMapel).map(tp => <option key={tp.id} value={tp.id}>{tp.kode} - {tp.deskripsi}</option>)}
+            {state.agmp_tp.map(tp => <option key={tp.id} value={tp.id}>{tp.kode} - {tp.deskripsi}</option>)}
           </select>
         </div>
 
@@ -122,7 +120,7 @@ export default function Jurnal({ onNavigate }: { onNavigate: (tab: TabId) => voi
                     <span className="font-semibold text-sm">{state.agmp_kelas.find(k=>k.id === j.kelasId)?.nama}</span>
                     <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{j.tanggal}</span>
                   </div>
-                  <p className="text-xs font-semibold text-[#007AFF] mt-1">TP {state.agmp_tp.filter(tp => !tp.mapel || tp.mapel === currentMapel).find(t=>t.id === j.tpId)?.kode}</p>
+                  <p className="text-xs font-semibold text-[#007AFF] mt-1">TP {state.agmp_tp.find(t=>t.id === j.tpId)?.kode}</p>
                 </div>
                 <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${j.status === 'TUNTAS' ? 'bg-[#34C759]/10 text-[#34C759]' : 'bg-[#FF3B30]/10 text-[#FF3B30]'}`}>
                   {j.status}

@@ -5,13 +5,6 @@ import { FileText, Download, Printer, Edit2 } from "lucide-react";
 
 export default function Rapor() {
   const { state } = useStore();
-  const currentMapel = state.agmp_pengaturan?.mapel || '';
-  const filteredFormatif = state.agmp_formatif.filter(f => !f.mapel || f.mapel === currentMapel);
-  const filteredSumatif = state.agmp_sumatif.filter(s => !s.mapel || s.mapel === currentMapel);
-  const filteredTP = state.agmp_tp.filter(tp => !tp.mapel || tp.mapel === currentMapel);
-  const filteredRemedial = state.agmp_remedial.filter(r => !r.mapel || r.mapel === currentMapel);
-  const filteredAbsensi = state.agmp_absensi.filter(a => !a.mapel || a.mapel === currentMapel);
-  const filteredRapor = state.agmp_rapor.filter(r => !r.mapel || r.mapel === currentMapel);
   
   const activeTA = state.agmp_tahun_ajaran.find(ta => ta.isActive);
   const [selectedTaId, setSelectedTaId] = useState(activeTA?.id || '');
@@ -31,7 +24,7 @@ export default function Rapor() {
   // Generate data for report
   const generateReportData = (siswaId: string) => {
     const tpSemesterToMatch = selectedTA ? (selectedTA.semester === "Ganjil" ? "1" : "2") : null;
-    const tps = filteredTP.filter((tp) => tp.kelasIds.includes(kelasId) && (selectedTA ? (tp.semester === selectedTA.semester || tp.semester === tpSemesterToMatch) : true));
+    const tps = state.agmp_tp.filter((tp) => tp.kelasIds.includes(kelasId) && (selectedTA ? (tp.semester === selectedTA.semester || tp.semester === tpSemesterToMatch) : true));
     const interval = {
       batasBawahTuntas: 75,
       batasAtasLanjut: 85,
@@ -52,7 +45,7 @@ export default function Rapor() {
 
     tps.forEach((tp) => {
       // Find sumatif
-      const sumatifMatches = filteredSumatif.filter((s) => s.tpId === tp.id && s.kelasId === kelasId);
+      const sumatifMatches = state.agmp_sumatif.filter((s) => s.tpId === tp.id && s.kelasId === kelasId);
       const sumatif = selectedTaId
         ? sumatifMatches.find((s) => s.taId === selectedTaId) || sumatifMatches.find((s) => !s.taId)
         : sumatifMatches[0];

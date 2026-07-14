@@ -24,18 +24,13 @@ export default function Beranda({
   onNavigate: (tab: TabId) => void;
 }) {
   const { state } = useStore();
-  const currentMapel = state.agmp_pengaturan?.mapel || "";
 
-  const filterByMapel = <T extends { mapel?: string }>(items: T[]) => {
-    return items.filter(item => !item.mapel || item.mapel === currentMapel);
-  };
-
-  const TPs = filterByMapel(state.agmp_tp);
+  const TPs = state.agmp_tp;
   const totalTPs = TPs.length;
   
   // Calculate attendance percentage for today or latest
   const { kehadiranPersen, kehadiranDate, kehadiranTotalSiswa } = useMemo(() => {
-    const absensis = filterByMapel(state.agmp_absensi);
+    const absensis = state.agmp_absensi;
     if (absensis.length === 0) return { kehadiranPersen: 0, kehadiranDate: "-", kehadiranTotalSiswa: 0 };
     
     // Sort by date descending
@@ -58,18 +53,18 @@ export default function Beranda({
     
     const persen = totalCount > 0 ? (hadirCount / totalCount) * 100 : 0;
     return { kehadiranPersen: persen, kehadiranDate: latestDate, kehadiranTotalSiswa: totalCount };
-  }, [state.agmp_absensi, currentMapel]);
+  }, [state.agmp_absensi]);
 
-  const sumatifTuntasCount = filterByMapel(state.agmp_sumatif).filter(
+  const sumatifTuntasCount = state.agmp_sumatif.filter(
     (s) => s.isLocked,
   ).length;
 
-  const activeRemedials = filterByMapel(state.agmp_remedial).filter(
+  const activeRemedials = state.agmp_remedial.filter(
     (r) => r.status !== "Selesai" && r.status !== "Dibatalkan"
   ).length;
 
   const today = new Date().toISOString().split("T")[0];
-  const jurnalsHariIni = filterByMapel(state.agmp_jurnal).filter(j => j.tanggal === today);
+  const jurnalsHariIni = state.agmp_jurnal.filter(j => j.tanggal === today);
 
   const stats = [
     {
@@ -250,7 +245,7 @@ export default function Beranda({
             </div>
             <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-3">
               {state.agmp_kelas.map((kelas) => {
-                const jurnal = filterByMapel(state.agmp_jurnal).find((j) => j.kelasId === kelas.id && j.tanggal === today);
+                const jurnal = state.agmp_jurnal.find((j) => j.kelasId === kelas.id && j.tanggal === today);
                 const isTerisi = !!jurnal;
                 
                 return (
@@ -327,7 +322,7 @@ export default function Beranda({
                     let statusTextColor = "text-gray-600";
                     
                     if (kehadiranDate !== "-") {
-                       const absensiTerkait = filterByMapel(state.agmp_absensi).find(a => a.tanggal === kehadiranDate && a.kelasId === s.kelasId);
+                       const absensiTerkait = state.agmp_absensi.find(a => a.tanggal === kehadiranDate && a.kelasId === s.kelasId);
                        if (absensiTerkait && absensiTerkait.records[s.id]) {
                           statusSiswa = absensiTerkait.records[s.id];
                           if (statusSiswa === "HADIR") { bg = "bg-green-500"; statusBgColor = "bg-green-50"; statusTextColor = "text-green-600"; }
