@@ -5,6 +5,7 @@ export const defaultState: AppState = {
   agmp_pengaturan: {
     guruNama: "",
     mapel: "",
+    mapels: [],
     sekolah: "",
   },
   agmp_kelas: [],

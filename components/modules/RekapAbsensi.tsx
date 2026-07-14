@@ -5,6 +5,8 @@ import { AbsensiStatus } from '@/lib/types';
 
 export default function RekapAbsensi() {
   const { state } = useStore();
+  const currentMapel = state.agmp_pengaturan?.mapel || "";
+  const mapelAbsensi = state.agmp_absensi.filter(a => !a.mapel || a.mapel === currentMapel);
   const [kelasId, setKelasId] = useState(state.agmp_kelas[0]?.id || '');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -18,10 +20,10 @@ export default function RekapAbsensi() {
 
   const filteredAbsensi = useMemo(() => {
     if (!kelasId || !startDate || !endDate) return [];
-    return state.agmp_absensi
+    return mapelAbsensi
       .filter(a => a.kelasId === kelasId && a.tanggal >= startDate && a.tanggal <= endDate)
       .sort((a, b) => a.tanggal.localeCompare(b.tanggal));
-  }, [state.agmp_absensi, kelasId, startDate, endDate]);
+  }, [mapelAbsensi, kelasId, startDate, endDate]);
 
   const handlePrint = () => {
     window.print();

@@ -16,6 +16,13 @@ import { generateId } from "@/lib/utils";
 
 export default function Remedial() {
   const { state, updateItem, addItem, showToast } = useStore();
+  const currentMapel = state.agmp_pengaturan?.mapel || '';
+  const filteredFormatif = state.agmp_formatif.filter(f => !f.mapel || f.mapel === currentMapel);
+  const filteredSumatif = state.agmp_sumatif.filter(s => !s.mapel || s.mapel === currentMapel);
+  const filteredTP = state.agmp_tp.filter(tp => !tp.mapel || tp.mapel === currentMapel);
+  const filteredRemedial = state.agmp_remedial.filter(r => !r.mapel || r.mapel === currentMapel);
+  const filteredAbsensi = state.agmp_absensi.filter(a => !a.mapel || a.mapel === currentMapel);
+  const filteredRapor = state.agmp_rapor.filter(r => !r.mapel || r.mapel === currentMapel);
   const activeTA = state.agmp_tahun_ajaran.find(ta => ta.isActive);
   const activeTaId = activeTA?.id || '';
 
@@ -26,7 +33,7 @@ export default function Remedial() {
   const [manualSumatifId, setManualSumatifId] = useState("");
   const [manualSiswaId, setManualSiswaId] = useState("");
 
-  const remedialList = state.agmp_remedial.filter(r => (activeTaId ? r.taId === activeTaId : true));
+  const remedialList = filteredRemedial.filter(r => (activeTaId ? r.taId === activeTaId : true));
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -322,7 +329,7 @@ export default function Remedial() {
                 {state.agmp_sumatif
                   .filter((s) => s.kelasId === manualKelasId)
                   .map((s) => {
-                    const tp = state.agmp_tp.find((t) => t.id === s.tpId);
+                    const tp = filteredTP.find((t) => t.id === s.tpId);
                     return (
                       <option key={s.id} value={s.id}>
                         TP {tp?.kode} ({s.teknik})
@@ -346,7 +353,7 @@ export default function Remedial() {
                   state.agmp_siswa
                     .filter((s) => s.kelasId === manualKelasId)
                     .filter((s) => {
-                      const sumatif = state.agmp_sumatif.find(
+                      const sumatif = filteredSumatif.find(
                         (sum) => sum.id === manualSumatifId,
                       );
                       const sumatifRecord = sumatif?.records?.[s.id];
@@ -363,7 +370,7 @@ export default function Remedial() {
                         ),
                     )
                     .map((s) => {
-                      const sumatifRec = state.agmp_sumatif.find(
+                      const sumatifRec = filteredSumatif.find(
                         (sum) => sum.id === manualSumatifId,
                       )?.records?.[s.id];
                       return (
@@ -381,7 +388,7 @@ export default function Remedial() {
                   showToast('Tidak ada Tahun Ajaran yang aktif!', 'error');
                   return;
                 }
-                const sumatif = state.agmp_sumatif.find(
+                const sumatif = filteredSumatif.find(
                   (s) => s.id === manualSumatifId,
                 );
                 if (sumatif) {
@@ -423,8 +430,8 @@ export default function Remedial() {
         ) : (
           remedialList.map((r) => {
             const siswa = state.agmp_siswa.find((s) => s.id === r.siswaId);
-            const tp = state.agmp_tp.find((t) => t.id === r.tpId);
-            const existingSumatif = state.agmp_sumatif.find((s) => s.id === r.sumatifId);
+            const tp = filteredTP.find((t) => t.id === r.tpId);
+            const existingSumatif = filteredSumatif.find((s) => s.id === r.sumatifId);
             const sumatifAsli = existingSumatif?.records[r.siswaId];
             const rubrik = state.agmp_rubrik.find((rub) => rub.tpId === r.tpId);
             const isExpanded = expandedId === r.id;

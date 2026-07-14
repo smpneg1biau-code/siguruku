@@ -1,3 +1,4 @@
+import { DAFTAR_MATA_PELAJARAN } from "@/lib/constants";
 import React, { useState, useEffect, useMemo } from "react";
 import { useStore } from "@/lib/store";
 import { generateId } from "@/lib/utils";
@@ -5,8 +6,10 @@ import { KKTPType, AspekRubrik } from "@/lib/types";
 import { Plus, Trash2, Edit, Download } from "lucide-react";
 import * as XLSX from "xlsx";
 
+
+
 export default function Konfigurasi() {
-  const [activeTab, setActiveTab] = useState<"ta" | "kelas" | "siswa" | "tp" | "kktp" | "db">(
+  const [activeTab, setActiveTab] = useState<"profil" | "ta" | "kelas" | "siswa" | "tp" | "kktp" | "db">(
     "ta",
   );
 
@@ -21,7 +24,7 @@ export default function Konfigurasi() {
 
       {/* Tabs */}
       <div className="flex overflow-x-auto hide-scrollbar gap-2 pb-2">
-        {[{id:"ta", label:"Tahun Ajaran"}, {id:"kelas", label:"Kelas"}, {id:"siswa", label: "Siswa"}, {id:"tp", label:"TP"}, {id:"kktp", label:"KKTP"}].map((tab) => (
+        {[{id:"profil", label:"Profil Guru"}, {id:"ta", label:"Tahun Ajaran"}, {id:"kelas", label:"Kelas"}, {id:"siswa", label: "Siswa"}, {id:"tp", label:"TP"}, {id:"kktp", label:"KKTP"}].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
@@ -37,6 +40,7 @@ export default function Konfigurasi() {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6">
+        {activeTab === "profil" && <ManajemenProfil />}
         {activeTab === "ta" && <ManajemenTA />}
         {activeTab === "kelas" && <ManajemenKelas />}
         {activeTab === "siswa" && <ManajemenSiswa />}
@@ -636,6 +640,8 @@ function ManajemenSiswa() {
 
 function ManajemenTP() {
   const { state, addItem, deleteItem } = useStore();
+  const currentMapel = state.agmp_pengaturan?.mapel || "";
+  const filteredTP = state.agmp_tp.filter(tp => !tp.mapel || tp.mapel === currentMapel);
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({
     kode: "",
@@ -647,7 +653,7 @@ function ManajemenTP() {
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    addItem("agmp_tp", { id: generateId(), ...formData });
+    addItem("agmp_tp", { id: generateId(), mapel: currentMapel, ...formData });
     setIsAdding(false);
     setFormData({
       kode: "",
@@ -769,7 +775,7 @@ function ManajemenTP() {
       )}
 
       <div className="divide-y border rounded-xl overflow-hidden">
-        {state.agmp_tp.map((tp) => (
+        {filteredTP.map((tp) => (
           <div key={tp.id} className="p-4 hover:bg-gray-50">
             <div className="flex justify-between items-start">
               <div>
@@ -807,7 +813,7 @@ function ManajemenTP() {
             </div>
           </div>
         ))}
-        {state.agmp_tp.length === 0 && (
+        {filteredTP.length === 0 && (
           <div className="p-4 text-center text-sm text-gray-500">
             Belum ada data TP
           </div>
@@ -819,20 +825,21 @@ function ManajemenTP() {
 
 function ManajemenKKTP() {
   const { state, addItem, updateItem, updateData, showToast } = useStore();
+  const currentMapel = state.agmp_pengaturan?.mapel || "";
   const [selectedKelasId, setSelectedKelasId] = useState<string>(
     state.agmp_kelas[0]?.id || "",
   );
   
   const tpOptions = useMemo(() => 
-    state.agmp_tp.filter((t) => t.kelasIds.includes(selectedKelasId)),
-    [state.agmp_tp, selectedKelasId]
+    state.agmp_tp.filter(t => !t.mapel || t.mapel === currentMapel).filter((t) => t.kelasIds.includes(selectedKelasId)),
+    [state.agmp_tp, selectedKelasId, currentMapel]
   );
 
   const [selectedTpId, setSelectedTpId] = useState<string>(
     tpOptions[0]?.id || "",
   );
 
-  const tp = state.agmp_tp.find((t) => t.id === selectedTpId);
+  const tp = state.agmp_tp.filter(t => !t.mapel || t.mapel === currentMapel).find((t) => t.id === selectedTpId);
   const existingRubrik = state.agmp_rubrik.find((r) => r.tpId === selectedTpId);
 
   const [jenisKKTP, setJenisKKTP] = useState<KKTPType>("Interval Nilai");
@@ -1310,6 +1317,102 @@ function ManajemenKKTP() {
             </button>
           </form>
         )}
+      </div>
+    </div>
+  );
+}
+
+
+
+
+function ManajemenProfil() {
+  const { state, updateData, showToast } = useStore();
+  const [formData, setFormData] = useState({
+    guruNama: state.agmp_pengaturan?.guruNama || "",
+    sekolah: state.agmp_pengaturan?.sekolah || "",
+    mapels: state.agmp_pengaturan?.mapels || [],
+  });
+
+  const handleToggleMapel = (m: string) => {
+    setFormData(prev => ({
+      ...prev,
+      mapels: prev.mapels.includes(m) ? prev.mapels.filter(x => x !== m) : [...prev.mapels, m]
+    }));
+  };
+
+  const handleSave = async () => {
+    try {
+      const activeMapel = formData.mapels.length > 0 ? formData.mapels[0] : "";
+      await updateData("agmp_pengaturan", {
+        ...state.agmp_pengaturan,
+        guruNama: formData.guruNama,
+        sekolah: formData.sekolah,
+        mapels: formData.mapels,
+        mapel: state.agmp_pengaturan?.mapel && formData.mapels.includes(state.agmp_pengaturan.mapel) 
+                ? state.agmp_pengaturan.mapel 
+                : activeMapel,
+      });
+      showToast("Profil berhasil disimpan", "success");
+    } catch (e) {
+      showToast("Gagal menyimpan profil", "error");
+    }
+  };
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <h3 className="text-lg font-bold">Profil Guru</h3>
+        <p className="text-sm text-gray-500">Atur nama, sekolah, dan mata pelajaran yang Anda ampu.</p>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">Nama Guru</label>
+          <input 
+            type="text"
+            className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20"
+            value={formData.guruNama}
+            onChange={e => setFormData({...formData, guruNama: e.target.value})}
+            placeholder="Contoh: Budi Santoso, S.Pd"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">Nama Sekolah</label>
+          <input 
+            type="text"
+            className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20"
+            value={formData.sekolah}
+            onChange={e => setFormData({...formData, sekolah: e.target.value})}
+            placeholder="Contoh: SMP Negeri 1 Biau"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Mata Pelajaran yang Diampu</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {DAFTAR_MATA_PELAJARAN.map(m => (
+              <label key={m} className="flex items-center gap-2 p-2 border rounded-xl hover:bg-gray-50 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={formData.mapels.includes(m)}
+                  onChange={() => handleToggleMapel(m)}
+                  className="rounded text-[#007AFF] focus:ring-[#007AFF]"
+                />
+                <span className="text-sm text-gray-700">{m}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="pt-4">
+          <button 
+            onClick={handleSave}
+            className="bg-[#007AFF] hover:bg-blue-600 text-white px-6 py-2 rounded-xl font-semibold text-sm transition-colors"
+          >
+            Simpan Profil
+          </button>
+        </div>
       </div>
     </div>
   );

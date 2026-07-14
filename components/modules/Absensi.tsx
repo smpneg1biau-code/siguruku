@@ -6,6 +6,7 @@ import { CheckCircle2, Download, MessageSquare, X, Plus } from 'lucide-react';
 
 export default function Absensi() {
   const { state, addItem, updateItem } = useStore();
+  const currentMapel = state.agmp_pengaturan?.mapel || "";
   const activeTA = state.agmp_tahun_ajaran.find(ta => ta.isActive);
   const activeTaId = activeTA?.id || '';
 
@@ -25,7 +26,7 @@ export default function Absensi() {
        if(siswaList.length > 0) {
            const records: Record<string, AbsensiStatus> = {};
            siswaList.forEach(s => records[s.id] = 'HADIR');
-           addItem('agmp_absensi', { id: generateId(), taId: activeTaId, tanggal, kelasId, records }, true);
+           addItem('agmp_absensi', { id: generateId(), taId: activeTaId, tanggal, kelasId, records, mapel: currentMapel }, true);
            // eslint-disable-next-line react-hooks/set-state-in-effect
            setLocalRecords(records);
        }
@@ -33,7 +34,7 @@ export default function Absensi() {
         
        setLocalRecords(existingRecord.records || {});
     }
-  }, [tanggal, kelasId, existingRecord, addItem, state.agmp_siswa, activeTaId]);
+  }, [tanggal, kelasId, existingRecord, addItem, state.agmp_siswa, activeTaId, currentMapel]);
 
   const siswaList = state.agmp_siswa.filter(s => s.kelasId === kelasId);
   const sortedSiswaList = [...siswaList].sort((a, b) => a.nama.localeCompare(b.nama));
@@ -170,11 +171,12 @@ export default function Absensi() {
 
 function DetailSiswaModal({ siswaId, onClose, existingRecord }: { siswaId: string, onClose: () => void, existingRecord: any }) {
   const { state, updateItem, addItem, showToast } = useStore();
+  const currentMapel = state.agmp_pengaturan?.mapel || "";
   const activeTA = state.agmp_tahun_ajaran.find(ta => ta.isActive);
   const activeTaId = activeTA?.id || '';
 
   const siswa = state.agmp_siswa.find(s => s.id === siswaId);
-  const anekdotHistory = state.agmp_anekdot.filter(a => a.siswaId === siswaId && (a.taId === activeTaId || !a.taId)).sort((a,b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime());
+  const anekdotHistory = state.agmp_anekdot.filter(a => a.siswaId === siswaId && (a.taId === activeTaId || !a.taId) && (!a.mapel || a.mapel === currentMapel)).sort((a,b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime());
   
   const [absenNote, setAbsenNote] = useState(existingRecord?.catatan?.[siswaId] || '');
   const [anekdotBaru, setAnekdotBaru] = useState('');
@@ -193,6 +195,7 @@ function DetailSiswaModal({ siswaId, onClose, existingRecord }: { siswaId: strin
       return;
     }
     addItem('agmp_anekdot', {
+      mapel: currentMapel,
       id: generateId(),
       taId: activeTaId,
       siswaId,

@@ -15,6 +15,7 @@ export type Siswa = {
 };
 
 export type TP = {
+  mapel?: string;
   id: string;
   kode: string;
   deskripsi: string;
@@ -59,6 +60,7 @@ export type Rubrik = {
 };
 
 export type Jurnal = {
+  mapel?: string;
   id: string;
   taId: string;
   tanggal: string;
@@ -76,6 +78,7 @@ export type Jurnal = {
 export type AbsensiStatus = "HADIR" | "SAKIT" | "IZIN" | "ALPA" | "BOLOS";
 
 export type Absensi = {
+  mapel?: string;
   id: string;
   taId: string;
   tanggal: string;
@@ -85,6 +88,7 @@ export type Absensi = {
 };
 
 export type Anekdot = {
+  mapel?: string;
   id: string;
   taId: string;
   siswaId: string;
@@ -93,6 +97,7 @@ export type Anekdot = {
 };
 
 export type Formatif = {
+  mapel?: string;
   id: string;
   taId: string;
   jurnalId: string;
@@ -125,6 +130,7 @@ export type TesTulisConfig = {
 };
 
 export type Sumatif = {
+  mapel?: string;
   id: string;
   taId: string;
   tpId: string;
@@ -137,6 +143,7 @@ export type Sumatif = {
 };
 
 export type Remedial = {
+  mapel?: string;
   id: string;
   taId: string;
   sumatifId: string;
@@ -157,6 +164,7 @@ export type Remedial = {
 };
 
 export type Rapor = {
+  mapel?: string;
   id: string;
   siswaId: string;
   semester: string;
@@ -187,7 +195,8 @@ export type AppState = {
   agmp_anekdot: Anekdot[];
   agmp_pengaturan: {
     guruNama: string;
-    mapel: string;
+    mapel: string; // The current active mapel or legacy single mapel
+    mapels?: string[]; // The list of mapels the teacher teaches
     sekolah: string;
   };
 };
