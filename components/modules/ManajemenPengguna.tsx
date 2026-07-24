@@ -10,11 +10,13 @@ type AppUser = {
   name: string;
   isAuthorized: boolean;
   createdAt: string;
+  mapelId?: string;
 };
 
 export default function ManajemenPengguna() {
   const [users, setUsers] = useState<AppUser[]>([]);
-  const { showToast } = useStore();
+  const { showToast, state } = useStore();
+  const mapels = state.agmp_mapel || [];
 
   useEffect(() => {
     const usersRef = collection(db, 'app_users');
@@ -28,6 +30,17 @@ export default function ManajemenPengguna() {
 
     return () => unsub();
   }, []);
+
+  const assignMapel = async (userId: string, mapelId: string) => {
+    try {
+      const userRef = doc(db, 'app_users', userId);
+      await updateDoc(userRef, { mapelId });
+      showToast("Mata pelajaran berhasil diatur", "success");
+    } catch (error) {
+      console.error("Error updating user mapel", error);
+      showToast("Gagal mengatur mata pelajaran", "error");
+    }
+  };
 
   const toggleAuth = async (userId: string, currentStatus: boolean) => {
     try {
@@ -58,6 +71,7 @@ export default function ManajemenPengguna() {
               <tr>
                 <th className="px-6 py-4 font-semibold border-b border-gray-100">Pengguna</th>
                 <th className="px-6 py-4 font-semibold border-b border-gray-100">Email</th>
+                <th className="px-6 py-4 font-semibold border-b border-gray-100">Mata Pelajaran</th>
                 <th className="px-6 py-4 font-semibold border-b border-gray-100 text-center">Status Akses</th>
                 <th className="px-6 py-4 font-semibold border-b border-gray-100 text-center">Aksi</th>
               </tr>
@@ -74,6 +88,20 @@ export default function ManajemenPengguna() {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-gray-600 text-sm">{u.email}</td>
+                  <td className="px-6 py-4">
+                    <select
+                      className="px-3 py-1.5 border rounded-lg text-sm bg-gray-50 focus:bg-white min-w-[150px]"
+                      value={u.mapelId || ""}
+                      onChange={(e) => assignMapel(u.id, e.target.value)}
+                    >
+                      <option value="">-- Pilih Mapel --</option>
+                      {mapels.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.kode} - {m.nama}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
                   <td className="px-6 py-4 text-center">
                     {u.email === 'smpneg1biau@gmail.com' ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
@@ -107,7 +135,7 @@ export default function ManajemenPengguna() {
               ))}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500 italic">
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500 italic">
                     Belum ada pengguna.
                   </td>
                 </tr>
