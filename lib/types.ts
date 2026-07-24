@@ -1,3 +1,24 @@
+export type TemaBentuk = {
+  id: string;
+  dimensiId: string;
+  bentuk: "Pembelajaran Kolaboratif Lintas Disiplin" | "Gerakan 7KAIH" | "Cara Lainnya";
+  deskripsi?: string;
+};
+
+export type ModulKokurikuler = {
+  id: string;
+  nama: string;
+  temaBentukId: string;
+  alokasiWaktu: number;
+};
+
+export type Fasilitator = {
+  id: string;
+  modulId: string;
+  kelasId: string;
+  guruIds: string[];
+};
+
 export type SubDimensi = {
   id: string;
   nama: string;
@@ -204,6 +225,9 @@ export type AppState = {
   agmp_anekdot: Anekdot[];
   agmp_mapel: Mapel[];
   agmp_dimensi: Dimensi[];
+  agmp_tema_bentuk: TemaBentuk[];
+  agmp_modul_kokurikuler: ModulKokurikuler[];
+  agmp_fasilitator: Fasilitator[];
   agmp_pengaturan: {
     guruNama: string;
     mapel: string;

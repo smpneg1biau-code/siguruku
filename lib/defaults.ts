@@ -21,4 +21,7 @@ export const defaultState: AppState = {
   agmp_anekdot: [],
   agmp_mapel: [],
   agmp_dimensi: [],
+  agmp_tema_bentuk: [],
+  agmp_modul_kokurikuler: [],
+  agmp_fasilitator: [],
 };

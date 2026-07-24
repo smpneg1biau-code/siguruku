@@ -28,6 +28,9 @@ import Rapor from "@/components/modules/Rapor";
 import RekapAkhir from "@/components/modules/RekapAkhir";
 import Database from "@/components/modules/Database";
 import ManajemenPengguna from "@/components/modules/ManajemenPengguna";
+import TemaBentuk from "@/components/modules/TemaBentuk";
+import DaftarModul from "@/components/modules/DaftarModul";
+import Fasilitator from "@/components/modules/Fasilitator";
 import { BarChart2, Database as DatabaseIcon, Shield } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { auth } from "@/lib/firebase";
@@ -45,10 +48,14 @@ export type TabId =
   | "rapor"
   | "rekap-akhir"
   | "database"
+  | "tema-bentuk"
+  | "daftar-modul"
+  | "fasilitator"
   | "pengguna";
 
 type MenuItem = {
   adminOnly?: boolean;
+  koordinatorOnly?: boolean;
   id: TabId;
   label: string;
   icon: React.ElementType;
@@ -89,6 +96,14 @@ const MENU_CATEGORIES: MenuCategory[] = [
     ],
   },
   {
+    category: "Kokurikuler",
+    items: [
+      { id: "tema-bentuk", label: "Tema & Bentuk", icon: BookOpen, koordinatorOnly: true },
+      { id: "daftar-modul", label: "Daftar Modul", icon: FileText, koordinatorOnly: true },
+      { id: "fasilitator", label: "Fasilitator", icon: Users, koordinatorOnly: true },
+    ],
+  },
+  {
     category: "Sistem & Pengaturan",
     items: [
       { id: "konfigurasi", label: "Pengaturan", icon: Settings },
@@ -102,7 +117,7 @@ const NAV_ITEMS = MENU_CATEGORIES.flatMap((c) => c.items);
 
 export default function Shell() {
     const [activeTab, setActiveTab] = useState<TabId>("beranda");
-  const { state, logout, isAdmin } = useStore();
+  const { state, logout, isAdmin, isKoordinator } = useStore();
   const [isOnline, setIsOnline] = useState(true);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
 
@@ -169,6 +184,12 @@ export default function Shell() {
         return <Rapor />;
       case "rekap-akhir":
         return <RekapAkhir onNavigate={setActiveTab} />;
+      case "tema-bentuk":
+        return <TemaBentuk />;
+      case "daftar-modul":
+        return <DaftarModul />;
+      case "fasilitator":
+        return <Fasilitator />;
       case "database":
         return <Database />;
       case "pengguna":
@@ -198,7 +219,7 @@ export default function Shell() {
         </div>
         <nav className="flex-1 py-2 overflow-y-auto no-scrollbar">
           {MENU_CATEGORIES.map((category) => {
-            const filteredItems = category.items.filter(item => !item.adminOnly || isAdmin);
+            const filteredItems = category.items.filter(item => (!item.adminOnly || isAdmin) && (!item.koordinatorOnly || isAdmin || isKoordinator));
             if (filteredItems.length === 0) return null;
 
             if (category.category === "Menu Utama") {

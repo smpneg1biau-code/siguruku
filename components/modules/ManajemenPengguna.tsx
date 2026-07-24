@@ -9,6 +9,7 @@ type AppUser = {
   email: string;
   name: string;
   isAuthorized: boolean;
+  isKoordinator?: boolean;
   createdAt: string;
   mapelId?: string;
 };
@@ -39,6 +40,17 @@ export default function ManajemenPengguna() {
     } catch (error) {
       console.error("Error updating user mapel", error);
       showToast("Gagal mengatur mata pelajaran", "error");
+    }
+  };
+
+  const toggleKoordinator = async (userId: string, currentStatus: boolean) => {
+    try {
+      const userRef = doc(db, 'app_users', userId);
+      await updateDoc(userRef, { isKoordinator: !currentStatus });
+      showToast(`Status Koordinator berhasil ${!currentStatus ? 'diberikan' : 'dicabut'}`, "success");
+    } catch (error) {
+      console.error("Error updating koordinator status", error);
+      showToast("Gagal mengubah status Koordinator", "error");
     }
   };
 
@@ -73,6 +85,7 @@ export default function ManajemenPengguna() {
                 <th className="px-6 py-4 font-semibold border-b border-gray-100">Email</th>
                 <th className="px-6 py-4 font-semibold border-b border-gray-100">Mata Pelajaran</th>
                 <th className="px-6 py-4 font-semibold border-b border-gray-100 text-center">Status Akses</th>
+                <th className="px-6 py-4 font-semibold border-b border-gray-100 text-center">Koordinator</th>
                 <th className="px-6 py-4 font-semibold border-b border-gray-100 text-center">Aksi</th>
               </tr>
             </thead>
@@ -120,6 +133,20 @@ export default function ManajemenPengguna() {
                   <td className="px-6 py-4 text-center">
                     {u.email !== 'smpneg1biau@gmail.com' && (
                       <button
+                        onClick={() => toggleKoordinator(u.id, !!u.isKoordinator)}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                          u.isKoordinator 
+                            ? 'bg-purple-50 text-purple-600 hover:bg-purple-100' 
+                            : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        {u.isKoordinator ? 'Koordinator' : 'Bukan'}
+                      </button>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    {u.email !== 'smpneg1biau@gmail.com' && (
+                      <button
                         onClick={() => toggleAuth(u.id, u.isAuthorized)}
                         className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                           u.isAuthorized 
@@ -135,7 +162,7 @@ export default function ManajemenPengguna() {
               ))}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500 italic">
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500 italic">
                     Belum ada pengguna.
                   </td>
                 </tr>

@@ -10,6 +10,7 @@ import LoginScreen from '@/components/LoginScreen';
 
 type StoreContextType = {
   isAdmin: boolean;
+  isKoordinator: boolean;
   isAuthorized: boolean | null;
   state: AppState;
   updateData: <K extends keyof AppState>(key: K, data: AppState[K], silent?: boolean) => Promise<void>;
@@ -36,6 +37,7 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
   const [loadingData, setLoadingData] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isKoordinator, setIsKoordinator] = useState<boolean>(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const showToast = (message: string, type: "success" | "error" = "success") => {
@@ -64,6 +66,7 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
       setLoadingData(false);
       setIsAuthorized(null);
       setIsAdmin(false);
+      setIsKoordinator(false);
       return;
     } 
     
@@ -87,9 +90,11 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
         }, { merge: true }).catch(console.error);
         
         setIsAuthorized(userIsAdmin);
+        setIsKoordinator(false);
       } else {
         const data = docSnap.data();
         setIsAuthorized(userIsAdmin ? true : !!data?.isAuthorized);
+        setIsKoordinator(!!data?.isKoordinator);
       }
     });
     unsubscribes.push(unsubAuth);
@@ -117,7 +122,7 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
     const listKeys: (keyof AppState)[] = [
       'agmp_tahun_ajaran', 'agmp_kelas', 'agmp_siswa', 'agmp_tp',
       'agmp_kktp', 'agmp_rubrik', 'agmp_jurnal', 'agmp_absensi',
-      'agmp_formatif', 'agmp_sumatif', 'agmp_remedial', 'agmp_rapor', 'agmp_anekdot', 'agmp_mapel', 'agmp_dimensi'
+      'agmp_formatif', 'agmp_sumatif', 'agmp_remedial', 'agmp_rapor', 'agmp_anekdot', 'agmp_mapel', 'agmp_dimensi', 'agmp_tema_bentuk', 'agmp_modul_kokurikuler', 'agmp_fasilitator'
     ];
 
     listKeys.forEach((key) => {
@@ -247,7 +252,7 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
     const listKeys: (keyof AppState)[] = [
       'agmp_tahun_ajaran', 'agmp_kelas', 'agmp_siswa', 'agmp_tp',
       'agmp_kktp', 'agmp_rubrik', 'agmp_jurnal', 'agmp_absensi',
-      'agmp_formatif', 'agmp_sumatif', 'agmp_remedial', 'agmp_rapor', 'agmp_anekdot', 'agmp_mapel', 'agmp_dimensi'
+      'agmp_formatif', 'agmp_sumatif', 'agmp_remedial', 'agmp_rapor', 'agmp_anekdot', 'agmp_mapel', 'agmp_dimensi', 'agmp_tema_bentuk', 'agmp_modul_kokurikuler', 'agmp_fasilitator'
     ];
 
     try {
@@ -293,7 +298,7 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
       const listKeys: (keyof AppState)[] = [
         'agmp_tahun_ajaran', 'agmp_kelas', 'agmp_siswa', 'agmp_tp',
         'agmp_kktp', 'agmp_rubrik', 'agmp_jurnal', 'agmp_absensi',
-        'agmp_formatif', 'agmp_sumatif', 'agmp_remedial', 'agmp_rapor', 'agmp_anekdot', 'agmp_mapel', 'agmp_dimensi'
+        'agmp_formatif', 'agmp_sumatif', 'agmp_remedial', 'agmp_rapor', 'agmp_anekdot', 'agmp_mapel', 'agmp_dimensi', 'agmp_tema_bentuk', 'agmp_modul_kokurikuler', 'agmp_fasilitator'
       ];
 
       listKeys.forEach((key) => {
@@ -356,7 +361,7 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <StoreContext.Provider value={{ state, updateData, addItem, updateItem, deleteItem, clearAllData, restoreAllData, showToast, logout, isAdmin, isAuthorized }}>
+    <StoreContext.Provider value={{ state, updateData, addItem, updateItem, deleteItem, clearAllData, restoreAllData, showToast, logout, isAdmin, isKoordinator, isAuthorized }}>
       {children}
       {toast && (
         <div className={`fixed bottom-20 right-4 md:bottom-4 md:right-4 px-6 py-3 rounded-lg shadow-lg font-bold text-sm z-50 animate-in slide-in-from-bottom ${toast.type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}>
