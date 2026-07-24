@@ -1,3 +1,14 @@
+export type SubDimensi = {
+  id: string;
+  nama: string;
+};
+
+export type Dimensi = {
+  id: string;
+  nama: string;
+  subDimensi: SubDimensi[];
+};
+
 export type Mapel = {
   id: string;
   kode: string;
@@ -192,6 +203,7 @@ export type AppState = {
   agmp_rapor: Rapor[];
   agmp_anekdot: Anekdot[];
   agmp_mapel: Mapel[];
+  agmp_dimensi: Dimensi[];
   agmp_pengaturan: {
     guruNama: string;
     mapel: string;

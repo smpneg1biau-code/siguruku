@@ -7,7 +7,7 @@ import * as XLSX from "xlsx";
 
 export default function Konfigurasi() {
   const { isAdmin } = useStore();
-  const [activeTab, setActiveTab] = useState<"ta" | "kelas" | "siswa" | "tp" | "kktp" | "mapel" | "db">("ta");
+  const [activeTab, setActiveTab] = useState<"ta" | "kelas" | "siswa" | "tp" | "kktp" | "mapel" | "dimensi" | "db">("ta");
 
   return (
     <div className="space-y-6">
@@ -20,7 +20,7 @@ export default function Konfigurasi() {
 
       {/* Tabs */}
       <div className="flex overflow-x-auto hide-scrollbar gap-2 pb-2">
-        {[{id:"ta", label:"Tahun Ajaran"}, {id:"kelas", label:"Kelas"}, {id:"siswa", label: "Siswa"}, {id:"tp", label:"TP"}, {id:"kktp", label:"KKTP"}, ...(isAdmin ? [{id:"mapel", label:"Mata Pelajaran"}] : [])].map((tab) => (
+        {[{id:"ta", label:"Tahun Ajaran"}, {id:"kelas", label:"Kelas"}, {id:"siswa", label: "Siswa"}, {id:"tp", label:"TP"}, {id:"kktp", label:"KKTP"}, ...(isAdmin ? [{id:"mapel", label:"Mata Pelajaran"}, {id:"dimensi", label:"Dimensi Lulusan"}] : [])].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
@@ -42,6 +42,7 @@ export default function Konfigurasi() {
         {activeTab === "tp" && <ManajemenTP />}
         {activeTab === "kktp" && <ManajemenKKTP />}
         {activeTab === "mapel" && isAdmin && <ManajemenMapel />}
+        {activeTab === "dimensi" && isAdmin && <ManajemenDimensi />}
       </div>
     </div>
   );
@@ -1456,6 +1457,195 @@ function ManajemenMapel() {
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  );
+}
+
+
+function ManajemenDimensi() {
+  const { state, addItem, updateItem, deleteItem, updateData } = useStore();
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  
+  const [namaDimensi, setNamaDimensi] = useState("");
+  
+  const [expandedDimensi, setExpandedDimensi] = useState<Record<string, boolean>>({});
+
+  const toggleDimensi = (id: string) => {
+    setExpandedDimensi(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleSave = () => {
+    if (!namaDimensi.trim()) return;
+    
+    if (editingId) {
+      updateItem("agmp_dimensi", editingId, { nama: namaDimensi });
+    } else {
+      addItem("agmp_dimensi", { id: generateId(), nama: namaDimensi, subDimensi: [] } as any);
+    }
+    
+    setIsAdding(false);
+    setEditingId(null);
+    setNamaDimensi("");
+  };
+
+  const handleEdit = (dimensi: any) => {
+    setEditingId(dimensi.id);
+    setNamaDimensi(dimensi.nama);
+    setIsAdding(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm("Hapus dimensi ini?")) {
+      deleteItem("agmp_dimensi", id);
+    }
+  };
+
+  const [addingSubFor, setAddingSubFor] = useState<string | null>(null);
+  const [subNama, setSubNama] = useState("");
+  const [editingSubId, setEditingSubId] = useState<{dimensiId: string, subId: string} | null>(null);
+
+  const handleSaveSub = (dimensiId: string) => {
+    if (!subNama.trim()) return;
+    
+    if (editingSubId) {
+       const dim = state.agmp_dimensi.find((d: any) => d.id === editingSubId.dimensiId);
+       if (dim) {
+         const newSub = dim.subDimensi.map((s: any) => s.id === editingSubId.subId ? { ...s, nama: subNama } : s);
+         updateItem("agmp_dimensi", editingSubId.dimensiId, { subDimensi: newSub } as any);
+       }
+    } else {
+       const dim = state.agmp_dimensi.find((d: any) => d.id === dimensiId);
+       if (dim) {
+         const newSub = [...(dim.subDimensi || []), { id: generateId(), nama: subNama }];
+         updateItem("agmp_dimensi", dimensiId, { subDimensi: newSub } as any);
+       }
+    }
+    
+    setAddingSubFor(null);
+    setEditingSubId(null);
+    setSubNama("");
+  };
+
+  const handleDeleteSub = (dimensiId: string, subId: string) => {
+    if (confirm("Hapus sub dimensi ini?")) {
+       const dim = state.agmp_dimensi.find((d: any) => d.id === dimensiId);
+       if (dim) {
+         const newSub = dim.subDimensi.filter((s: any) => s.id !== subId);
+         updateItem("agmp_dimensi", dimensiId, { subDimensi: newSub } as any);
+       }
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-bold">Dimensi Lulusan</h3>
+        <button
+          onClick={() => { setIsAdding(true); setEditingId(null); setNamaDimensi(""); }}
+          className="flex items-center gap-2 bg-[#007AFF] text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-600 transition"
+        >
+          <Plus size={16} /> Tambah Dimensi
+        </button>
+      </div>
+
+      {isAdding && (
+        <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 flex gap-2 items-end">
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-gray-500 mb-1">Nama Dimensi</label>
+            <input
+              type="text"
+              value={namaDimensi}
+              onChange={(e) => setNamaDimensi(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#007AFF] focus:border-[#007AFF]"
+              placeholder="Contoh: Beriman dan Bertakwa..."
+            />
+          </div>
+          <button onClick={handleSave} className="bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600 transition">
+            Simpan
+          </button>
+          <button onClick={() => { setIsAdding(false); setEditingId(null); setNamaDimensi(""); }} className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-300 transition">
+            Batal
+          </button>
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {state.agmp_dimensi?.map((dimensi: any) => (
+          <div key={dimensi.id} className="border border-gray-200 rounded-xl overflow-hidden">
+            <div className="bg-gray-50 p-3 flex justify-between items-center cursor-pointer" onClick={() => toggleDimensi(dimensi.id)}>
+              <div className="font-medium text-sm">{dimensi.nama}</div>
+              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <button onClick={() => handleEdit(dimensi)} className="text-blue-500 hover:bg-blue-50 p-1.5 rounded transition" title="Edit">
+                  <Edit size={16} />
+                </button>
+                <button onClick={() => handleDelete(dimensi.id)} className="text-red-500 hover:bg-red-50 p-1.5 rounded transition" title="Hapus">
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </div>
+            
+            {expandedDimensi[dimensi.id] && (
+              <div className="p-3 bg-white border-t border-gray-200">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Sub Dimensi</span>
+                  <button 
+                    onClick={() => { setAddingSubFor(dimensi.id); setEditingSubId(null); setSubNama(""); }}
+                    className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-1 rounded font-medium hover:bg-indigo-100 transition flex items-center gap-1"
+                  >
+                    <Plus size={12} /> Tambah Sub
+                  </button>
+                </div>
+                
+                {addingSubFor === dimensi.id && (
+                  <div className="flex gap-2 items-end mb-3 bg-gray-50 p-2 rounded-lg border border-gray-200">
+                     <div className="flex-1">
+                        <input
+                          type="text"
+                          value={subNama}
+                          onChange={(e) => setSubNama(e.target.value)}
+                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-[#007AFF] focus:border-[#007AFF]"
+                          placeholder="Nama sub dimensi..."
+                        />
+                     </div>
+                     <button onClick={() => handleSaveSub(dimensi.id)} className="bg-green-500 text-white px-2 py-1.5 rounded text-xs font-medium">
+                        Simpan
+                     </button>
+                     <button onClick={() => { setAddingSubFor(null); setEditingSubId(null); setSubNama(""); }} className="bg-gray-200 text-gray-700 px-2 py-1.5 rounded text-xs font-medium">
+                        Batal
+                     </button>
+                  </div>
+                )}
+                
+                <div className="space-y-2">
+                  {dimensi.subDimensi?.length > 0 ? (
+                    dimensi.subDimensi.map((sub: any) => (
+                      <div key={sub.id} className="flex justify-between items-center bg-gray-50 p-2 rounded-lg text-sm border border-gray-100">
+                        <span className="text-gray-700 text-xs">{sub.nama}</span>
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => { setEditingSubId({dimensiId: dimensi.id, subId: sub.id}); setAddingSubFor(dimensi.id); setSubNama(sub.nama); }} className="text-blue-500 hover:text-blue-700 p-1">
+                            <Edit size={14} />
+                          </button>
+                          <button onClick={() => handleDeleteSub(dimensi.id, sub.id)} className="text-red-500 hover:text-red-700 p-1">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-gray-400 italic">Belum ada sub dimensi.</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+        {(!state.agmp_dimensi || state.agmp_dimensi.length === 0) && (
+          <div className="text-center py-8 bg-gray-50 rounded-xl border border-gray-200 border-dashed">
+             <p className="text-sm text-gray-500 font-medium">Belum ada data dimensi</p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -20,4 +20,5 @@ export const defaultState: AppState = {
   agmp_rapor: [],
   agmp_anekdot: [],
   agmp_mapel: [],
+  agmp_dimensi: [],
 };
