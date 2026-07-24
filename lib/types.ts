@@ -1,3 +1,9 @@
+export type Mapel = {
+  id: string;
+  kode: string;
+  nama: string;
+};
+
 export type Kelas = {
   id: string;
   nama: string;
@@ -185,6 +191,7 @@ export type AppState = {
   agmp_remedial: Remedial[];
   agmp_rapor: Rapor[];
   agmp_anekdot: Anekdot[];
+  agmp_mapel: Mapel[];
   agmp_pengaturan: {
     guruNama: string;
     mapel: string;

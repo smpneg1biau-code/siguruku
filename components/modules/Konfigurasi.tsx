@@ -6,9 +6,8 @@ import { Plus, Trash2, Edit, Download } from "lucide-react";
 import * as XLSX from "xlsx";
 
 export default function Konfigurasi() {
-  const [activeTab, setActiveTab] = useState<"ta" | "kelas" | "siswa" | "tp" | "kktp" | "db">(
-    "ta",
-  );
+  const { isAdmin } = useStore();
+  const [activeTab, setActiveTab] = useState<"ta" | "kelas" | "siswa" | "tp" | "kktp" | "mapel" | "db">("ta");
 
   return (
     <div className="space-y-6">
@@ -21,7 +20,7 @@ export default function Konfigurasi() {
 
       {/* Tabs */}
       <div className="flex overflow-x-auto hide-scrollbar gap-2 pb-2">
-        {[{id:"ta", label:"Tahun Ajaran"}, {id:"kelas", label:"Kelas"}, {id:"siswa", label: "Siswa"}, {id:"tp", label:"TP"}, {id:"kktp", label:"KKTP"}].map((tab) => (
+        {[{id:"ta", label:"Tahun Ajaran"}, {id:"kelas", label:"Kelas"}, {id:"siswa", label: "Siswa"}, {id:"tp", label:"TP"}, {id:"kktp", label:"KKTP"}, ...(isAdmin ? [{id:"mapel", label:"Mata Pelajaran"}] : [])].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
@@ -42,6 +41,7 @@ export default function Konfigurasi() {
         {activeTab === "siswa" && <ManajemenSiswa />}
         {activeTab === "tp" && <ManajemenTP />}
         {activeTab === "kktp" && <ManajemenKKTP />}
+        {activeTab === "mapel" && isAdmin && <ManajemenMapel />}
       </div>
     </div>
   );
@@ -1310,6 +1310,152 @@ function ManajemenKKTP() {
             </button>
           </form>
         )}
+      </div>
+    </div>
+  );
+}
+
+function ManajemenMapel() {
+  const { state, addItem, updateItem, deleteItem } = useStore();
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    kode: "",
+    nama: "",
+  });
+
+  const handleAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+    addItem("agmp_mapel", { id: generateId(), ...formData });
+    setIsAdding(false);
+    setFormData({ kode: "", nama: "" });
+  };
+
+  const handleUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingId) {
+      updateItem("agmp_mapel", editingId, formData);
+      setEditingId(null);
+      setFormData({ kode: "", nama: "" });
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-bold text-gray-900">Mata Pelajaran</h3>
+        <button
+          onClick={() => {
+            setIsAdding(true);
+            setEditingId(null);
+            setFormData({ kode: "", nama: "" });
+          }}
+          className="flex items-center gap-2 px-4 py-2 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-blue-600 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Tambah Mapel
+        </button>
+      </div>
+
+      {(isAdding || editingId) && (
+        <form onSubmit={editingId ? handleUpdate : handleAdd} className="bg-gray-50 p-4 rounded-xl border mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Kode Mapel</label>
+              <input
+                type="text"
+                value={formData.kode}
+                onChange={(e) => setFormData({ ...formData, kode: e.target.value })}
+                className="w-full px-3 py-2 border rounded-xl text-sm"
+                required
+                placeholder="Misal: MAT"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Mata Pelajaran</label>
+              <input
+                type="text"
+                value={formData.nama}
+                onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
+                className="w-full px-3 py-2 border rounded-xl text-sm"
+                required
+                placeholder="Misal: Matematika"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className="px-4 py-2 bg-[#007AFF] text-white rounded-xl text-sm font-medium hover:bg-blue-600"
+            >
+              Simpan
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsAdding(false);
+                setEditingId(null);
+              }}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-300"
+            >
+              Batal
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div className="bg-white rounded-xl border overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-gray-50 text-gray-600 border-b">
+              <tr>
+                <th className="px-4 py-3 font-medium">Kode Mapel</th>
+                <th className="px-4 py-3 font-medium">Mata Pelajaran</th>
+                <th className="px-4 py-3 font-medium w-24 text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(!state.agmp_mapel || state.agmp_mapel.length === 0) ? (
+                <tr>
+                  <td colSpan={3} className="px-4 py-8 text-center text-gray-500">
+                    Belum ada data mata pelajaran
+                  </td>
+                </tr>
+              ) : (
+                state.agmp_mapel.map((mapel) => (
+                  <tr key={mapel.id} className="border-b hover:bg-gray-50">
+                    <td className="px-4 py-3 font-medium text-gray-900">{mapel.kode}</td>
+                    <td className="px-4 py-3">{mapel.nama}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => {
+                            setEditingId(mapel.id);
+                            setFormData({ kode: mapel.kode, nama: mapel.nama });
+                            setIsAdding(false);
+                          }}
+                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm("Hapus mata pelajaran ini?")) {
+                              deleteItem("agmp_mapel", mapel.id);
+                            }
+                          }}
+                          className="p-1 text-red-600 hover:bg-red-50 rounded"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
