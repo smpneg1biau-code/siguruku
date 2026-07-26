@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { StoreProvider } from '@/lib/store';
 import Shell from '@/components/Shell';
 

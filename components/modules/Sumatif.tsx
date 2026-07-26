@@ -30,10 +30,9 @@ export default function Sumatif() {
 
   useEffect(() => {
     if (tpOptions.length > 0 && !tpOptions.find((t) => t.id === tpId)) {
-      
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTpId(tpOptions[0].id);
     } else if (tpOptions.length === 0 && tpId !== "") {
-       
       setTpId("");
     }
   }, [tpOptions, tpId]);
@@ -73,10 +72,9 @@ export default function Sumatif() {
   // Sync local records when entering wizard mode
   useEffect(() => {
     if (mode === "wizard" && existingSumatif) {
-      
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocalRecords(JSON.parse(JSON.stringify(existingSumatif.records)));
     } else {
-      
       setLocalRecords(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -85,10 +83,9 @@ export default function Sumatif() {
   // Set default state based on existing data
   useEffect(() => {
     if (existingSumatif) {
-      
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMode("rekap");
     } else {
-       
       setMode("init");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -636,8 +633,8 @@ export default function Sumatif() {
                                 >
                                   <option value="" disabled>Pilih Skala</option>
                                   {skalaOptions.map((skala, idx) => {
-                                    const desc = aspek.deskripsiSkala?.[idx] ? ` - ${aspek.deskripsiSkala[idx]}` : "";
-                                    const val = aspek.ekivalenSkala?.[idx] !== undefined ? ` (${aspek.ekivalenSkala[idx]})` : "";
+                                    const desc = aspek.deskripsiSkala?.[idx] ? ` — ${aspek.deskripsiSkala[idx]}` : "";
+                                    const val = (aspek.ekivalenSkala?.[idx] !== undefined && aspek.ekivalenSkala[idx] !== "") ? ` [Nilai 1-100: ${aspek.ekivalenSkala[idx]}]` : "";
                                     return (
                                       <option key={idx} value={idx}>
                                         {skala}{desc}{val}

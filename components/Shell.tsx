@@ -198,6 +198,14 @@ export default function Shell() {
         return <TemaBentuk />;
       case "daftar-modul":
         return <DaftarModul />;
+      case "tema-kokurikuler":
+        return <TemaKokurikuler />;
+      case "kegiatan-kokurikuler":
+        return <KegiatanKokurikuler />;
+      case "asesmen-formatif-koku":
+        return <AsesmenFormatifKoku />;
+      case "asesmen-sumatif-koku":
+        return <AsesmenSumatifKoku />;
       case "fasilitator":
         return <Fasilitator />;
       case "database":

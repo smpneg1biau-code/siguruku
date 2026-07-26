@@ -905,10 +905,15 @@ function ManajemenKKTP() {
 
   const addAspek = () => setAspekPenilaian([...aspekPenilaian, { 
     id: generateId(), 
-    nama: "Aspek Baru", 
-    skalaPenilaian: ["Mulai Memahami", "Memahami", "Sangat Memahami"],
-    deskripsiSkala: ["", "", ""],
-    ekivalenSkala: [65, 75, 85]
+    nama: "Indikator / Aspek Baru", 
+    skalaPenilaian: ["Baru Berkembang", "Layak", "Cakap", "Mahir"],
+    deskripsiSkala: [
+      "Belum memenuhi kriteria minimal",
+      "Memenuhi kriteria minimal dengan bantuan",
+      "Memenuhi kriteria tanpa bantuan",
+      "Melampaui kriteria dengan sangat baik"
+    ],
+    ekivalenSkala: ["50-65", "66-75", "76-85", "86-100"]
   }]);
   const updateAspek = (index: number, val: string) => {
     const n = [...aspekPenilaian]; n[index].nama = val; setAspekPenilaian(n);
@@ -1143,76 +1148,93 @@ function ManajemenKKTP() {
             {jenisKKTP === "Rubrik Deskripsi" && (
               <div className="space-y-6">
                 {/* 1. Aspek & Skala Penilaian */}
-                <div className="bg-white p-4 border rounded-xl shadow-sm">
-                  <h4 className="font-bold text-gray-900 mb-2">1. Aspek & Skala Penilaian</h4>
-                  <p className="text-xs text-gray-500 mb-4">Tambahkan indikator dan tentukan skala pencapaian untuk masing-masing indikator.</p>
+                <div className="bg-white p-4 border rounded-xl shadow-sm space-y-4">
+                  <div>
+                    <h4 className="font-bold text-gray-900">1. Aspek & Skala Penilaian</h4>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Tambahkan indikator dan tentukan deskripsi capaian serta rentang ekivalen nilai (1-100) untuk setiap poin skala penilaian agar mudah dikonversi saat asesmen sumatif.
+                    </p>
+                  </div>
+
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800 space-y-1">
+                    <p className="font-semibold">💡 Petunjuk Pengisian Skala Penilaian Rubrik Deskripsi:</p>
+                    <ul className="list-disc pl-4 space-y-0.5 text-blue-700">
+                      <li><b>Deskripsi Capaian:</b> Penjelasan perilaku/kriteria yang ditunjukkan siswa pada skala tersebut.</li>
+                      <li><b>Rentang Ekivalen Nilai (1-100):</b> Rentang nilai atau angka tengah (misal: <code className="bg-blue-100 px-1 rounded">50-65</code>, <code className="bg-blue-100 px-1 rounded">66-75</code>, <code className="bg-blue-100 px-1 rounded">76-85</code>, <code className="bg-blue-100 px-1 rounded">86-100</code> atau angka acuan tunggal seperti <code className="bg-blue-100 px-1 rounded">75</code>). Nilai tengah rentang ini akan otomatis dikonversi ke skala 1-100 saat pengolahan nilai sumatif.</li>
+                    </ul>
+                  </div>
+
                   <div className="space-y-6">
                     {aspekPenilaian.map((aspek, idx) => (
-                      <div key={aspek.id} className="p-4 border border-gray-100 rounded-xl bg-gray-50/50 relative">
-                        <button type="button" onClick={() => removeAspek(idx)} className="absolute top-4 right-4 p-2 text-red-500 hover:bg-red-50 rounded">
+                      <div key={aspek.id} className="p-4 border border-gray-200 rounded-xl bg-gray-50/50 relative">
+                        <button type="button" onClick={() => removeAspek(idx)} className="absolute top-4 right-4 p-2 text-red-500 hover:bg-red-50 rounded" title="Hapus Indikator">
                           <Trash2 className="w-4 h-4" />
                         </button>
                         <div className="flex gap-2 items-center mb-4 mr-10">
-                          <span className="text-sm font-bold text-gray-400">Indikator {idx+1}.</span>
+                          <span className="text-sm font-bold text-gray-500">Indikator {idx+1}.</span>
                           <input
                             type="text"
                             value={aspek.nama}
                             onChange={(e) => updateAspek(idx, e.target.value)}
-                            className="flex-1 px-3 py-2 border rounded text-sm font-medium"
-                            placeholder="Contoh: Mengembangkan Ide"
+                            className="flex-1 px-3 py-2 border rounded-lg text-sm font-medium bg-white focus:ring-2 focus:ring-[#007AFF] outline-none"
+                            placeholder="Contoh: Mengembangkan Ide dan Gagasan"
                             required
                           />
                         </div>
-                        <div className="ml-0 sm:ml-6 bg-white p-3 border rounded-lg">
-                          <p className="text-xs font-semibold text-gray-700 mb-2">Skala Penilaian (terendah ke tertinggi)</p>
+                        <div className="ml-0 sm:ml-6 bg-white p-4 border rounded-lg shadow-2xs space-y-3">
+                          <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">Skala Penilaian (terendah ke tertinggi)</p>
                           <div className="space-y-3">
                             {(aspek.skalaPenilaian || []).map((s, sIdx) => (
-                              <div key={sIdx} className="flex flex-col gap-2 p-2 border rounded bg-gray-50/30">
+                              <div key={sIdx} className="flex flex-col gap-2 p-3 border rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors">
                                 <div className="flex gap-2 items-center">
-                                  <span className="text-xs font-bold text-gray-500 w-5">{sIdx+1}.</span>
+                                  <span className="text-xs font-extrabold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">{sIdx+1}</span>
                                   <input
                                     type="text"
                                     value={s}
                                     onChange={(e) => updateAspekSkala(idx, sIdx, e.target.value)}
-                                    className="flex-1 px-3 py-1.5 border rounded text-xs font-medium"
-                                    placeholder="Nama Skala (misal: Layak)"
+                                    className="flex-1 px-3 py-1.5 border rounded-md text-xs font-bold text-gray-900 bg-white"
+                                    placeholder="Nama Skala (misal: Layak / Cakap / Mahir)"
                                     required
                                   />
-                                  <button type="button" onClick={() => removeAspekSkala(idx, sIdx)} className="p-1 text-red-500 hover:bg-red-50 rounded">
+                                  <button type="button" onClick={() => removeAspekSkala(idx, sIdx)} className="p-1 text-red-500 hover:bg-red-50 rounded" title="Hapus Poin Skala">
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
-                                <div className="flex flex-col sm:flex-row gap-2 pl-7">
-                                  <input
-                                    type="text"
-                                    value={aspek.deskripsiSkala?.[sIdx] || ""}
-                                    onChange={(e) => updateAspekDeskripsi(idx, sIdx, e.target.value)}
-                                    className="flex-[2] px-3 py-1.5 border rounded text-xs"
-                                    placeholder="Deskripsi Capaian (misal: Menguasai dasar)"
-                                  />
-                                  <div className="flex items-center gap-1 flex-1">
-                                    <span className="text-xs text-gray-500 whitespace-nowrap">Rentang Ekivalen:</span>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 pl-6 pt-1">
+                                  <div className="md:col-span-2 space-y-1">
+                                    <label className="text-[11px] font-semibold text-gray-600 block">Deskripsi Capaian Setiap Poin Skala</label>
+                                    <input
+                                      type="text"
+                                      value={aspek.deskripsiSkala?.[sIdx] || ""}
+                                      onChange={(e) => updateAspekDeskripsi(idx, sIdx, e.target.value)}
+                                      className="w-full px-3 py-1.5 border rounded-md text-xs bg-white focus:ring-1 focus:ring-[#007AFF] outline-none"
+                                      placeholder="Contoh: Mampu menjelaskan konsep dasar dengan bantuan minimal"
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <label className="text-[11px] font-semibold text-gray-600 block">Rentang Ekivalen Nilai (1-100)</label>
                                     <input
                                       type="text"
                                       value={aspek.ekivalenSkala?.[sIdx] || ""}
                                       onChange={(e) => updateAspekEkivalen(idx, sIdx, e.target.value)}
-                                      className="w-full px-2 py-1.5 border rounded text-xs"
-                                      placeholder="Misal: 70-80"
+                                      className="w-full px-3 py-1.5 border rounded-md text-xs font-semibold text-blue-700 bg-white focus:ring-1 focus:ring-[#007AFF] outline-none"
+                                      placeholder="Misal: 71-80 atau 75"
                                     />
                                   </div>
                                 </div>
                               </div>
                             ))}
                           </div>
-                          <button type="button" onClick={() => addAspekSkala(idx)} className="mt-2 flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium">
-                            <Plus className="w-3.5 h-3.5" /> Tambah Skala
+                          <button type="button" onClick={() => addAspekSkala(idx)} className="mt-2 flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-semibold pt-1">
+                            <Plus className="w-4 h-4" /> Tambah Poin Skala
                           </button>
                         </div>
                       </div>
                     ))}
                   </div>
-                  <button type="button" onClick={addAspek} className="mt-4 flex items-center justify-center w-full py-2 border-2 border-dashed border-gray-200 rounded-xl gap-1 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">
-                    <Plus className="w-4 h-4" /> Tambah Aspek / Indikator Baru
+                  <button type="button" onClick={addAspek} className="mt-4 flex items-center justify-center w-full py-2.5 border-2 border-dashed border-blue-200 bg-blue-50/30 hover:bg-blue-50 rounded-xl gap-2 text-sm font-semibold text-blue-700 transition-colors">
+                    <Plus className="w-4 h-4" /> Tambah Indikator / Aspek Baru
                   </button>
                 </div>
 

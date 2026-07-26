@@ -64,7 +64,7 @@ export default function KegiatanKokurikuler() {
         showToast("Kegiatan berhasil diperbarui", "success");
       } else {
         await addItem("agmp_kegiatan_kokurikuler", { id: generateId(), 
-          noUrut, nama, tujuanAkhir, temaId: selectedTemaId, kelasIds: selectedKelasIds, capaianProfil: [] 
+          noUrut, nama, tujuanAkhir, temaId: selectedTemaId, kelasIds: selectedKelasIds, capaianProfil: [] as CapaianProfil[] 
         });
         showToast("Kegiatan berhasil ditambahkan", "success");
       }
