@@ -4,38 +4,32 @@ export type TemaBentuk = {
   bentuk: "Pembelajaran Kolaboratif Lintas Disiplin" | "Gerakan 7KAIH" | "Cara Lainnya";
   deskripsi?: string;
 };
-
 export type ModulKokurikuler = {
   id: string;
   nama: string;
   temaBentukId: string;
   alokasiWaktu: number;
 };
-
 export type Fasilitator = {
   id: string;
   modulId: string;
   kelasId: string;
   guruIds: string[];
 };
-
 export type SubDimensi = {
   id: string;
   nama: string;
 };
-
 export type Dimensi = {
   id: string;
   nama: string;
   subDimensi: SubDimensi[];
 };
-
 export type Mapel = {
   id: string;
   kode: string;
   nama: string;
 };
-
 export type Kelas = {
   id: string;
   nama: string;
@@ -43,7 +37,6 @@ export type Kelas = {
   tahunAjaran: string;
   waliKelas: string;
 };
-
 export type Siswa = {
   id: string;
   nisn: string;
@@ -51,7 +44,6 @@ export type Siswa = {
   jk: "L" | "P";
   kelasId: string;
 };
-
 export type TP = {
   id: string;
   kode: string;
@@ -60,7 +52,6 @@ export type TP = {
   kelasIds: string[];
   semester: string;
 };
-
 export type KKTP = {
   id: string;
   tpId: string;
@@ -68,9 +59,7 @@ export type KKTP = {
   deskripsi: string;
   bobot?: number;
 };
-
 export type KKTPType = "Daftar Ceklist" | "Rubrik Deskripsi" | "Interval Nilai" | "Persentase";
-
 export type AspekRubrik = {
   id: string;
   nama: string;
@@ -78,24 +67,19 @@ export type AspekRubrik = {
   deskripsiSkala?: string[];
   ekivalenSkala?: string[] | number[];
 };
-
 export type Rubrik = {
   id: string;
   tpId: string;
   jenisKKTP?: KKTPType;
-  level1?: string; // Baru Berkembang
-  level2?: string; // Layak
-  level3?: string; // Cakap
-  level4?: string; // Mahir
-  
-  // Rubrik Deskripsi specific
+  level1?: string;
+  level2?: string;
+  level3?: string;
+  level4?: string;
   skalaPenilaian?: string[];
   aspekPenilaian?: AspekRubrik[];
-  aturanKetuntasan?: Record<string, number>; // Maps aspekId to minimum skala index required
-  // Daftar Ceklist specific
-  syaratKetuntasanDaftarCeklis?: number; // Minimal indikator/kriteria yang harus tercapai
+  aturanKetuntasan?: Record<string, number>;
+  syaratKetuntasanDaftarCeklis?: number;
 };
-
 export type Jurnal = {
   id: string;
   taId: string;
@@ -110,18 +94,15 @@ export type Jurnal = {
   cekTengahDone: boolean;
   isClosed: boolean;
 };
-
 export type AbsensiStatus = "HADIR" | "SAKIT" | "IZIN" | "ALPA" | "BOLOS";
-
 export type Absensi = {
   id: string;
   taId: string;
   tanggal: string;
   kelasId: string;
-  records: Record<string, AbsensiStatus>; // key: siswaId
-  catatan?: Record<string, string>; // key: siswaId
+  records: Record<string, AbsensiStatus>;
+  catatan?: Record<string, string>;
 };
-
 export type Anekdot = {
   id: string;
   taId: string;
@@ -129,7 +110,6 @@ export type Anekdot = {
   tanggal: string;
   teks: string;
 };
-
 export type Formatif = {
   id: string;
   taId: string;
@@ -138,30 +118,26 @@ export type Formatif = {
   teknik: string;
   hasil: any;
 };
-
 export type SumatifRecord = {
-  level: number; // 1, 2, 3, 4
-  nilai: number; // 0-100
+  level: number;
+  nilai: number;
   catatan: string;
   status: "TUNTAS" | "BELUM TUNTAS";
   buktiUrl?: string;
   tesTulisScores?: Record<number, number>;
-  rubrikScores?: Record<string, number>; // Maps aspekId to selected skala index
-  ceklistScores?: Record<string, boolean>; // Maps aspekId to boolean (tercapai atau belum)
+  rubrikScores?: Record<string, number>;
+  ceklistScores?: Record<string, boolean>;
 };
-
 export type AuditLogEntry = {
   tanggal: string;
   user: string;
   action: string;
   ip: string;
 };
-
 export type TesTulisConfig = {
   id: number;
   bobotMaksimal: number;
 };
-
 export type Sumatif = {
   id: string;
   taId: string;
@@ -169,11 +145,10 @@ export type Sumatif = {
   kelasId: string;
   teknik: string;
   isLocked: boolean;
-  records: Record<string, SumatifRecord>; // key: siswaId
+  records: Record<string, SumatifRecord>;
   auditLog?: AuditLogEntry[];
   tesTulisConfig?: TesTulisConfig[];
 };
-
 export type Remedial = {
   id: string;
   taId: string;
@@ -193,7 +168,6 @@ export type Remedial = {
   ceklistScoresBaru?: Record<string, boolean>;
   tesTulisScoresBaru?: Record<string, number>;
 };
-
 export type Rapor = {
   id: string;
   siswaId: string;
@@ -201,12 +175,43 @@ export type Rapor = {
   tahunAjaran: string;
   deskripsi: string;
 };
-
 export type TahunAjaran = {
   id: string;
   nama: string;
   semester: "Ganjil" | "Genap";
   isActive: boolean;
+};
+
+// Kokurikuler Types
+export type TemaKokurikuler = {
+  id: string;
+  nama: string;
+  deskripsi?: string;
+};
+export type CapaianProfil = {
+  dimensiId: string;
+  subDimensiIds: string[];
+};
+export type KegiatanKokurikuler = {
+  id: string;
+  temaId: string;
+  kelasIds: string[];
+  noUrut: number;
+  nama: string;
+  tujuanAkhir: string;
+  capaianProfil: CapaianProfil[];
+};
+export type AsesmenFormatifKoku = {
+  id: string;
+  kegiatanId: string;
+  kelasId: string;
+  // to be defined further if needed
+};
+export type AsesmenSumatifKoku = {
+  id: string;
+  kegiatanId: string;
+  kelasId: string;
+  // to be defined further if needed
 };
 
 export type AppState = {
@@ -233,4 +238,8 @@ export type AppState = {
     mapel: string;
     sekolah: string;
   };
+  agmp_tema_kokurikuler: TemaKokurikuler[];
+  agmp_kegiatan_kokurikuler: KegiatanKokurikuler[];
+  agmp_asesmen_formatif_koku: AsesmenFormatifKoku[];
+  agmp_asesmen_sumatif_koku: AsesmenSumatifKoku[];
 };

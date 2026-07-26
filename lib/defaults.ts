@@ -24,4 +24,8 @@ export const defaultState: AppState = {
   agmp_tema_bentuk: [],
   agmp_modul_kokurikuler: [],
   agmp_fasilitator: [],
+  agmp_tema_kokurikuler: [],
+  agmp_kegiatan_kokurikuler: [],
+  agmp_asesmen_formatif_koku: [],
+  agmp_asesmen_sumatif_koku: [],
 };

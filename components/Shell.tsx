@@ -31,6 +31,10 @@ import ManajemenPengguna from "@/components/modules/ManajemenPengguna";
 import TemaBentuk from "@/components/modules/TemaBentuk";
 import DaftarModul from "@/components/modules/DaftarModul";
 import Fasilitator from "@/components/modules/Fasilitator";
+import TemaKokurikuler from "@/components/modules/TemaKokurikuler";
+import KegiatanKokurikuler from "@/components/modules/KegiatanKokurikuler";
+import AsesmenFormatifKoku from "@/components/modules/AsesmenFormatifKoku";
+import AsesmenSumatifKoku from "@/components/modules/AsesmenSumatifKoku";
 import { BarChart2, Database as DatabaseIcon, Shield } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { auth } from "@/lib/firebase";
@@ -50,6 +54,10 @@ export type TabId =
   | "database"
   | "tema-bentuk"
   | "daftar-modul"
+  | "tema-kokurikuler"
+  | "kegiatan-kokurikuler"
+  | "asesmen-formatif-koku"
+  | "asesmen-sumatif-koku"
   | "fasilitator"
   | "pengguna";
 
@@ -98,8 +106,10 @@ const MENU_CATEGORIES: MenuCategory[] = [
   {
     category: "Kokurikuler",
     items: [
-      { id: "tema-bentuk", label: "Tema & Bentuk", icon: BookOpen, koordinatorOnly: true },
-      { id: "daftar-modul", label: "Daftar Modul", icon: FileText, koordinatorOnly: true },
+      { id: "tema-kokurikuler", label: "Daftar Tema", icon: BookOpen, koordinatorOnly: true },
+      { id: "kegiatan-kokurikuler", label: "Kegiatan Kokurikuler", icon: FileText, koordinatorOnly: true },
+      { id: "asesmen-formatif-koku", label: "Asesmen Formatif", icon: CheckSquare, koordinatorOnly: true },
+      { id: "asesmen-sumatif-koku", label: "Asesmen Sumatif", icon: Award, koordinatorOnly: true },
       { id: "fasilitator", label: "Fasilitator", icon: Users, koordinatorOnly: true },
     ],
   },

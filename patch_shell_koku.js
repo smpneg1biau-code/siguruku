@@ -1,39 +1,53 @@
 const fs = require('fs');
 let code = fs.readFileSync('components/Shell.tsx', 'utf8');
 
-// Add imports
 code = code.replace(
-  /import ManajemenPengguna from "@\/components\/modules\/ManajemenPengguna";/,
-  `import ManajemenPengguna from "@/components/modules/ManajemenPengguna";\nimport TemaBentuk from "@/components/modules/TemaBentuk";\nimport DaftarModul from "@/components/modules/DaftarModul";\nimport Fasilitator from "@/components/modules/Fasilitator";`
+  /\| "tema-bentuk"\n  \| "daftar-modul"/,
+  '| "tema-bentuk"\n  | "daftar-modul"\n  | "tema-kokurikuler"\n  | "kegiatan-kokurikuler"\n  | "asesmen-formatif-koku"\n  | "asesmen-sumatif-koku"'
 );
 
-// Add TabId
-code = code.replace(
-  /  \| "database"/,
-  `  | "database"\n  | "tema-bentuk"\n  | "daftar-modul"\n  | "fasilitator"`
-);
-
-// Add Menu Category (before Sistem & Pengaturan)
-const kokuMenu = `  {
+const oldKoku = `  {
     category: "Kokurikuler",
     items: [
-      { id: "tema-bentuk", label: "Tema & Bentuk", icon: BookOpen },
-      { id: "daftar-modul", label: "Daftar Modul", icon: FileText },
-      { id: "fasilitator", label: "Fasilitator", icon: Users },
+      { id: "tema-bentuk", label: "Tema & Bentuk", icon: BookOpen, koordinatorOnly: true },
+      { id: "daftar-modul", label: "Daftar Modul", icon: FileText, koordinatorOnly: true },
+      { id: "fasilitator", label: "Fasilitator", icon: Users, koordinatorOnly: true },
     ],
-  },
-  {
-    category: "Sistem & Pengaturan",`;
-code = code.replace(/  \{\n    category: "Sistem & Pengaturan",/g, kokuMenu);
+  },`;
+  
+const newKoku = `  {
+    category: "Kokurikuler",
+    items: [
+      { id: "tema-kokurikuler", label: "Daftar Tema", icon: BookOpen, koordinatorOnly: true },
+      { id: "kegiatan-kokurikuler", label: "Kegiatan Kokurikuler", icon: FileText, koordinatorOnly: true },
+      { id: "asesmen-formatif-koku", label: "Asesmen Formatif", icon: CheckSquare, koordinatorOnly: true },
+      { id: "asesmen-sumatif-koku", label: "Asesmen Sumatif", icon: Award, koordinatorOnly: true },
+      { id: "fasilitator", label: "Fasilitator", icon: Users, koordinatorOnly: true },
+    ],
+  },`;
 
-// Add to renderContent
-const kokuCases = `      case "tema-bentuk":
-        return <TemaBentuk />;
-      case "daftar-modul":
-        return <DaftarModul />;
-      case "fasilitator":
-        return <Fasilitator />;
-      case "database":`;
-code = code.replace(/      case "database":/, kokuCases);
+code = code.replace(oldKoku, newKoku);
+
+const oldSwitch = `          {activeTab === "tema-bentuk" && <TemaBentuk />}
+          {activeTab === "daftar-modul" && <DaftarModul />}
+          {activeTab === "fasilitator" && <Fasilitator />}`;
+          
+const newSwitch = `          {activeTab === "tema-bentuk" && <TemaBentuk />}
+          {activeTab === "daftar-modul" && <DaftarModul />}
+          {activeTab === "tema-kokurikuler" && <TemaKokurikuler />}
+          {activeTab === "kegiatan-kokurikuler" && <KegiatanKokurikuler />}
+          {activeTab === "asesmen-formatif-koku" && <AsesmenFormatifKoku />}
+          {activeTab === "asesmen-sumatif-koku" && <AsesmenSumatifKoku />}
+          {activeTab === "fasilitator" && <Fasilitator />}`;
+
+code = code.replace(oldSwitch, newSwitch);
+
+// add imports
+const importKoku = `import TemaKokurikuler from "@/components/modules/TemaKokurikuler";
+import KegiatanKokurikuler from "@/components/modules/KegiatanKokurikuler";
+import AsesmenFormatifKoku from "@/components/modules/AsesmenFormatifKoku";
+import AsesmenSumatifKoku from "@/components/modules/AsesmenSumatifKoku";`;
+
+code = code.replace(/import Fasilitator from "@\/components\/modules\/Fasilitator";/, `import Fasilitator from "@/components/modules/Fasilitator";\n${importKoku}`);
 
 fs.writeFileSync('components/Shell.tsx', code);
