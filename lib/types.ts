@@ -217,6 +217,17 @@ export type AsesmenSumatifKoku = {
   // to be defined further if needed
 };
 
+export type RubrikKokurikuler = {
+  id: string;
+  kegiatanId?: string;
+  dimensiNama: string;
+  subDimensiNama: string;
+  deskripsiSB: string; // SB = Tahap Mahir (M)
+  deskripsiB: string;  // B  = Tahap Cakap (C - Standar)
+  deskripsiC: string;  // C  = Tahap Berkembang (B)
+  deskripsiK: string;  // K  = Tahap Menuju / Belum Berkembang
+};
+
 export type AppState = {
   agmp_tahun_ajaran: TahunAjaran[];
   agmp_kelas: Kelas[];
@@ -245,4 +256,5 @@ export type AppState = {
   agmp_kegiatan_kokurikuler: KegiatanKokurikuler[];
   agmp_asesmen_formatif_koku: AsesmenFormatifKoku[];
   agmp_asesmen_sumatif_koku: AsesmenSumatifKoku[];
+  agmp_rubrik_kokurikuler: RubrikKokurikuler[];
 };

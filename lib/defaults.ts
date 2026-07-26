@@ -28,4 +28,5 @@ export const defaultState: AppState = {
   agmp_kegiatan_kokurikuler: [],
   agmp_asesmen_formatif_koku: [],
   agmp_asesmen_sumatif_koku: [],
+  agmp_rubrik_kokurikuler: [],
 };

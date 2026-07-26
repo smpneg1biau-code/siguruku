@@ -33,6 +33,7 @@ import DaftarModul from "@/components/modules/DaftarModul";
 import Fasilitator from "@/components/modules/Fasilitator";
 import TemaKokurikuler from "@/components/modules/TemaKokurikuler";
 import KegiatanKokurikuler from "@/components/modules/KegiatanKokurikuler";
+import SettingRubrikKoku from "@/components/modules/SettingRubrikKoku";
 import AsesmenFormatifKoku from "@/components/modules/AsesmenFormatifKoku";
 import AsesmenSumatifKoku from "@/components/modules/AsesmenSumatifKoku";
 import { BarChart2, Database as DatabaseIcon, Shield } from "lucide-react";
@@ -56,6 +57,7 @@ export type TabId =
   | "daftar-modul"
   | "tema-kokurikuler"
   | "kegiatan-kokurikuler"
+  | "setting-rubrik-koku"
   | "asesmen-formatif-koku"
   | "asesmen-sumatif-koku"
   | "fasilitator"
@@ -108,6 +110,7 @@ const MENU_CATEGORIES: MenuCategory[] = [
     items: [
       { id: "tema-kokurikuler", label: "Daftar Tema", icon: BookOpen, koordinatorOnly: true },
       { id: "kegiatan-kokurikuler", label: "Kegiatan Kokurikuler", icon: FileText, koordinatorOnly: true },
+      { id: "setting-rubrik-koku", label: "Setting Rubrik", icon: Settings, koordinatorOnly: true },
       { id: "asesmen-formatif-koku", label: "Asesmen Formatif", icon: CheckSquare, koordinatorOnly: true },
       { id: "asesmen-sumatif-koku", label: "Asesmen Sumatif", icon: Award, koordinatorOnly: true },
       { id: "fasilitator", label: "Fasilitator", icon: Users, koordinatorOnly: true },
@@ -202,6 +205,8 @@ export default function Shell() {
         return <TemaKokurikuler />;
       case "kegiatan-kokurikuler":
         return <KegiatanKokurikuler />;
+      case "setting-rubrik-koku":
+        return <SettingRubrikKoku />;
       case "asesmen-formatif-koku":
         return <AsesmenFormatifKoku />;
       case "asesmen-sumatif-koku":

@@ -122,7 +122,11 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
     const listKeys: (keyof AppState)[] = [
       'agmp_tahun_ajaran', 'agmp_kelas', 'agmp_siswa', 'agmp_tp',
       'agmp_kktp', 'agmp_rubrik', 'agmp_jurnal', 'agmp_absensi',
-      'agmp_formatif', 'agmp_sumatif', 'agmp_remedial', 'agmp_rapor', 'agmp_anekdot', 'agmp_mapel', 'agmp_dimensi', 'agmp_tema_bentuk', 'agmp_modul_kokurikuler', 'agmp_fasilitator'
+      'agmp_formatif', 'agmp_sumatif', 'agmp_remedial', 'agmp_rapor',
+      'agmp_anekdot', 'agmp_mapel', 'agmp_dimensi', 'agmp_tema_bentuk',
+      'agmp_modul_kokurikuler', 'agmp_fasilitator', 'agmp_tema_kokurikuler',
+      'agmp_kegiatan_kokurikuler', 'agmp_asesmen_formatif_koku',
+      'agmp_asesmen_sumatif_koku', 'agmp_rubrik_kokurikuler'
     ];
 
     listKeys.forEach((key) => {
