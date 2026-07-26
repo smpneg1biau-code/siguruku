@@ -183,9 +183,12 @@ export type TahunAjaran = {
 };
 
 // Kokurikuler Types
+export type BentukKegiatan = "Pembelajaran Kolaboratif Lintas Disiplin" | "Gerakan 7KAIH" | "Cara Lainnya";
+
 export type TemaKokurikuler = {
   id: string;
   nama: string;
+  bentukKegiatan?: BentukKegiatan | string;
   deskripsi?: string;
 };
 export type CapaianProfil = {

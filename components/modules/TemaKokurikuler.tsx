@@ -12,11 +12,11 @@ export default function TemaKokurikuler() {
   const [editingId, setEditingId] = useState<string | null>(null);
   
   const [nama, setNama] = useState("");
-  const [deskripsi, setDeskripsi] = useState("");
+  const [bentukKegiatan, setBentukKegiatan] = useState<string>("Pembelajaran Kolaboratif Lintas Disiplin");
 
   const resetForm = () => {
     setNama("");
-    setDeskripsi("");
+    setBentukKegiatan("Pembelajaran Kolaboratif Lintas Disiplin");
     setIsAdding(false);
     setEditingId(null);
   };
@@ -29,10 +29,10 @@ export default function TemaKokurikuler() {
 
     try {
       if (editingId) {
-        await updateItem("agmp_tema_kokurikuler", editingId, { nama, deskripsi });
+        await updateItem("agmp_tema_kokurikuler", editingId, { nama, bentukKegiatan });
         showToast("Tema berhasil diperbarui", "success");
       } else {
-        await addItem("agmp_tema_kokurikuler", { id: generateId(), nama, deskripsi });
+        await addItem("agmp_tema_kokurikuler", { id: generateId(), nama, bentukKegiatan });
         showToast("Tema berhasil ditambahkan", "success");
       }
       resetForm();
@@ -43,7 +43,7 @@ export default function TemaKokurikuler() {
 
   const handleEdit = (tema: TemaType) => {
     setNama(tema.nama);
-    setDeskripsi(tema.deskripsi || "");
+    setBentukKegiatan(tema.bentukKegiatan || tema.deskripsi || "Pembelajaran Kolaboratif Lintas Disiplin");
     setEditingId(tema.id);
     setIsAdding(true);
   };
@@ -88,14 +88,16 @@ export default function TemaKokurikuler() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi (Opsional)</label>
-              <textarea
-                value={deskripsi}
-                onChange={(e) => setDeskripsi(e.target.value)}
-                className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500"
-                placeholder="Deskripsi singkat tentang tema ini"
-                rows={3}
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Bentuk Kegiatan</label>
+              <select
+                value={bentukKegiatan}
+                onChange={(e) => setBentukKegiatan(e.target.value)}
+                className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+              >
+                <option value="Pembelajaran Kolaboratif Lintas Disiplin">Pembelajaran Kolaboratif Lintas Disiplin</option>
+                <option value="Gerakan 7KAIH">Gerakan 7KAIH</option>
+                <option value="Cara Lainnya">Cara Lainnya</option>
+              </select>
             </div>
             <div className="flex justify-end gap-3 pt-4">
               <button
@@ -122,7 +124,7 @@ export default function TemaKokurikuler() {
               <tr>
                 <th className="px-6 py-4 font-semibold border-b border-gray-100">No</th>
                 <th className="px-6 py-4 font-semibold border-b border-gray-100">Nama Tema</th>
-                <th className="px-6 py-4 font-semibold border-b border-gray-100 w-1/2">Deskripsi</th>
+                <th className="px-6 py-4 font-semibold border-b border-gray-100 w-1/2">Bentuk Kegiatan</th>
                 <th className="px-6 py-4 font-semibold border-b border-gray-100 text-right">Aksi</th>
               </tr>
             </thead>
@@ -131,7 +133,11 @@ export default function TemaKokurikuler() {
                 <tr key={tema.id} className="hover:bg-gray-50/50">
                   <td className="px-6 py-4 text-gray-500 text-sm">{idx + 1}</td>
                   <td className="px-6 py-4 font-medium text-gray-900">{tema.nama}</td>
-                  <td className="px-6 py-4 text-gray-600 text-sm truncate max-w-[200px]">{tema.deskripsi || "-"}</td>
+                  <td className="px-6 py-4 text-gray-600 text-sm">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                      {tema.bentukKegiatan || tema.deskripsi || "Pembelajaran Kolaboratif Lintas Disiplin"}
+                    </span>
+                  </td>
                   <td className="px-6 py-4">
                     <div className="flex justify-end gap-2">
                       <button
