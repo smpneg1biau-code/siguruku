@@ -40,6 +40,7 @@ export default function SettingRubrikKoku() {
     deskripsiB: string;
     deskripsiC: string;
     deskripsiK: string;
+    standarKelulusan: "SB" | "B" | "C" | "K";
   }>>({});
 
   // Populate initial state from saved store data or default standards
@@ -50,6 +51,7 @@ export default function SettingRubrikKoku() {
       deskripsiB: string;
       deskripsiC: string;
       deskripsiK: string;
+      standarKelulusan: "SB" | "B" | "C" | "K";
     }> = {};
 
     // First load static standards
@@ -61,6 +63,7 @@ export default function SettingRubrikKoku() {
           deskripsiB: sub.C,
           deskripsiC: sub.B,
           deskripsiK: sub.K,
+          standarKelulusan: "B",
         };
       });
     });
@@ -75,6 +78,7 @@ export default function SettingRubrikKoku() {
         deskripsiB: r.deskripsiB,
         deskripsiC: r.deskripsiC,
         deskripsiK: r.deskripsiK,
+        standarKelulusan: r.standarKelulusan || "B",
       };
     });
 
@@ -118,6 +122,35 @@ export default function SettingRubrikKoku() {
       }
     });
 
+    // If a Kegiatan is selected, filter by its CapaianProfil
+    if (selectedKegiatan && selectedKegiatan.capaianProfil) {
+      const allowedDimensiNames = new Map<string, Set<string>>(); // dimName -> Set(subDimNames)
+      selectedKegiatan.capaianProfil.forEach(cp => {
+        const dimObj = dimensiList.find(d => d.id === cp.dimensiId);
+        if (dimObj) {
+          const subSet = new Set<string>();
+          cp.subDimensiIds.forEach(subId => {
+            const subObj = dimObj.subDimensi?.find(s => s.id === subId);
+            if (subObj) subSet.add(subObj.nama.toLowerCase());
+          });
+          allowedDimensiNames.set(dimObj.nama.toLowerCase(), subSet);
+        }
+      });
+
+      dims = dims.filter(d => {
+        const dimNameLower = d.nama.toLowerCase();
+        if (allowedDimensiNames.has(dimNameLower)) {
+          const allowedSubs = allowedDimensiNames.get(dimNameLower);
+          d.subDimensi = d.subDimensi.filter(sub => allowedSubs?.has(sub.nama.toLowerCase()));
+          return d.subDimensi.length > 0;
+        }
+        return false;
+      });
+    } else if (!selectedKegiatanId) {
+      // If no kegiatan is selected, show nothing based on new requirement
+      return [];
+    }
+
     // Filter by Dimensi dropdown if selected
     if (selectedDimensiFilter) {
       dims = dims.filter(d => d.nama === selectedDimensiFilter);
@@ -134,7 +167,7 @@ export default function SettingRubrikKoku() {
     }
 
     return dims;
-  }, [dimensiList, selectedDimensiFilter, searchQuery]);
+  }, [dimensiList, selectedDimensiFilter, searchQuery, selectedKegiatan, selectedKegiatanId]);
 
   // Handle local text edits
   const handleRubrikChange = (
@@ -162,6 +195,34 @@ export default function SettingRubrikKoku() {
       [key]: {
         ...current,
         [predikat === "SB" ? "deskripsiSB" : predikat === "B" ? "deskripsiB" : predikat === "C" ? "deskripsiC" : "deskripsiK"]: value,
+      }
+    });
+  };
+
+  const handleStandarKelulusanChange = (
+    dimensiNama: string,
+    subDimensiNama: string,
+    value: "SB" | "B" | "C" | "K"
+  ) => {
+    const kegKey = selectedKegiatanId || "global";
+    const key = `${kegKey}_${dimensiNama}_${subDimensiNama}`;
+
+    const globalKey = `global_${dimensiNama}_${subDimensiNama}`;
+    const fallback = rubrikState[globalKey] || {
+      deskripsiSB: "",
+      deskripsiB: "",
+      deskripsiC: "",
+      deskripsiK: "",
+      standarKelulusan: "B",
+    };
+
+    const current = rubrikState[key] || { ...fallback };
+
+    setRubrikState({
+      ...rubrikState,
+      [key]: {
+        ...current,
+        standarKelulusan: value,
       }
     });
   };
@@ -195,6 +256,20 @@ export default function SettingRubrikKoku() {
     return "";
   };
 
+  const getStandarKelulusanValue = (dimensiNama: string, subDimensiNama: string): "SB" | "B" | "C" | "K" => {
+    const kegKey = selectedKegiatanId || "global";
+    const key = `${kegKey}_${dimensiNama}_${subDimensiNama}`;
+    const globalKey = `global_${dimensiNama}_${subDimensiNama}`;
+
+    if (rubrikState[key] && rubrikState[key].standarKelulusan) {
+      return rubrikState[key].standarKelulusan;
+    }
+    if (rubrikState[globalKey] && rubrikState[globalKey].standarKelulusan) {
+      return rubrikState[globalKey].standarKelulusan;
+    }
+    return "B"; // default standard
+  };
+
   // Save all current modifications to store/database
   const handleSaveAll = async () => {
     try {
@@ -210,6 +285,7 @@ export default function SettingRubrikKoku() {
           const deskB = current?.deskripsiB ?? getRubrikValue(dim.nama, sub.nama, "B");
           const deskC = current?.deskripsiC ?? getRubrikValue(dim.nama, sub.nama, "C");
           const deskK = current?.deskripsiK ?? getRubrikValue(dim.nama, sub.nama, "K");
+          const standar = current?.standarKelulusan ?? getStandarKelulusanValue(dim.nama, sub.nama);
 
           // Find existing item in savedRubrikList
           const existing = savedRubrikList.find(r => 
@@ -227,6 +303,7 @@ export default function SettingRubrikKoku() {
               deskripsiB: deskB,
               deskripsiC: deskC,
               deskripsiK: deskK,
+              standarKelulusan: standar,
             });
             countSaved++;
           } else {
@@ -239,6 +316,7 @@ export default function SettingRubrikKoku() {
               deskripsiB: deskB,
               deskripsiC: deskC,
               deskripsiK: deskK,
+              standarKelulusan: standar,
             });
             countSaved++;
           }
@@ -265,6 +343,7 @@ export default function SettingRubrikKoku() {
             deskripsiB: sub.C,
             deskripsiC: sub.B,
             deskripsiK: sub.K,
+            standarKelulusan: "B",
           };
         });
       });
@@ -451,25 +530,39 @@ export default function SettingRubrikKoku() {
                 const valB = getRubrikValue(dim.nama, sub.nama, "B");
                 const valC = getRubrikValue(dim.nama, sub.nama, "C");
                 const valK = getRubrikValue(dim.nama, sub.nama, "K");
+                const standar = getStandarKelulusanValue(dim.nama, sub.nama);
 
                 return (
                   <div key={sub.nama} className={subIdx > 0 ? "pt-5 space-y-3" : "space-y-3"}>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-blue-600"></span>
                         <h4 className="font-bold text-gray-900 text-xs sm:text-sm">
                           Sub-dimensi: <span className="text-blue-700">{sub.nama}</span>
                         </h4>
                       </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-semibold text-gray-600">Standar Kelulusan:</label>
+                        <select
+                          value={standar}
+                          onChange={(e) => handleStandarKelulusanChange(dim.nama, sub.nama, e.target.value as "SB" | "B" | "C" | "K")}
+                          className="px-2 py-1 text-xs border border-gray-300 rounded-lg bg-white font-bold text-blue-700 outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="SB">Sangat Baik (SB)</option>
+                          <option value="B">Baik (B)</option>
+                          <option value="C">Cukup (C)</option>
+                          <option value="K">Kurang (K)</option>
+                        </select>
+                      </div>
                     </div>
 
                     {/* 4 Predikat Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                       {/* SB */}
-                      <div className="p-3 bg-emerald-50/40 border border-emerald-200 rounded-xl space-y-2 focus-within:ring-2 focus-within:ring-emerald-500 transition-all">
+                      <div className={`p-3 border rounded-xl space-y-2 focus-within:ring-2 focus-within:ring-emerald-500 transition-all ${standar === "SB" ? "bg-emerald-100/50 border-emerald-400 shadow-md ring-1 ring-emerald-400" : "bg-emerald-50/40 border-emerald-200"}`}>
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-extrabold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
-                            SB (Sangat Baik)
+                          <span className={`text-xs font-extrabold px-2 py-0.5 rounded border ${standar === "SB" ? "bg-emerald-500 text-white border-emerald-600" : "bg-emerald-100 text-emerald-800 border-emerald-300"}`}>
+                            SB (Sangat Baik) {standar === "SB" && "⭐"}
                           </span>
                           <span className="text-[10px] font-bold text-emerald-700">Tahap Mahir (M)</span>
                         </div>
@@ -483,27 +576,27 @@ export default function SettingRubrikKoku() {
                       </div>
 
                       {/* B */}
-                      <div className="p-3 bg-blue-50/40 border border-blue-200 rounded-xl space-y-2 focus-within:ring-2 focus-within:ring-blue-500 transition-all">
+                      <div className={`p-3 border rounded-xl space-y-2 focus-within:ring-2 focus-within:ring-blue-500 transition-all ${standar === "B" ? "bg-blue-100/50 border-blue-400 shadow-md ring-1 ring-blue-400" : "bg-blue-50/40 border-blue-200"}`}>
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-extrabold text-blue-800 bg-blue-100 px-2 py-0.5 rounded border border-blue-300">
-                            B (Baik)
+                          <span className={`text-xs font-extrabold px-2 py-0.5 rounded border ${standar === "B" ? "bg-blue-500 text-white border-blue-600" : "bg-blue-100 text-blue-800 border-blue-300"}`}>
+                            B (Baik) {standar === "B" && "⭐"}
                           </span>
-                          <span className="text-[10px] font-bold text-blue-700">Tahap Cakap (C) - Standar</span>
+                          <span className="text-[10px] font-bold text-blue-700">Tahap Cakap (C)</span>
                         </div>
                         <textarea
                           rows={3}
                           value={valB}
                           onChange={(e) => handleRubrikChange(dim.nama, sub.nama, "B", e.target.value)}
                           className="w-full p-2.5 text-xs bg-white border border-blue-200 rounded-lg text-gray-800 focus:outline-none focus:border-blue-500 shadow-2xs resize-y"
-                          placeholder="Deskripsi kriteria Baik / Standar..."
+                          placeholder="Deskripsi kriteria Baik..."
                         />
                       </div>
 
                       {/* C */}
-                      <div className="p-3 bg-amber-50/40 border border-amber-200 rounded-xl space-y-2 focus-within:ring-2 focus-within:ring-amber-500 transition-all">
+                      <div className={`p-3 border rounded-xl space-y-2 focus-within:ring-2 focus-within:ring-amber-500 transition-all ${standar === "C" ? "bg-amber-100/50 border-amber-400 shadow-md ring-1 ring-amber-400" : "bg-amber-50/40 border-amber-200"}`}>
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-extrabold text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-300">
-                            C (Cukup)
+                          <span className={`text-xs font-extrabold px-2 py-0.5 rounded border ${standar === "C" ? "bg-amber-500 text-white border-amber-600" : "bg-amber-100 text-amber-800 border-amber-300"}`}>
+                            C (Cukup) {standar === "C" && "⭐"}
                           </span>
                           <span className="text-[10px] font-bold text-amber-700">Tahap Berkembang (B)</span>
                         </div>
@@ -517,12 +610,12 @@ export default function SettingRubrikKoku() {
                       </div>
 
                       {/* K */}
-                      <div className="p-3 bg-rose-50/40 border border-rose-200 rounded-xl space-y-2 focus-within:ring-2 focus-within:ring-rose-500 transition-all">
+                      <div className={`p-3 border rounded-xl space-y-2 focus-within:ring-2 focus-within:ring-rose-500 transition-all ${standar === "K" ? "bg-rose-100/50 border-rose-400 shadow-md ring-1 ring-rose-400" : "bg-rose-50/40 border-rose-200"}`}>
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-extrabold text-rose-800 bg-rose-100 px-2 py-0.5 rounded border border-rose-300">
-                            K (Kurang)
+                          <span className={`text-xs font-extrabold px-2 py-0.5 rounded border ${standar === "K" ? "bg-rose-500 text-white border-rose-600" : "bg-rose-100 text-rose-800 border-rose-300"}`}>
+                            K (Kurang) {standar === "K" && "⭐"}
                           </span>
-                          <span className="text-[10px] font-bold text-rose-700">Menuju / Belum Berkembang</span>
+                          <span className="text-[10px] font-bold text-rose-700">Menuju Berkembang</span>
                         </div>
                         <textarea
                           rows={3}

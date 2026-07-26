@@ -226,6 +226,7 @@ export type RubrikKokurikuler = {
   deskripsiB: string;  // B  = Tahap Cakap (C - Standar)
   deskripsiC: string;  // C  = Tahap Berkembang (B)
   deskripsiK: string;  // K  = Tahap Menuju / Belum Berkembang
+  standarKelulusan?: "SB" | "B" | "C" | "K"; // default B
 };
 
 export type AppState = {
