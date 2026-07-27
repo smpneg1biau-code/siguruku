@@ -31,7 +31,7 @@ export default function SettingRubrikKoku() {
 
   const [selectedKegiatanId, setSelectedKegiatanId] = useState<string>("");
   const [selectedDimensiFilter, setSelectedDimensiFilter] = useState<string>("");
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedSubDimensiFilter, setSelectedSubDimensiFilter] = useState<string>("");
 
   // Local state for live editing of rubrics: Key = `${kegiatanId || 'global'}_${dimensiNama}_${subDimensiNama}`
   const [rubrikState, setRubrikState] = useState<Record<string, {
@@ -91,6 +91,37 @@ export default function SettingRubrikKoku() {
     return kegiatanList.find(k => k.id === selectedKegiatanId) || null;
   }, [kegiatanList, selectedKegiatanId]);
 
+  const filterDimensiOptions = useMemo(() => {
+    if (!selectedKegiatan || !selectedKegiatan.capaianProfil) return [];
+    
+    const options: string[] = [];
+    selectedKegiatan.capaianProfil.forEach(cp => {
+      const dimObj = dimensiList.find(d => d.id === cp.dimensiId);
+      if (dimObj && !options.includes(dimObj.nama)) {
+        options.push(dimObj.nama);
+      }
+    });
+    return options;
+  }, [selectedKegiatan, dimensiList]);
+
+  const filterSubDimensiOptions = useMemo(() => {
+    if (!selectedKegiatan || !selectedKegiatan.capaianProfil || !selectedDimensiFilter) return [];
+    
+    const options: string[] = [];
+    selectedKegiatan.capaianProfil.forEach(cp => {
+      const dimObj = dimensiList.find(d => d.id === cp.dimensiId);
+      if (dimObj && dimObj.nama === selectedDimensiFilter) {
+        cp.subDimensiIds.forEach(subId => {
+          const subObj = dimObj.subDimensi?.find(s => s.id === subId);
+          if (subObj && !options.includes(subObj.nama)) {
+            options.push(subObj.nama);
+          }
+        });
+      }
+    });
+    return options;
+  }, [selectedKegiatan, selectedDimensiFilter, dimensiList]);
+
   // List of dimensions & sub-dimensions to display
   const activeDimensions = useMemo(() => {
     // Standard 8 dimensions from reference
@@ -119,6 +150,19 @@ export default function SettingRubrikKoku() {
             defaultK: "Tingkat pencapaian kurang (Belum berkembang)",
           }))
         });
+      } else {
+        // Merge subdimensions if they exist in agmp_dimensi but not in standard list
+        (customDim.subDimensi || []).forEach(customSub => {
+          if (!existing.subDimensi.find(s => s.nama.toLowerCase() === customSub.nama.toLowerCase())) {
+            existing.subDimensi.push({
+              nama: customSub.nama,
+              defaultSB: "Tingkat pencapaian sangat baik (Mahir)",
+              defaultB: "Tingkat pencapaian baik (Cakap / Standar)",
+              defaultC: "Tingkat pencapaian cukup (Berkembang)",
+              defaultK: "Tingkat pencapaian kurang (Belum berkembang)",
+            });
+          }
+        });
       }
     });
 
@@ -131,17 +175,17 @@ export default function SettingRubrikKoku() {
           const subSet = new Set<string>();
           cp.subDimensiIds.forEach(subId => {
             const subObj = dimObj.subDimensi?.find(s => s.id === subId);
-            if (subObj) subSet.add(subObj.nama.toLowerCase());
+            if (subObj) subSet.add(subObj.nama.trim().toLowerCase());
           });
-          allowedDimensiNames.set(dimObj.nama.toLowerCase(), subSet);
+          allowedDimensiNames.set(dimObj.nama.trim().toLowerCase(), subSet);
         }
       });
 
       dims = dims.filter(d => {
-        const dimNameLower = d.nama.toLowerCase();
+        const dimNameLower = d.nama.trim().toLowerCase();
         if (allowedDimensiNames.has(dimNameLower)) {
           const allowedSubs = allowedDimensiNames.get(dimNameLower);
-          d.subDimensi = d.subDimensi.filter(sub => allowedSubs?.has(sub.nama.toLowerCase()));
+          d.subDimensi = d.subDimensi.filter(sub => allowedSubs?.has(sub.nama.trim().toLowerCase()));
           return d.subDimensi.length > 0;
         }
         return false;
@@ -156,18 +200,16 @@ export default function SettingRubrikKoku() {
       dims = dims.filter(d => d.nama === selectedDimensiFilter);
     }
 
-    // Filter by search query if typed
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    // Filter by Sub-dimensi dropdown if selected
+    if (selectedSubDimensiFilter) {
       dims = dims.map(d => {
-        const matchesDim = d.nama.toLowerCase().includes(q);
-        const filteredSub = d.subDimensi.filter(s => s.nama.toLowerCase().includes(q) || matchesDim);
+        const filteredSub = d.subDimensi.filter(s => s.nama === selectedSubDimensiFilter);
         return { ...d, subDimensi: filteredSub };
       }).filter(d => d.subDimensi.length > 0);
     }
 
     return dims;
-  }, [dimensiList, selectedDimensiFilter, searchQuery, selectedKegiatan, selectedKegiatanId]);
+  }, [dimensiList, selectedDimensiFilter, selectedSubDimensiFilter, selectedKegiatan, selectedKegiatanId]);
 
   // Handle local text edits
   const handleRubrikChange = (
@@ -435,7 +477,11 @@ export default function SettingRubrikKoku() {
             </label>
             <select
               value={selectedKegiatanId}
-              onChange={(e) => setSelectedKegiatanId(e.target.value)}
+              onChange={(e) => {
+                setSelectedKegiatanId(e.target.value);
+                setSelectedDimensiFilter("");
+                setSelectedSubDimensiFilter("");
+              }}
               className="w-full px-3 py-2 border rounded-xl text-xs font-medium bg-white focus:ring-2 focus:ring-[#007AFF] outline-none"
             >
               <option value="">-- Semua Kegiatan / Rubrik Standar Global --</option>
@@ -457,33 +503,43 @@ export default function SettingRubrikKoku() {
             </label>
             <select
               value={selectedDimensiFilter}
-              onChange={(e) => setSelectedDimensiFilter(e.target.value)}
+              onChange={(e) => {
+                setSelectedDimensiFilter(e.target.value);
+                setSelectedSubDimensiFilter("");
+              }}
               className="w-full px-3 py-2 border rounded-xl text-xs font-medium bg-white focus:ring-2 focus:ring-[#007AFF] outline-none"
             >
               <option value="">-- Semua Dimensi Lulusan --</option>
-              {KOKU_RUBRIK_STANDARD_FASE_D.map((d) => (
-                <option key={d.dimensiNama} value={d.dimensiNama}>
-                  {d.dimensiNama}
+              {filterDimensiOptions.map((dimensiNama) => (
+                <option key={dimensiNama} value={dimensiNama}>
+                  {dimensiNama}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Search Bar */}
+          {/* Filter Sub Dimensi */}
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-              <Search className="w-3.5 h-3.5 text-blue-600" /> Cari Sub-dimensi / Kata Kunci:
+              <Filter className="w-3.5 h-3.5 text-blue-600" /> Filter Sub-dimensi:
             </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Misal: Argumentasi, Berbagi, Menjaga alam..."
-                className="w-full pl-8 pr-3 py-2 border rounded-xl text-xs bg-white focus:ring-2 focus:ring-[#007AFF] outline-none"
-              />
-              <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2.5" />
-            </div>
+            <select
+              value={selectedSubDimensiFilter}
+              onChange={(e) => setSelectedSubDimensiFilter(e.target.value)}
+              className="w-full px-3 py-2 border rounded-xl text-xs font-medium bg-white focus:ring-2 focus:ring-[#007AFF] outline-none disabled:bg-gray-100 disabled:text-gray-400"
+              disabled={!selectedDimensiFilter}
+            >
+              <option value="">
+                {!selectedDimensiFilter 
+                  ? "-- Pilih Dimensi Terlebih Dahulu --" 
+                  : "-- Semua Sub-dimensi --"}
+              </option>
+              {filterSubDimensiOptions.map((subNama) => (
+                <option key={subNama} value={subNama}>
+                  {subNama}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
