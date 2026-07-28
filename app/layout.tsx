@@ -1,5 +1,9 @@
-import type {Metadata} from 'next';
+import type {Metadata, Viewport} from 'next';
 import './globals.css'; // Global styles
+
+export const viewport: Viewport = {
+  themeColor: '#007AFF',
+};
 
 export const metadata: Metadata = {
   title: 'SI-Guruku App',

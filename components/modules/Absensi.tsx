@@ -2,16 +2,19 @@ import { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { AbsensiStatus } from '@/lib/types';
 import { generateId, getInitials } from '@/lib/utils';
-import { CheckCircle2, Download, MessageSquare, X, Plus } from 'lucide-react';
+import { CheckCircle2, Download, MessageSquare, X, Plus, QrCode } from 'lucide-react';
+import { Scanner } from '@yudiel/react-qr-scanner';
 
 export default function Absensi() {
-  const { state, addItem, updateItem } = useStore();
+  const { state, addItem, updateItem, showToast } = useStore();
   const activeTA = state.agmp_tahun_ajaran.find(ta => ta.isActive);
   const activeTaId = activeTA?.id || '';
 
   const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
   const [kelasId, setKelasId] = useState(state.agmp_kelas[0]?.id || '');
   const [selectedSiswaId, setSelectedSiswaId] = useState<string | null>(null);
+  
+  const [isScanning, setIsScanning] = useState(false);
   
   // Find or create record for today & class
   const existingRecord = state.agmp_absensi.find(a => a.tanggal === tanggal && a.kelasId === kelasId && (activeTaId ? (a.taId === activeTaId || !a.taId) : true));
@@ -83,6 +86,20 @@ export default function Absensi() {
   const counts = { HADIR: 0, SAKIT: 0, IZIN: 0, ALPA: 0, BOLOS: 0 };
   Object.values(currentRecords).forEach(val => counts[val]++);
 
+  const handleScan = (detectedCodes: any[]) => {
+    if (detectedCodes && detectedCodes.length > 0) {
+      const scannedNISN = detectedCodes[0].rawValue;
+      const siswa = siswaList.find(s => s.nisn === scannedNISN);
+      if (siswa) {
+        setLocalRecords(prev => ({ ...prev, [siswa.id]: 'HADIR' }));
+        showToast(`Berhasil mencatat kehadiran: ${siswa.nama}`, 'success');
+        // Stop scanning after success if you want, but maybe we keep it open for multiple scans.
+      } else {
+        showToast(`Siswa dengan NISN ${scannedNISN} tidak ditemukan di kelas ini.`, 'error');
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -90,10 +107,32 @@ export default function Absensi() {
           <h2 className="text-2xl font-bold text-gray-900">Absensi Kelas</h2>
           <p className="text-sm text-gray-500 mt-1">Tap status untuk mengubah. Tap nama untuk menambah catatan/anekdot. {activeTA ? `(TA: ${activeTA.nama} - Smt ${activeTA.semester})` : ''}</p>
         </div>
-        <button className="flex items-center gap-1.5 text-sm bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-200">
-           <Download className="w-4 h-4" /> Export CSV
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setIsScanning(!isScanning)}
+            className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors ${
+              isScanning ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+            }`}
+          >
+             {isScanning ? <><X className="w-4 h-4" /> Tutup Scanner</> : <><QrCode className="w-4 h-4" /> Mode Scan QR</>}
+          </button>
+          <button className="flex items-center gap-1.5 text-sm bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-200">
+             <Download className="w-4 h-4" /> Export CSV
+          </button>
+        </div>
       </header>
+
+      {isScanning && (
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-4">
+          <div className="text-center">
+            <h3 className="font-semibold text-gray-800">Scan QR Code Siswa</h3>
+            <p className="text-sm text-gray-500">Arahkan kamera ke QR Code (NISN) siswa untuk mencatat kehadiran.</p>
+          </div>
+          <div className="w-full max-w-sm rounded-xl overflow-hidden border-4 border-gray-100">
+            <Scanner onScan={handleScan} />
+          </div>
+        </div>
+      )}
 
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row gap-3">
         <input type="date" className="px-3 py-2 border rounded-lg text-sm bg-gray-50" value={tanggal} onChange={e => setTanggal(e.target.value)} />

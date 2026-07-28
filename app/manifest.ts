@@ -2,9 +2,9 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Sistem Manajemen Administrasi',
+    name: 'SI-Guruku',
     short_name: 'AdminApp',
-    description: 'Aplikasi manajemen administrasi sekolah dengan dukungan PWA.',
+    description: 'Aplikasi manajemen administrasi sekolah Si-Guruku.',
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',
