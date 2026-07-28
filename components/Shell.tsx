@@ -365,33 +365,30 @@ export default function Shell() {
       {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-30 pb-safe print:hidden">
         <div className="flex justify-around items-center h-16 px-1">
-          {NAV_ITEMS.slice(0, 4).map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={cn(
-                "flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors",
-                activeTab === item.id ? "text-[#007AFF]" : "text-[#8E8E93]",
-              )}
-            >
-              <item.icon className="w-5 h-5" />
-              <span className="text-[10px] font-medium">{item.label}</span>
-            </button>
-          ))}
-          <button
-            onClick={() => setActiveTab("konfigurasi")}
-            className={cn(
-              "flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors",
-              ["konfigurasi", "formatif", "remedial", "rapor", "rekap-akhir"].includes(
-                activeTab,
-              )
-                ? "text-[#007AFF]"
-                : "text-[#8E8E93]",
-            )}
-          >
-            <Settings className="w-5 h-5" />
-            <span className="text-[10px] font-medium">Lainnya</span>
-          </button>
+          {["beranda", "jurnal", "absensi", "formatif", "kegiatan-kokurikuler"]
+            .map((id) => NAV_ITEMS.find((item) => item.id === id))
+            .filter((item): item is MenuItem => {
+              if (!item) return false;
+              if (item.adminOnly && !isAdmin) return false;
+              if (item.koordinatorOnly && !isAdmin && !isKoordinator) return false;
+              return true;
+            })
+            .map((item) => {
+              const label = item.id === "kegiatan-kokurikuler" ? "Kokurikuler" : item.label;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={cn(
+                    "flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors px-1",
+                    activeTab === item.id ? "text-[#007AFF]" : "text-[#8E8E93]",
+                  )}
+                >
+                  <item.icon className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-[9px] font-medium text-center leading-tight line-clamp-1">{label}</span>
+                </button>
+              );
+            })}
         </div>
       </nav>
     </div>

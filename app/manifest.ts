@@ -3,7 +3,7 @@ import { MetadataRoute } from 'next'
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'SI-Guruku',
-    short_name: 'AdminApp',
+    short_name: 'SI-Guruku',
     description: 'Aplikasi manajemen administrasi sekolah Si-Guruku.',
     start_url: '/',
     display: 'standalone',
