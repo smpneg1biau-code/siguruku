@@ -125,7 +125,7 @@ export default function Rapor() {
         ? ` Ananda perlu mendapatkan bimbingan untuk meningkatkan ${lowTPs[0]}.`
         : "";
 
-    const narrative = `Ananda ${selectedSiswa?.nama} ${overallPredikat} dalam pembelajaran ${state.agmp_pengaturan.mapel}.${highText}${lowText}`;
+    const narrative = `Ananda ${selectedSiswa?.nama} ${overallPredikat} dalam pembelajaran ${state.agmp_mapel?.find(m => m.id === state.agmp_pengaturan?.mapelId)?.nama || state.agmp_pengaturan.mapel}.${highText}${lowText}`;
 
     return { scores, narrative };
   };
@@ -198,7 +198,7 @@ export default function Rapor() {
                 Capaian Kompetensi Mata Pelajaran
               </p>
               <p className="text-sm font-medium text-gray-500 mt-0.5">
-                {state.agmp_pengaturan.mapel}
+                {state.agmp_mapel?.find(m => m.id === state.agmp_pengaturan?.mapelId)?.nama || state.agmp_pengaturan.mapel}
               </p>
             </div>
             <div className="text-right text-xs text-gray-600">

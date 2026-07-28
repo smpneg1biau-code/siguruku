@@ -257,7 +257,7 @@ export default function Beranda({
                     <div className="flex items-center gap-3">
                       <div>
                         <p className="text-xs font-bold">
-                          {kelas.nama} • {state.agmp_pengaturan.mapel}
+                          {kelas.nama} • {state.agmp_mapel?.find(m => m.id === state.agmp_pengaturan?.mapelId)?.nama || state.agmp_pengaturan.mapel || "Mapel"}
                         </p>
                         <p className="text-[10px] text-gray-500">
                           {isTerisi ? "Sudah diisi" : "Belum diisi"}

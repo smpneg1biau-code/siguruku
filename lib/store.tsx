@@ -95,6 +95,13 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
         const data = docSnap.data();
         setIsAuthorized(userIsAdmin ? true : !!data?.isAuthorized);
         setIsKoordinator(!!data?.isKoordinator);
+        setState(prev => ({
+          ...prev,
+          agmp_pengaturan: {
+            ...prev.agmp_pengaturan,
+            mapelId: data?.mapelId || prev.agmp_pengaturan.mapelId
+          }
+        }));
       }
     });
     unsubscribes.push(unsubAuth);
@@ -126,16 +133,19 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
       'agmp_anekdot', 'agmp_mapel', 'agmp_dimensi', 'agmp_tema_bentuk',
       'agmp_modul_kokurikuler', 'agmp_fasilitator', 'agmp_tema_kokurikuler',
       'agmp_kegiatan_kokurikuler', 'agmp_asesmen_formatif_koku',
-      'agmp_asesmen_sumatif_koku', 'agmp_rubrik_kokurikuler'
+      'agmp_asesmen_sumatif_koku', 'agmp_rubrik_kokurikuler', 'agmp_absensi_kokurikuler'
     ];
 
+    const globalCollections = ['agmp_tahun_ajaran', 'agmp_kelas', 'agmp_siswa', 'agmp_mapel'];
+
     listKeys.forEach((key) => {
-      const colRef = collection(db, 'users', user.uid, key);
+      const isGlobal = globalCollections.includes(key);
+      const colRef = isGlobal ? collection(db, key) : collection(db, 'users', user.uid, key);
       const unsub = onSnapshot(colRef, (snapshot) => {
         const items = snapshot.docs.map(doc => ({ ...doc.data() }));
         setState(prev => ({ ...prev, [key]: items }));
       }, (error) => {
-        handleFirestoreError(error, OperationType.LIST, `users/${user.uid}/${key}`);
+        handleFirestoreError(error, OperationType.LIST, isGlobal ? key : `users/${user.uid}/${key}`);
       });
       unsubscribes.push(unsub);
     });
@@ -185,11 +195,14 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
       return { ...prev, [key]: [...list, item] };
     });
 
-    const docRef = doc(db, 'users', user.uid, key as string, itemData.id);
+    const globalCollections = ['agmp_tahun_ajaran', 'agmp_kelas', 'agmp_siswa', 'agmp_mapel'];
+    const isGlobal = globalCollections.includes(key);
+    const docRef = isGlobal ? doc(db, key as string, itemData.id) : doc(db, 'users', user.uid, key as string, itemData.id);
+
     return setDoc(docRef, itemData)
       .then(() => { if (!silent) showToast("Data berhasil ditambahkan", "success"); })
       .catch(err => {
-        handleFirestoreError(err, OperationType.CREATE, `users/${user.uid}/${key as string}/${itemData.id}`);
+        handleFirestoreError(err, OperationType.CREATE, isGlobal ? `${key as string}/${itemData.id}` : `users/${user.uid}/${key as string}/${itemData.id}`);
         if (!silent) showToast("Gagal menambahkan", "error");
         throw err;
       });
@@ -218,12 +231,14 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
       return { ...prev, [key]: nextList };
     });
 
-    const docRef = doc(db, 'users', user.uid, key as string, id);
+    const globalCollections = ['agmp_tahun_ajaran', 'agmp_kelas', 'agmp_siswa', 'agmp_mapel'];
+    const isGlobal = globalCollections.includes(key);
+    const docRef = isGlobal ? doc(db, key as string, id) : doc(db, 'users', user.uid, key as string, id);
     const payload = fullItem || updates;
     return setDoc(docRef, payload, { merge: true })
       .then(() => { if (!silent) showToast("Data berhasil diupdate", "success"); })
       .catch(err => {
-        handleFirestoreError(err, OperationType.UPDATE, `users/${user.uid}/${key as string}/${id}`);
+        handleFirestoreError(err, OperationType.UPDATE, isGlobal ? `${key as string}/${id}` : `users/${user.uid}/${key as string}/${id}`);
         if (!silent) showToast("Gagal update", "error");
         throw err;
       });
@@ -239,11 +254,13 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
       return { ...prev, [key]: nextList };
     });
 
-    const docRef = doc(db, 'users', user.uid, key as string, id);
+    const globalCollections = ['agmp_tahun_ajaran', 'agmp_kelas', 'agmp_siswa', 'agmp_mapel'];
+    const isGlobal = globalCollections.includes(key);
+    const docRef = isGlobal ? doc(db, key as string, id) : doc(db, 'users', user.uid, key as string, id);
     return deleteDoc(docRef)
       .then(() => { if (!silent) showToast("Data berhasil dihapus", "success"); })
       .catch(err => {
-        handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}/${key as string}/${id}`);
+        handleFirestoreError(err, OperationType.DELETE, isGlobal ? `${key as string}/${id}` : `users/${user.uid}/${key as string}/${id}`);
         if (!silent) showToast("Gagal hapus", "error");
         throw err;
       });

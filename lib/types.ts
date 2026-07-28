@@ -103,6 +103,16 @@ export type Absensi = {
   records: Record<string, AbsensiStatus>;
   catatan?: Record<string, string>;
 };
+export type AbsensiKokurikuler = {
+  id: string;
+  taId: string;
+  tanggal: string;
+  kelasId: string;
+  kegiatanId: string;
+  records: Record<string, AbsensiStatus>;
+  catatan?: Record<string, string>;
+};
+
 export type Anekdot = {
   id: string;
   taId: string;
@@ -251,6 +261,8 @@ export type AppState = {
   agmp_pengaturan: {
     guruNama: string;
     mapel: string;
+    mapelId?: string;
+    kelasIds?: string[];
     sekolah: string;
   };
   agmp_tema_kokurikuler: TemaKokurikuler[];
@@ -258,4 +270,5 @@ export type AppState = {
   agmp_asesmen_formatif_koku: AsesmenFormatifKoku[];
   agmp_asesmen_sumatif_koku: AsesmenSumatifKoku[];
   agmp_rubrik_kokurikuler: RubrikKokurikuler[];
+  agmp_absensi_kokurikuler: AbsensiKokurikuler[];
 };

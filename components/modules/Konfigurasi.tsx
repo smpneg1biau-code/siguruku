@@ -7,7 +7,7 @@ import * as XLSX from "xlsx";
 
 export default function Konfigurasi() {
   const { isAdmin } = useStore();
-  const [activeTab, setActiveTab] = useState<"ta" | "kelas" | "siswa" | "tp" | "kktp" | "mapel" | "dimensi" | "db">("ta");
+  const [activeTab, setActiveTab] = useState<"profil" | "ta" | "kelas" | "siswa" | "tp" | "kktp" | "mapel" | "dimensi" | "db">("profil");
 
   return (
     <div className="space-y-6">
@@ -20,7 +20,7 @@ export default function Konfigurasi() {
 
       {/* Tabs */}
       <div className="flex overflow-x-auto hide-scrollbar gap-2 pb-2">
-        {[{id:"ta", label:"Tahun Ajaran"}, {id:"kelas", label:"Kelas"}, {id:"siswa", label: "Siswa"}, {id:"tp", label:"TP"}, {id:"kktp", label:"KKTP"}, ...(isAdmin ? [{id:"mapel", label:"Mata Pelajaran"}, {id:"dimensi", label:"Dimensi Lulusan"}] : [])].map((tab) => (
+        {[{id:"profil", label:"Profil & Preferensi"}, {id:"ta", label:"Tahun Ajaran"}, {id:"kelas", label:"Kelas"}, {id:"siswa", label: "Siswa"}, {id:"tp", label:"TP"}, {id:"kktp", label:"KKTP"}, ...(isAdmin ? [{id:"mapel", label:"Mata Pelajaran"}, {id:"dimensi", label:"Dimensi Lulusan"}] : [])].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
@@ -36,6 +36,7 @@ export default function Konfigurasi() {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6">
+        {activeTab === "profil" && <ManajemenProfil />}
         {activeTab === "ta" && <ManajemenTA />}
         {activeTab === "kelas" && <ManajemenKelas />}
         {activeTab === "siswa" && <ManajemenSiswa />}
@@ -49,7 +50,7 @@ export default function Konfigurasi() {
 }
 
 function ManajemenTA() {
-  const { state, addItem, updateItem, deleteItem, updateData } = useStore();
+  const { state, addItem, updateItem, deleteItem, updateData, isAdmin } = useStore();
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -108,19 +109,21 @@ function ManajemenTA() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="font-bold text-gray-900">Daftar Tahun Ajaran</h3>
-        <button
-          onClick={() => {
-            setIsAdding(!isAdding);
-            setEditingId(null);
-            setFormData({ nama: "", semester: "Ganjil", isActive: false });
-          }}
-          className="flex items-center gap-1 text-sm bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100"
-        >
-          <Plus className="w-4 h-4" /> Tambah
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => {
+              setIsAdding(!isAdding);
+              setEditingId(null);
+              setFormData({ nama: "", semester: "Ganjil", isActive: false });
+            }}
+            className="flex items-center gap-1 text-sm bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100"
+          >
+            <Plus className="w-4 h-4" /> Tambah
+          </button>
+        )}
       </div>
 
-      {(isAdding || editingId) && (
+      {isAdmin && (isAdding || editingId) && (
         <form
           onSubmit={editingId ? handleUpdate : handleAdd}
           className="bg-gray-50 p-4 rounded-xl space-y-3 border border-gray-100"
@@ -189,7 +192,7 @@ function ManajemenTA() {
               </p>
             </div>
             <div className="flex gap-2 w-full sm:w-auto justify-end">
-              {!ta.isActive && (
+              {isAdmin && !ta.isActive && (
                 <button
                   onClick={() => handleSetAktif(ta)}
                   className="px-3 py-1.5 text-xs border border-green-500 text-green-600 hover:bg-green-50 rounded-lg font-medium"
@@ -197,18 +200,22 @@ function ManajemenTA() {
                   Set Aktif
                 </button>
               )}
-              <button
-                onClick={() => handleEditClick(ta)}
-                className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
-              >
-                <Edit className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => deleteItem("agmp_tahun_ajaran", ta.id)}
-                className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              {isAdmin && (
+                <>
+                  <button
+                    onClick={() => handleEditClick(ta)}
+                    className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => deleteItem("agmp_tahun_ajaran", ta.id)}
+                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </>
+              )}
             </div>
           </div>
         ))}
@@ -218,7 +225,7 @@ function ManajemenTA() {
 }
 
 function ManajemenKelas() {
-  const { state, addItem, updateItem, deleteItem } = useStore();
+  const { state, addItem, updateItem, deleteItem, isAdmin } = useStore();
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -268,19 +275,21 @@ function ManajemenKelas() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="font-bold text-gray-900">Daftar Kelas</h3>
-        <button
-          onClick={() => {
-            setIsAdding(!isAdding);
-            setEditingId(null);
-            resetForm();
-          }}
-          className="flex items-center gap-1 text-sm bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100"
-        >
-          <Plus className="w-4 h-4" /> Tambah
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => {
+              setIsAdding(!isAdding);
+              setEditingId(null);
+              resetForm();
+            }}
+            className="flex items-center gap-1 text-sm bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100"
+          >
+            <Plus className="w-4 h-4" /> Tambah
+          </button>
+        )}
       </div>
 
-      {(isAdding || editingId) && (
+      {isAdmin && (isAdding || editingId) && (
         <form
           onSubmit={editingId ? handleUpdate : handleAdd}
           className="bg-gray-50 p-4 rounded-xl space-y-3 border border-gray-100"
@@ -366,18 +375,22 @@ function ManajemenKelas() {
               </p>
             </div>
             <div className="flex gap-2">
-              <button
-                onClick={() => handleEditClick(k)}
-                className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
-              >
-                <Edit className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => deleteItem("agmp_kelas", k.id)}
-                className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              {isAdmin && (
+                <>
+                  <button
+                    onClick={() => handleEditClick(k)}
+                    className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => deleteItem("agmp_kelas", k.id)}
+                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </>
+              )}
             </div>
           </div>
         ))}
@@ -387,8 +400,12 @@ function ManajemenKelas() {
 }
 
 function ManajemenSiswa() {
-  const { state, addItem, updateItem, deleteItem, showToast } = useStore();
-  const [filterKelas, setFilterKelas] = useState(state.agmp_kelas[0]?.id || "");
+  const { state, addItem, updateItem, deleteItem, showToast, isAdmin } = useStore();
+  const kelasOptions = isAdmin 
+    ? state.agmp_kelas 
+    : state.agmp_kelas.filter(k => state.agmp_pengaturan?.kelasIds?.includes(k.id));
+  
+  const [filterKelas, setFilterKelas] = useState(kelasOptions[0]?.id || "");
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -397,6 +414,16 @@ function ManajemenSiswa() {
     jk: "L" as "L" | "P",
     kelasId: filterKelas,
   });
+
+  useEffect(() => {
+    if (kelasOptions.length > 0 && !kelasOptions.find(k => k.id === filterKelas)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFilterKelas(kelasOptions[0].id);
+    } else if (kelasOptions.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFilterKelas("");
+    }
+  }, [kelasOptions, filterKelas]);
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -500,7 +527,7 @@ function ManajemenSiswa() {
             setFormData({ ...formData, kelasId: e.target.value });
           }}
         >
-          {state.agmp_kelas.map((k) => (
+          {kelasOptions.map((k) => (
             <option key={k.id} value={k.id}>
               Kelas {k.nama}
             </option>
@@ -1669,6 +1696,104 @@ function ManajemenDimensi() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function ManajemenProfil() {
+  const { state, updateData } = useStore();
+  const [formData, setFormData] = useState({
+    guruNama: state.agmp_pengaturan.guruNama || "",
+    sekolah: state.agmp_pengaturan.sekolah || "",
+    kelasIds: state.agmp_pengaturan.kelasIds || []
+  });
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateData("agmp_pengaturan", {
+      ...state.agmp_pengaturan,
+      guruNama: formData.guruNama,
+      sekolah: formData.sekolah,
+      kelasIds: formData.kelasIds
+    });
+  };
+
+  const toggleKelas = (kelasId: string) => {
+    setFormData(prev => {
+      const isSelected = prev.kelasIds.includes(kelasId);
+      return {
+        ...prev,
+        kelasIds: isSelected ? prev.kelasIds.filter(id => id !== kelasId) : [...prev.kelasIds, kelasId]
+      };
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <h3 className="font-bold text-gray-900">Profil & Preferensi Anda</h3>
+          <p className="text-xs text-gray-500 mt-1">Lengkapi data ini agar otomatis terisi di format cetak dan aplikasi.</p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSave} className="space-y-4 max-w-xl">
+        <div className="space-y-1">
+          <label className="text-sm font-semibold text-gray-700">Nama Guru (beserta Gelar)</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white"
+            placeholder="Contoh: Budi Santoso, S.Pd."
+            value={formData.guruNama}
+            onChange={(e) => setFormData({ ...formData, guruNama: e.target.value })}
+            required
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-sm font-semibold text-gray-700">Mata Pelajaran</label>
+          <div className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-600">
+            {state.agmp_mapel?.find(m => m.id === state.agmp_pengaturan?.mapelId)?.nama || "Belum diatur oleh admin"}
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-sm font-semibold text-gray-700">Nama Sekolah</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white"
+            placeholder="Contoh: SMP Negeri 1 Jakarta"
+            value={formData.sekolah}
+            onChange={(e) => setFormData({ ...formData, sekolah: e.target.value })}
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-700">Kelas yang Diampu</label>
+          <p className="text-xs text-gray-500 mb-2">Pilih kelas yang Anda ajar. Ini akan memfilter daftar siswa di menu lainnya.</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {state.agmp_kelas.map((k) => (
+              <label key={k.id} className={`flex items-center gap-2 p-2 border rounded-lg cursor-pointer transition-colors ${formData.kelasIds.includes(k.id) ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
+                <input
+                  type="checkbox"
+                  className="rounded text-blue-600 focus:ring-blue-500"
+                  checked={formData.kelasIds.includes(k.id)}
+                  onChange={() => toggleKelas(k.id)}
+                />
+                <span className="text-sm font-medium">{k.nama}</span>
+              </label>
+            ))}
+            {state.agmp_kelas.length === 0 && (
+               <div className="col-span-full text-xs text-gray-500 italic">Belum ada kelas yang ditambahkan oleh admin.</div>
+            )}
+          </div>
+        </div>
+
+        <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors">
+          Simpan Profil
+        </button>
+      </form>
     </div>
   );
 }

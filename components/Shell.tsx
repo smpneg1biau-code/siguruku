@@ -34,6 +34,8 @@ import Fasilitator from "@/components/modules/Fasilitator";
 import TemaKokurikuler from "@/components/modules/TemaKokurikuler";
 import KegiatanKokurikuler from "@/components/modules/KegiatanKokurikuler";
 import SettingRubrikKoku from "@/components/modules/SettingRubrikKoku";
+import AbsensiKokurikuler from "@/components/modules/AbsensiKokurikuler";
+import RekapAbsensiKokurikuler from "@/components/modules/RekapAbsensiKokurikuler";
 import AsesmenFormatifKoku from "@/components/modules/AsesmenFormatifKoku";
 import AsesmenSumatifKoku from "@/components/modules/AsesmenSumatifKoku";
 import { BarChart2, Database as DatabaseIcon, Shield } from "lucide-react";
@@ -60,6 +62,8 @@ export type TabId =
   | "setting-rubrik-koku"
   | "asesmen-formatif-koku"
   | "asesmen-sumatif-koku"
+  | "absensi-kokurikuler"
+  | "rekap-absensi-kokurikuler"
   | "fasilitator"
   | "pengguna";
 
@@ -111,6 +115,8 @@ const MENU_CATEGORIES: MenuCategory[] = [
       { id: "tema-kokurikuler", label: "Daftar Tema", icon: BookOpen, koordinatorOnly: true },
       { id: "kegiatan-kokurikuler", label: "Kegiatan Kokurikuler", icon: FileText, koordinatorOnly: true },
       { id: "setting-rubrik-koku", label: "Setting Rubrik", icon: Settings, koordinatorOnly: true },
+      { id: "absensi-kokurikuler", label: "Kehadiran Kokurikuler", icon: Users, koordinatorOnly: true },
+      { id: "rekap-absensi-kokurikuler", label: "Rekap Kehadiran", icon: Printer, koordinatorOnly: true },
       { id: "asesmen-formatif-koku", label: "Asesmen Formatif", icon: CheckSquare, koordinatorOnly: true },
       { id: "asesmen-sumatif-koku", label: "Asesmen Sumatif", icon: Award, koordinatorOnly: true },
       { id: "fasilitator", label: "Fasilitator", icon: Users, koordinatorOnly: true },
@@ -207,6 +213,10 @@ export default function Shell() {
         return <KegiatanKokurikuler />;
       case "setting-rubrik-koku":
         return <SettingRubrikKoku />;
+      case "absensi-kokurikuler":
+        return <AbsensiKokurikuler />;
+      case "rekap-absensi-kokurikuler":
+        return <RekapAbsensiKokurikuler />;
       case "asesmen-formatif-koku":
         return <AsesmenFormatifKoku />;
       case "asesmen-sumatif-koku":
@@ -312,7 +322,7 @@ export default function Shell() {
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold text-gray-900 truncate">{userName}</p>
               <p className="text-[10px] text-gray-500 truncate">
-                {state.agmp_pengaturan.mapel || "Guru Mata Pelajaran"}
+                {state.agmp_mapel?.find(m => m.id === state.agmp_pengaturan?.mapelId)?.nama || state.agmp_pengaturan.mapel || "Guru Mata Pelajaran"}
               </p>
             </div>
             <button onClick={logout} className="p-1 hover:bg-gray-200 rounded text-red-500 transition-colors" title="Keluar">

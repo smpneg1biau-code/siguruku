@@ -6,6 +6,7 @@ export const defaultState: AppState = {
     guruNama: "",
     mapel: "",
     sekolah: "",
+    kelasIds: [],
   },
   agmp_kelas: [],
   agmp_siswa: [],
@@ -29,4 +30,5 @@ export const defaultState: AppState = {
   agmp_asesmen_formatif_koku: [],
   agmp_asesmen_sumatif_koku: [],
   agmp_rubrik_kokurikuler: [],
+  agmp_absensi_kokurikuler: [],
 };
