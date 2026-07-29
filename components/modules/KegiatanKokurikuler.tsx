@@ -148,8 +148,20 @@ export default function KegiatanKokurikuler() {
           <select 
             value={selectedTemaId} 
             onChange={(e) => {
-              setSelectedTemaId(e.target.value);
+              const newTemaId = e.target.value;
+              setSelectedTemaId(newTemaId);
               setIsAdding(false);
+              
+              if (newTemaId) {
+                const kegiatanForTema = (state.agmp_kegiatan_kokurikuler || []).filter(k => k.temaId === newTemaId);
+                if (kegiatanForTema.length > 0) {
+                  setSelectedKelasIds(kegiatanForTema[0].kelasIds || []);
+                } else {
+                  setSelectedKelasIds([]);
+                }
+              } else {
+                setSelectedKelasIds([]);
+              }
             }}
             className="w-full md:w-1/2 px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 bg-gray-50"
           >
