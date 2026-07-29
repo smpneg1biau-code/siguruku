@@ -13,5 +13,13 @@ service cloud.firestore {
     match /authorized_users/{document=**} {
       allow write: if request.auth != null;
     }
+    
+    // Allow authorized users to write to global collections
+    match /agmp_tahun_ajaran/{document=**} { allow write: if request.auth != null; }
+    match /agmp_kelas/{document=**} { allow write: if request.auth != null; }
+    match /agmp_siswa/{document=**} { allow write: if request.auth != null; }
+    match /agmp_mapel/{document=**} { allow write: if request.auth != null; }
+    match /agmp_dimensi/{document=**} { allow write: if request.auth != null; }
+    match /agmp_tema_kokurikuler/{document=**} { allow write: if request.auth != null; }
   }
 }

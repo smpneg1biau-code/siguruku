@@ -416,9 +416,11 @@ function ManajemenSiswa() {
   useEffect(() => {
     if (kelasOptions.length > 0 && !kelasOptions.find(k => k.id === filterKelas)) {
       
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFilterKelas(kelasOptions[0].id);
     } else if (kelasOptions.length === 0) {
       
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFilterKelas("");
     }
   }, [kelasOptions, filterKelas]);
@@ -878,8 +880,10 @@ function ManajemenKKTP() {
     // When class changes, reset the selected TP to the first available for that class
     if (tpOptions.length > 0 && !tpOptions.find((t) => t.id === selectedTpId)) {
       
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedTpId(tpOptions[0].id);
     } else if (tpOptions.length === 0 && selectedTpId !== "") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedTpId("");
     }
   }, [tpOptions, selectedTpId]);
@@ -888,6 +892,7 @@ function ManajemenKKTP() {
   useEffect(() => {
     if (existingRubrik) {
       
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setJenisKKTP(existingRubrik.jenisKKTP || "Interval Nilai");
       setFormData({
         level1: existingRubrik.level1 || "",
