@@ -27,6 +27,7 @@ import Remedial from "@/components/modules/Remedial";
 import Rapor from "@/components/modules/Rapor";
 import RekapAkhir from "@/components/modules/RekapAkhir";
 import Database from "@/components/modules/Database";
+import Monitoring from "@/components/modules/Monitoring";
 import ManajemenPengguna from "@/components/modules/ManajemenPengguna";
 import TemaBentuk from "@/components/modules/TemaBentuk";
 import DaftarModul from "@/components/modules/DaftarModul";
@@ -38,7 +39,7 @@ import AbsensiKokurikuler from "@/components/modules/AbsensiKokurikuler";
 import RekapAbsensiKokurikuler from "@/components/modules/RekapAbsensiKokurikuler";
 import AsesmenFormatifKoku from "@/components/modules/AsesmenFormatifKoku";
 import AsesmenSumatifKoku from "@/components/modules/AsesmenSumatifKoku";
-import { BarChart2, Database as DatabaseIcon, Shield } from "lucide-react";
+import { BarChart2, Activity, Database as DatabaseIcon, Shield } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { auth } from "@/lib/firebase";
 
@@ -65,7 +66,8 @@ export type TabId =
   | "absensi-kokurikuler"
   | "rekap-absensi-kokurikuler"
   | "fasilitator"
-  | "pengguna";
+  | "pengguna"
+  | "monitoring";
 
 type MenuItem = {
   adminOnly?: boolean;
@@ -128,6 +130,7 @@ const MENU_CATEGORIES: MenuCategory[] = [
       { id: "konfigurasi", label: "Pengaturan", icon: Settings },
       { id: "database", label: "Database", icon: DatabaseIcon },
       { id: "pengguna", label: "Pengguna", icon: Shield, adminOnly: true },
+      { id: "monitoring", label: "Monitoring", icon: Activity, adminOnly: true },
     ],
   },
 ];
@@ -225,6 +228,8 @@ export default function Shell() {
         return <Fasilitator />;
       case "database":
         return <Database />;
+      case "monitoring":
+        return isAdmin ? <Monitoring /> : <Beranda onNavigate={setActiveTab} />;
       case "pengguna":
         return isAdmin ? <ManajemenPengguna /> : <Beranda onNavigate={setActiveTab} />;
       default:

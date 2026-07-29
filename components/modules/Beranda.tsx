@@ -23,7 +23,7 @@ export default function Beranda({
 }: {
   onNavigate: (tab: TabId) => void;
 }) {
-  const { state } = useStore();
+  const { state , filteredKelas } = useStore();
 
   const TPs = state.agmp_tp;
   const totalTPs = TPs.length;
@@ -144,7 +144,7 @@ export default function Beranda({
     },
   ];
 
-  const belumTerisiClassesCount = state.agmp_kelas.length - jurnalsHariIni.length;
+  const belumTerisiClassesCount = filteredKelas.length - jurnalsHariIni.length;
 
   return (
     <div className="space-y-6 flex flex-col h-full">
@@ -244,7 +244,7 @@ export default function Beranda({
               </button>
             </div>
             <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-3">
-              {state.agmp_kelas.map((kelas) => {
+              {filteredKelas.map((kelas) => {
                 const jurnal = state.agmp_jurnal.find((j) => j.kelasId === kelas.id && j.tanggal === today);
                 const isTerisi = !!jurnal;
                 
@@ -276,7 +276,7 @@ export default function Beranda({
                   </div>
                 );
               })}
-              {state.agmp_kelas.length === 0 && (
+              {filteredKelas.length === 0 && (
                 <div className="p-4 border-2 border-dashed border-gray-100 rounded-xl flex items-center justify-center text-xs text-gray-400 font-medium italic">
                   Belum ada kelas yang terdaftar
                 </div>

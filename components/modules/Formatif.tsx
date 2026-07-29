@@ -5,12 +5,12 @@ import { generateId, getInitials } from '@/lib/utils';
 import { TP, Siswa } from '@/lib/types';
 
 export default function Formatif() {
-  const { state, addItem, updateItem, showToast } = useStore();
+  const { state, addItem, updateItem, showToast , filteredKelas } = useStore();
   const activeTA = state.agmp_tahun_ajaran.find(ta => ta.isActive);
   const activeTaId = activeTA?.id || '';
 
   const [activeTab, setActiveTab] = useState<'awal' | 'tengah'>('awal');
-  const [kelasId, setKelasId] = useState(state.agmp_kelas[0]?.id || '');
+  const [kelasId, setKelasId] = useState(filteredKelas[0]?.id || '');
   const [tpIdState, setTpIdState] = useState('');
   
   const [teknikAwal, setTeknikAwal] = useState('Pertanyaan Pemantik');
@@ -187,7 +187,7 @@ export default function Formatif() {
           value={kelasId}
           onChange={(e) => setKelasId(e.target.value)}
         >
-          {state.agmp_kelas.map(k => <option key={k.id} value={k.id}>Kelas {k.nama}</option>)}
+          {filteredKelas.map(k => <option key={k.id} value={k.id}>Kelas {k.nama}</option>)}
         </select>
         
         <select 

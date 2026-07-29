@@ -4,7 +4,7 @@ import { Printer } from 'lucide-react';
 import { getInitials } from '@/lib/utils';
 
 export default function RekapAbsensiKokurikuler() {
-  const { state } = useStore();
+  const { state , filteredKelas } = useStore();
   const activeTA = state.agmp_tahun_ajaran.find(ta => ta.isActive);
   const activeTaId = activeTA?.id || '';
 
@@ -15,12 +15,12 @@ export default function RekapAbsensiKokurikuler() {
   const [kegiatanId, setKegiatanId] = useState(kegiatanList[0]?.id || '');
   
   const selectedKegiatan = kegiatanList.find(k => k.id === kegiatanId);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  
   const availableKelasIds = selectedKegiatan?.kelasIds || [];
-  const kelasList = state.agmp_kelas.filter(k => availableKelasIds.includes(k.id));
+  const kelasList = filteredKelas.filter(k => availableKelasIds.includes(k.id));
   const [kelasId, setKelasId] = useState(kelasList[0]?.id || '');
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  
   useMemo(() => {
     if (kelasList.length > 0 && !availableKelasIds.includes(kelasId)) {
         // eslint-disable-next-line react-hooks/set-state-in-render
@@ -31,7 +31,7 @@ export default function RekapAbsensiKokurikuler() {
     }
   }, [kegiatanId, kelasList, availableKelasIds, kelasId]);
 
-  const selectedKelas = state.agmp_kelas.find(k => k.id === kelasId);
+  const selectedKelas = filteredKelas.find(k => k.id === kelasId);
 
   const { dates, rekap, grandTotal } = useMemo(() => {
     if (!kelasId || !startDate || !endDate || !kegiatanId) return { dates: [], rekap: [], grandTotal: { HADIR:0, SAKIT:0, IZIN:0, ALPA:0, BOLOS:0 } };
@@ -71,7 +71,7 @@ export default function RekapAbsensiKokurikuler() {
     });
 
     return { dates, rekap, grandTotal };
-  }, [kelasId, startDate, endDate, kegiatanId, state.agmp_absensi_kokurikuler, state.agmp_siswa, activeTaId]);
+  }, [kelasId, startDate, endDate, state.agmp_absensi_kokurikuler, state.agmp_siswa, activeTaId]);
 
   const handlePrint = () => {
     window.print();

@@ -19,10 +19,10 @@ export default function RekapAkhir({
 }: {
   onNavigate: (tab: TabId) => void;
 }) {
-  const { state } = useStore();
+  const { state , filteredKelas } = useStore();
 
   const [selectedKelasId, setSelectedKelasId] = useState(
-    state.agmp_kelas[0]?.id || "",
+    filteredKelas[0]?.id || "",
   );
   
   const activeTA = state.agmp_tahun_ajaran.find(ta => ta.isActive);
@@ -177,7 +177,7 @@ export default function RekapAkhir({
               onChange={(e) => setSelectedKelasId(e.target.value)}
             >
               <option value="">Semua Kelas</option>
-              {state.agmp_kelas.map((k) => (
+              {filteredKelas.map((k) => (
                 <option key={k.id} value={k.id}>
                   {k.nama} (Fase {k.fase})
                 </option>
@@ -236,7 +236,7 @@ export default function RekapAkhir({
           
           <div className="hidden print:block text-center mb-6">
             <h2 className="text-xl font-bold uppercase">
-              REKAP AKHIR SEMESTER {state.agmp_kelas.find(k => k.id === selectedKelasId) ? `KELAS ${state.agmp_kelas.find(k => k.id === selectedKelasId)?.nama}` : ''}
+              REKAP AKHIR SEMESTER {filteredKelas.find(k => k.id === selectedKelasId) ? `KELAS ${filteredKelas.find(k => k.id === selectedKelasId)?.nama}` : ''}
             </h2>
             {selectedTA && (
               <p className="text-sm font-semibold uppercase text-gray-700 mt-1">
@@ -402,7 +402,7 @@ export default function RekapAkhir({
                   <p className="text-sm text-gray-500 font-medium">
                     NISN: {selectedSiswa.nisn} • Kelas{" "}
                     {
-                      state.agmp_kelas.find((k) => k.id === selectedKelasId)
+                      filteredKelas.find((k) => k.id === selectedKelasId)
                         ?.nama
                     }
                   </p>

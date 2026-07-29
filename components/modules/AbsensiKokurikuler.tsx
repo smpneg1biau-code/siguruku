@@ -6,7 +6,7 @@ import { CheckCircle2, Download, X, QrCode } from 'lucide-react';
 import { Scanner } from '@yudiel/react-qr-scanner';
 
 export default function AbsensiKokurikuler() {
-  const { state, addItem, updateItem, showToast } = useStore();
+  const { state, addItem, updateItem, showToast , filteredKelas } = useStore();
   const activeTA = state.agmp_tahun_ajaran.find(ta => ta.isActive);
   const activeTaId = activeTA?.id || '';
 
@@ -18,16 +18,16 @@ export default function AbsensiKokurikuler() {
   const selectedKegiatan = kegiatanList.find(k => k.id === kegiatanId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const availableKelasIds = selectedKegiatan?.kelasIds || [];
-  const kelasList = state.agmp_kelas.filter(k => availableKelasIds.includes(k.id));
+  const kelasList = filteredKelas.filter(k => availableKelasIds.includes(k.id));
   
   const [kelasId, setKelasId] = useState(kelasList[0]?.id || '');
   
   useEffect(() => {
     if (kelasList.length > 0 && !availableKelasIds.includes(kelasId)) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+        
         setKelasId(kelasList[0].id);
     } else if (kelasList.length === 0) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+        
         setKelasId('');
     }
   }, [kegiatanId, kelasList, availableKelasIds, kelasId]);
@@ -52,11 +52,11 @@ export default function AbsensiKokurikuler() {
            const records: Record<string, AbsensiStatus> = {};
            siswaList.forEach(s => records[s.id] = 'HADIR');
            addItem('agmp_absensi_kokurikuler', { id: generateId(), taId: activeTaId, tanggal, kelasId, kegiatanId, records }, true);
-           // eslint-disable-next-line react-hooks/set-state-in-effect
+           
            setLocalRecords(records);
        }
     } else if (existingRecord) {
-       // eslint-disable-next-line react-hooks/set-state-in-effect
+       
        setLocalRecords(existingRecord.records || {});
     }
   }, [tanggal, kelasId, kegiatanId, existingRecord, addItem, state.agmp_siswa, activeTaId]);

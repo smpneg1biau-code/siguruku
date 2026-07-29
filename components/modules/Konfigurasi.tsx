@@ -401,9 +401,7 @@ function ManajemenKelas() {
 
 function ManajemenSiswa() {
   const { state, addItem, updateItem, deleteItem, showToast, isAdmin } = useStore();
-  const kelasOptions = isAdmin 
-    ? state.agmp_kelas 
-    : state.agmp_kelas.filter(k => state.agmp_pengaturan?.kelasIds?.includes(k.id));
+  const kelasOptions = isAdmin ? state.agmp_kelas : state.agmp_kelas.filter(k => state.agmp_pengaturan?.kelasIds?.includes(k.id));
   
   const [filterKelas, setFilterKelas] = useState(kelasOptions[0]?.id || "");
   const [isAdding, setIsAdding] = useState(false);
@@ -417,10 +415,10 @@ function ManajemenSiswa() {
 
   useEffect(() => {
     if (kelasOptions.length > 0 && !kelasOptions.find(k => k.id === filterKelas)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      
       setFilterKelas(kelasOptions[0].id);
     } else if (kelasOptions.length === 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      
       setFilterKelas("");
     }
   }, [kelasOptions, filterKelas]);
@@ -879,7 +877,7 @@ function ManajemenKKTP() {
   useEffect(() => {
     // When class changes, reset the selected TP to the first available for that class
     if (tpOptions.length > 0 && !tpOptions.find((t) => t.id === selectedTpId)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      
       setSelectedTpId(tpOptions[0].id);
     } else if (tpOptions.length === 0 && selectedTpId !== "") {
       setSelectedTpId("");
@@ -889,7 +887,7 @@ function ManajemenKKTP() {
   // Sync state when TP changes
   useEffect(() => {
     if (existingRubrik) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      
       setJenisKKTP(existingRubrik.jenisKKTP || "Interval Nilai");
       setFormData({
         level1: existingRubrik.level1 || "",

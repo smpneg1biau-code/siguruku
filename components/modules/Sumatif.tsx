@@ -15,11 +15,11 @@ import {
 import { TesTulisConfig } from "@/lib/types";
 
 export default function Sumatif() {
-  const { state, addItem, updateItem, showToast } = useStore();
+  const { state, addItem, updateItem, showToast , filteredKelas } = useStore();
   const activeTA = state.agmp_tahun_ajaran.find(ta => ta.isActive);
   const activeTaId = activeTA?.id || '';
 
-  const [kelasId, setKelasId] = useState(state.agmp_kelas[0]?.id || "");
+  const [kelasId, setKelasId] = useState(filteredKelas[0]?.id || "");
   
   const tpOptions = useMemo(() => 
     state.agmp_tp.filter((t) => t.kelasIds.includes(kelasId)),
@@ -362,7 +362,7 @@ export default function Sumatif() {
           value={kelasId}
           onChange={(e) => setKelasId(e.target.value)}
         >
-          {state.agmp_kelas.map((k) => (
+          {filteredKelas.map((k) => (
             <option key={k.id} value={k.id}>
               Kelas {k.nama}
             </option>

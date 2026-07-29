@@ -6,7 +6,7 @@ import { generateId } from "@/lib/utils";
 import { Plus, Trash2, Edit } from "lucide-react";
 
 export default function Fasilitator() {
-  const { state, addItem, updateItem, deleteItem } = useStore();
+  const { state, addItem, updateItem, deleteItem , filteredKelas } = useStore();
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
@@ -15,7 +15,7 @@ export default function Fasilitator() {
   const [guruIds, setGuruIds] = useState<string[]>([]);
 
   const modul = state.agmp_modul_kokurikuler || [];
-  const kelas = state.agmp_kelas || [];
+  const kelas = filteredKelas || [];
   
   const [users, setUsers] = useState<any[]>([]);
 

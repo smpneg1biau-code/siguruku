@@ -4,17 +4,17 @@ import { getNilaiDetails } from "@/lib/utils";
 import { FileText, Download, Printer, Edit2 } from "lucide-react";
 
 export default function Rapor() {
-  const { state } = useStore();
+  const { state , filteredKelas } = useStore();
   
   const activeTA = state.agmp_tahun_ajaran.find(ta => ta.isActive);
   const [selectedTaId, setSelectedTaId] = useState(activeTA?.id || '');
 
-  const [kelasId, setKelasId] = useState(state.agmp_kelas[0]?.id || "");
+  const [kelasId, setKelasId] = useState(filteredKelas[0]?.id || "");
   const [selectedSiswaId, setSelectedSiswaId] = useState<string | null>(null);
 
   const siswaList = state.agmp_siswa.filter((s) => s.kelasId === kelasId);
   const selectedSiswa = siswaList.find((s) => s.id === selectedSiswaId);
-  const kelas = state.agmp_kelas.find((k) => k.id === kelasId);
+  const kelas = filteredKelas.find((k) => k.id === kelasId);
 
   const [isEditingNarrative, setIsEditingNarrative] = useState(false);
   const [editedNarrative, setEditedNarrative] = useState("");
@@ -164,7 +164,7 @@ export default function Rapor() {
             setSelectedSiswaId(null);
           }}
         >
-          {state.agmp_kelas.map((k) => (
+          {filteredKelas.map((k) => (
             <option key={k.id} value={k.id}>
               Kelas {k.nama}
             </option>

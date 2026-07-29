@@ -6,12 +6,12 @@ import { CheckCircle2, Download, MessageSquare, X, Plus, QrCode } from 'lucide-r
 import { Scanner } from '@yudiel/react-qr-scanner';
 
 export default function Absensi() {
-  const { state, addItem, updateItem, showToast } = useStore();
+  const { state, addItem, updateItem, showToast , filteredKelas } = useStore();
   const activeTA = state.agmp_tahun_ajaran.find(ta => ta.isActive);
   const activeTaId = activeTA?.id || '';
 
   const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
-  const [kelasId, setKelasId] = useState(state.agmp_kelas[0]?.id || '');
+  const [kelasId, setKelasId] = useState(filteredKelas[0]?.id || '');
   const [selectedSiswaId, setSelectedSiswaId] = useState<string | null>(null);
   
   const [isScanning, setIsScanning] = useState(false);
@@ -137,7 +137,7 @@ export default function Absensi() {
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row gap-3">
         <input type="date" className="px-3 py-2 border rounded-lg text-sm bg-gray-50" value={tanggal} onChange={e => setTanggal(e.target.value)} />
         <select className="px-3 py-2 border rounded-lg text-sm bg-gray-50" value={kelasId} onChange={e => setKelasId(e.target.value)}>
-          {state.agmp_kelas.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
+          {filteredKelas.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
         </select>
         <div className="flex gap-2 ml-auto">
           <button onClick={setAllHadir} className="flex items-center gap-1.5 text-sm font-semibold bg-[#34C759]/10 text-[#34C759] px-4 py-2 rounded-lg">
@@ -208,7 +208,7 @@ export default function Absensi() {
 }
 
 function DetailSiswaModal({ siswaId, onClose, existingRecord }: { siswaId: string, onClose: () => void, existingRecord: any }) {
-  const { state, updateItem, addItem, showToast } = useStore();
+  const { state, updateItem, addItem, showToast , filteredKelas } = useStore();
   const activeTA = state.agmp_tahun_ajaran.find(ta => ta.isActive);
   const activeTaId = activeTA?.id || '';
 

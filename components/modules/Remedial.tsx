@@ -15,7 +15,7 @@ import { Remedial as TRemedial } from "@/lib/types";
 import { generateId } from "@/lib/utils";
 
 export default function Remedial() {
-  const { state, updateItem, addItem, showToast } = useStore();
+  const { state, updateItem, addItem, showToast , filteredKelas } = useStore();
   const activeTA = state.agmp_tahun_ajaran.find(ta => ta.isActive);
   const activeTaId = activeTA?.id || '';
 
@@ -298,7 +298,7 @@ export default function Remedial() {
                 }}
               >
                 <option value="">-- Pilih Kelas --</option>
-                {state.agmp_kelas.map((k) => (
+                {filteredKelas.map((k) => (
                   <option key={k.id} value={k.id}>
                     {k.nama}
                   </option>

@@ -4,14 +4,14 @@ import { Printer, Filter } from 'lucide-react';
 import { AbsensiStatus } from '@/lib/types';
 
 export default function RekapAbsensi() {
-  const { state } = useStore();
-  const [kelasId, setKelasId] = useState(state.agmp_kelas[0]?.id || '');
+  const { state , filteredKelas } = useStore();
+  const [kelasId, setKelasId] = useState(filteredKelas[0]?.id || '');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
   const activeTA = state.agmp_tahun_ajaran.find(ta => ta.isActive);
 
-  const selectedKelas = state.agmp_kelas.find(k => k.id === kelasId);
+  const selectedKelas = filteredKelas.find(k => k.id === kelasId);
   const siswaList = state.agmp_siswa
     .filter(s => s.kelasId === kelasId)
     .sort((a, b) => a.nama.localeCompare(b.nama));
@@ -66,7 +66,7 @@ export default function RekapAbsensi() {
               value={kelasId} 
               onChange={e => setKelasId(e.target.value)}
             >
-              {state.agmp_kelas.map(k => (
+              {filteredKelas.map(k => (
                 <option key={k.id} value={k.id}>{k.nama}</option>
               ))}
             </select>

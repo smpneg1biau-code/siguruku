@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { AppState } from './types';
 import { defaultState } from './defaults';
 import { auth, db, handleFirestoreError, OperationType, signOut } from '@/lib/firebase';
@@ -13,6 +13,7 @@ type StoreContextType = {
   isKoordinator: boolean;
   isAuthorized: boolean | null;
   state: AppState;
+  filteredKelas: any[];
   updateData: <K extends keyof AppState>(key: K, data: AppState[K], silent?: boolean) => Promise<void>;
   addItem: <K extends keyof AppState>(key: K, item: AppState[K] extends (infer U)[] ? U : never, silent?: boolean) => Promise<void>;
   updateItem: <K extends keyof AppState>(
@@ -348,6 +349,11 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const filteredKelas = useMemo(() => {
+    if (isAdmin) return state.agmp_kelas;
+    return state.agmp_kelas.filter(k => state.agmp_pengaturan?.kelasIds?.includes(k.id));
+  }, [state.agmp_kelas, state.agmp_pengaturan?.kelasIds, isAdmin]);
+
   if (loadingAuth || loadingData) {
     return (
       <div className="flex h-screen flex-col items-center justify-center space-y-4">
@@ -382,7 +388,7 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <StoreContext.Provider value={{ state, updateData, addItem, updateItem, deleteItem, clearAllData, restoreAllData, showToast, logout, isAdmin, isKoordinator, isAuthorized }}>
+    <StoreContext.Provider value={{ state, filteredKelas, updateData, addItem, updateItem, deleteItem, clearAllData, restoreAllData, showToast, logout, isAdmin, isKoordinator, isAuthorized }}>
       {children}
       {toast && (
         <div className={`fixed bottom-20 right-4 md:bottom-4 md:right-4 px-6 py-3 rounded-lg shadow-lg font-bold text-sm z-50 animate-in slide-in-from-bottom ${toast.type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}>

@@ -5,9 +5,9 @@ import { generateId } from "@/lib/utils";
 import { KegiatanKokurikuler as KegiatanType, CapaianProfil, Dimensi, SubDimensi } from "@/lib/types";
 
 export default function KegiatanKokurikuler() {
-  const { state, addItem, updateItem, deleteItem, showToast } = useStore();
+  const { state, addItem, updateItem, deleteItem, showToast , filteredKelas } = useStore();
   const temaList = state.agmp_tema_kokurikuler || [];
-  const kelasList = state.agmp_kelas || [];
+  const kelasList = filteredKelas || [];
   const dimensiList = state.agmp_dimensi || [];
   const kegiatanList = state.agmp_kegiatan_kokurikuler || [];
 

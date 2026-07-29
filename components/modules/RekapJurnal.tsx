@@ -3,7 +3,7 @@ import { useStore } from '@/lib/store';
 import { Printer } from 'lucide-react';
 
 export default function RekapJurnal() {
-  const { state } = useStore();
+  const { state , filteredKelas } = useStore();
   const [kelasId, setKelasId] = useState('ALL');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -26,7 +26,7 @@ export default function RekapJurnal() {
   };
 
   const getKelasNama = (kId: string) => {
-    return state.agmp_kelas.find(k => k.id === kId)?.nama || '-';
+    return filteredKelas.find(k => k.id === kId)?.nama || '-';
   };
 
   const getTpKode = (tId: string) => {
@@ -68,7 +68,7 @@ export default function RekapJurnal() {
               onChange={e => setKelasId(e.target.value)}
             >
               <option value="ALL">Semua Kelas</option>
-              {state.agmp_kelas.map(k => (
+              {filteredKelas.map(k => (
                 <option key={k.id} value={k.id}>{k.nama}</option>
               ))}
             </select>
