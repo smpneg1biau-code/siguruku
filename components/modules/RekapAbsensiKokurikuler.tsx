@@ -29,7 +29,7 @@ export default function RekapAbsensiKokurikuler() {
         // eslint-disable-next-line react-hooks/set-state-in-render
         setKelasId('');
     }
-  }, [kelasList, availableKelasIds, kelasId]);
+  }, [kegiatanId, kelasList, availableKelasIds, kelasId]);
 
   const selectedKelas = filteredKelas.find(k => k.id === kelasId);
 
@@ -71,7 +71,7 @@ export default function RekapAbsensiKokurikuler() {
     });
 
     return { dates, rekap, grandTotal };
-  }, [kelasId, startDate, endDate, state.agmp_absensi_kokurikuler, state.agmp_siswa, activeTaId, kegiatanId]);
+  }, [kelasId, startDate, endDate, state.agmp_absensi_kokurikuler, state.agmp_siswa, activeTaId]);
 
   const handlePrint = () => {
     window.print();

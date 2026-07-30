@@ -25,12 +25,10 @@ export default function AbsensiKokurikuler() {
   useEffect(() => {
     if (kelasList.length > 0 && !availableKelasIds.includes(kelasId)) {
         
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-      setKelasId(kelasList[0].id);
+        setKelasId(kelasList[0].id);
     } else if (kelasList.length === 0) {
         
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-      setKelasId('');
+        setKelasId('');
     }
   }, [kegiatanId, kelasList, availableKelasIds, kelasId]);
 
@@ -55,12 +53,10 @@ export default function AbsensiKokurikuler() {
            siswaList.forEach(s => records[s.id] = 'HADIR');
            addItem('agmp_absensi_kokurikuler', { id: generateId(), taId: activeTaId, tanggal, kelasId, kegiatanId, records }, true);
            
-           // eslint-disable-next-line react-hooks/set-state-in-effect
            setLocalRecords(records);
        }
     } else if (existingRecord) {
        
-       // eslint-disable-next-line react-hooks/set-state-in-effect
        setLocalRecords(existingRecord.records || {});
     }
   }, [tanggal, kelasId, kegiatanId, existingRecord, addItem, state.agmp_siswa, activeTaId]);

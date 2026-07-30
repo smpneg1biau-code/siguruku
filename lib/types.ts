@@ -218,14 +218,7 @@ export type AsesmenFormatifKoku = {
   id: string;
   kegiatanId: string;
   kelasId: string;
-  siswaId: string;
-  dimensiId: string;
-  tanggal: string;
-  catatan: string;
-  statusProgres: "Muncul" | "Belum Muncul";
-  umpanBalik?: string;
-  refleksiMurid?: string;
-  taId: string;
+  // to be defined further if needed
 };
 export type AsesmenSumatifKoku = {
   id: string;
