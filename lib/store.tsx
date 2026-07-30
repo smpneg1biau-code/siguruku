@@ -5,7 +5,7 @@ import { AppState } from './types';
 import { defaultState } from './defaults';
 import { auth, db, handleFirestoreError, OperationType, signOut } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, doc, onSnapshot, setDoc, deleteDoc, getDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, onSnapshot, setDoc, deleteDoc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import LoginScreen from '@/components/LoginScreen';
 
 type StoreContextType = {
@@ -151,21 +151,24 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
       unsubscribes.push(unsub);
     });
 
-    if (userIsAdmin) {
-      const globalDimensiRef = collection(db, 'agmp_dimensi');
-      getDocs(globalDimensiRef).then(globalSnap => {
-        if (globalSnap.empty) {
-          const localDimensiRef = collection(db, 'users', user.uid, 'agmp_dimensi');
-          getDocs(localDimensiRef).then(localSnap => {
-            if (!localSnap.empty) {
-              localSnap.docs.forEach(d => {
-                setDoc(doc(db, 'agmp_dimensi', d.id), d.data());
-              });
-            }
-          });
+    const globalDimensiRef = collection(db, 'agmp_dimensi');
+    getDocs(globalDimensiRef).then(async globalSnap => {
+      if (globalSnap.empty) {
+        const appUsersRef = collection(db, 'app_users');
+        const adminQ = query(appUsersRef, where('email', '==', 'smpneg1biau@gmail.com'));
+        const adminSnap = await getDocs(adminQ);
+        if (!adminSnap.empty) {
+          const adminUid = adminSnap.docs[0].id;
+          const localDimensiRef = collection(db, 'users', adminUid, 'agmp_dimensi');
+          const localSnap = await getDocs(localDimensiRef);
+          if (!localSnap.empty) {
+            localSnap.docs.forEach(d => {
+              setDoc(doc(db, 'agmp_dimensi', d.id), d.data());
+            });
+          }
         }
-      });
-    }
+      }
+    }).catch(console.error);
 
     setLoadingData(false);
 
