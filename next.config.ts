@@ -1,10 +1,10 @@
 import type {NextConfig} from 'next';
-const withPWA = (config: any) => config;
+import withPWAInit from "@ducanh2912/next-pwa";
 
-// const withPWAInit_disabled = {
-// dest: "public",
-// disable: true
-// };
+const withPWA = withPWAInit({
+  dest: "public",
+  disable: process.env.NODE_ENV === "development",
+});
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
