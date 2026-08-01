@@ -137,7 +137,7 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
       'agmp_asesmen_sumatif_koku', 'agmp_rubrik_kokurikuler', 'agmp_absensi_kokurikuler'
     ];
 
-    const globalCollections = ['agmp_tahun_ajaran', 'agmp_kelas', 'agmp_siswa', 'agmp_mapel', 'agmp_dimensi'];
+    const globalCollections = ['agmp_tahun_ajaran', 'agmp_kelas', 'agmp_siswa', 'agmp_mapel', 'agmp_dimensi', 'agmp_tema_kokurikuler', 'agmp_kegiatan_kokurikuler', 'agmp_asesmen_formatif_koku', 'agmp_asesmen_sumatif_koku', 'agmp_rubrik_kokurikuler', 'agmp_absensi_kokurikuler', 'agmp_fasilitator'];
 
     listKeys.forEach((key) => {
       const isGlobal = globalCollections.includes(key);
@@ -215,7 +215,7 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
       return { ...prev, [key]: [...list, item] };
     });
 
-    const globalCollections = ['agmp_tahun_ajaran', 'agmp_kelas', 'agmp_siswa', 'agmp_mapel', 'agmp_dimensi'];
+    const globalCollections = ['agmp_tahun_ajaran', 'agmp_kelas', 'agmp_siswa', 'agmp_mapel', 'agmp_dimensi', 'agmp_tema_kokurikuler', 'agmp_kegiatan_kokurikuler', 'agmp_asesmen_formatif_koku', 'agmp_asesmen_sumatif_koku', 'agmp_rubrik_kokurikuler', 'agmp_absensi_kokurikuler', 'agmp_fasilitator'];
     const isGlobal = globalCollections.includes(key);
     const docRef = isGlobal ? doc(db, key as string, itemData.id) : doc(db, 'users', user.uid, key as string, itemData.id);
 
@@ -251,7 +251,7 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
       return { ...prev, [key]: nextList };
     });
 
-    const globalCollections = ['agmp_tahun_ajaran', 'agmp_kelas', 'agmp_siswa', 'agmp_mapel', 'agmp_dimensi'];
+    const globalCollections = ['agmp_tahun_ajaran', 'agmp_kelas', 'agmp_siswa', 'agmp_mapel', 'agmp_dimensi', 'agmp_tema_kokurikuler', 'agmp_kegiatan_kokurikuler', 'agmp_asesmen_formatif_koku', 'agmp_asesmen_sumatif_koku', 'agmp_rubrik_kokurikuler', 'agmp_absensi_kokurikuler', 'agmp_fasilitator'];
     const isGlobal = globalCollections.includes(key);
     const docRef = isGlobal ? doc(db, key as string, id) : doc(db, 'users', user.uid, key as string, id);
     const payload = fullItem || updates;
@@ -274,7 +274,7 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
       return { ...prev, [key]: nextList };
     });
 
-    const globalCollections = ['agmp_tahun_ajaran', 'agmp_kelas', 'agmp_siswa', 'agmp_mapel', 'agmp_dimensi'];
+    const globalCollections = ['agmp_tahun_ajaran', 'agmp_kelas', 'agmp_siswa', 'agmp_mapel', 'agmp_dimensi', 'agmp_tema_kokurikuler', 'agmp_kegiatan_kokurikuler', 'agmp_asesmen_formatif_koku', 'agmp_asesmen_sumatif_koku', 'agmp_rubrik_kokurikuler', 'agmp_absensi_kokurikuler', 'agmp_fasilitator'];
     const isGlobal = globalCollections.includes(key);
     const docRef = isGlobal ? doc(db, key as string, id) : doc(db, 'users', user.uid, key as string, id);
     return deleteDoc(docRef)

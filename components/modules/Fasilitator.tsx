@@ -14,7 +14,7 @@ export default function Fasilitator() {
   const [kelasId, setKelasId] = useState("");
   const [guruIds, setGuruIds] = useState<string[]>([]);
 
-  const modul = state.agmp_modul_kokurikuler || [];
+  const modul = state.agmp_kegiatan_kokurikuler || [];
   const kelas = filteredKelas || [];
   
   const [users, setUsers] = useState<any[]>([]);
@@ -88,13 +88,13 @@ export default function Fasilitator() {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">Modul</label>
+              <label className="block text-sm font-semibold text-gray-900 mb-2">Kegiatan (Modul)</label>
               <select
                 value={modulId}
                 onChange={(e) => setModulId(e.target.value)}
                 className="w-full px-3 py-2 border rounded-xl text-sm bg-gray-50"
               >
-                <option value="">-- Pilih Modul --</option>
+                <option value="">-- Pilih Kegiatan --</option>
                 {modul.map((m: any) => (
                   <option key={m.id} value={m.id}>{m.nama}</option>
                 ))}
@@ -161,7 +161,7 @@ export default function Fasilitator() {
             <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wider border-b border-gray-100">
               <tr>
                 <th className="px-6 py-4 font-semibold">Guru (Fasilitator)</th>
-                <th className="px-6 py-4 font-semibold">Modul</th>
+                <th className="px-6 py-4 font-semibold">Kegiatan (Modul)</th>
                 <th className="px-6 py-4 font-semibold">Kelas</th>
                 <th className="px-6 py-4 font-semibold text-right">Aksi</th>
               </tr>
