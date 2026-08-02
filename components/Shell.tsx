@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect } from "react";
+import Image from "next/image";
 import {
   Home,
   Settings,
@@ -266,9 +267,14 @@ export default function Shell() {
       <aside className="hidden md:flex flex-col w-[260px] bg-[#111827] text-slate-200 border-r border-slate-800/80 shadow-2xl flex-shrink-0 z-20 relative print:hidden">
         {/* Brand Logo */}
         <div className="p-4 flex items-center gap-3 border-b border-slate-800/80 bg-[#0f172a]/50">
-          <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center text-white font-extrabold text-lg shadow-md shadow-blue-500/20">
-            A
-          </div>
+          <Image
+            src="/logo.png"
+            alt="Logo AGMP 2025"
+            width={36}
+            height={36}
+            className="w-9 h-9 object-contain rounded-xl bg-white/5 p-0.5 shadow-md border border-white/10"
+            unoptimized
+          />
           <div>
             <h1 className="text-sm font-bold text-white leading-tight tracking-wide">AGMP 2025</h1>
             <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest">
