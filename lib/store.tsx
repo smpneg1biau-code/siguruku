@@ -104,6 +104,9 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
           }
         }));
       }
+    }, (error) => {
+      console.error("Auth snapshot error:", error);
+      setIsAuthorized(false);
     });
     unsubscribes.push(unsubAuth);
 
