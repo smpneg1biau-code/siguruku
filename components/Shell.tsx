@@ -13,6 +13,14 @@ import {
   LogOut,
   Printer,
   ChevronDown,
+  ChevronRight,
+  LayoutGrid,
+  Calendar,
+  GraduationCap,
+  BarChart2,
+  Activity,
+  Database as DatabaseIcon,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Beranda from "@/components/modules/Beranda";
@@ -39,7 +47,6 @@ import AbsensiKokurikuler from "@/components/modules/AbsensiKokurikuler";
 import RekapAbsensiKokurikuler from "@/components/modules/RekapAbsensiKokurikuler";
 import AsesmenFormatifKoku from "@/components/modules/AsesmenFormatifKoku";
 import AsesmenSumatifKoku from "@/components/modules/AsesmenSumatifKoku";
-import { BarChart2, Activity, Database as DatabaseIcon, Shield } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { auth } from "@/lib/firebase";
 
@@ -80,58 +87,70 @@ type MenuItem = {
 
 type MenuCategory = {
   category: string;
+  categoryIcon?: React.ElementType;
+  categoryColor?: string;
   items: MenuItem[];
 };
 
 const MENU_CATEGORIES: MenuCategory[] = [
   {
     category: "Menu Utama",
-    items: [{ id: "beranda", label: "Beranda", icon: Home, iconColor: "text-blue-500" }],
+    items: [{ id: "beranda", label: "Dashboard Utama", icon: LayoutGrid, iconColor: "text-sky-400" }],
   },
   {
     category: "Administrasi Kelas",
+    categoryIcon: BookOpen,
+    categoryColor: "text-indigo-400",
     items: [
-      { id: "jurnal", label: "Jurnal Harian", icon: BookOpen, iconColor: "text-emerald-500" },
-      { id: "rekap-jurnal", label: "Rekap Jurnal", icon: Printer, iconColor: "text-emerald-600" },
-      { id: "absensi", label: "Kehadiran", icon: Users, iconColor: "text-amber-500" },
-      { id: "rekap-absensi", label: "Rekap Absensi", icon: Printer, iconColor: "text-amber-600" },
+      { id: "jurnal", label: "Jurnal Harian", icon: BookOpen, iconColor: "text-indigo-400" },
+      { id: "rekap-jurnal", label: "Rekap Jurnal", icon: Printer, iconColor: "text-violet-400" },
+      { id: "absensi", label: "Kehadiran", icon: Users, iconColor: "text-amber-400" },
+      { id: "rekap-absensi", label: "Rekap Absensi", icon: Calendar, iconColor: "text-yellow-400" },
     ],
   },
   {
     category: "Penilaian & Tindak lanjut",
+    categoryIcon: CheckSquare,
+    categoryColor: "text-emerald-400",
     items: [
-      { id: "formatif", label: "Formatif", icon: CheckSquare, iconColor: "text-indigo-500" },
-      { id: "sumatif", label: "Sumatif", icon: Award, iconColor: "text-violet-500" },
-      { id: "remedial", label: "Remedial", icon: LifeBuoy, iconColor: "text-pink-500" },
+      { id: "formatif", label: "Formatif", icon: CheckSquare, iconColor: "text-emerald-400" },
+      { id: "sumatif", label: "Sumatif", icon: Award, iconColor: "text-cyan-400" },
+      { id: "remedial", label: "Remedial", icon: LifeBuoy, iconColor: "text-pink-400" },
     ],
   },
   {
     category: "Laporan Hasil Belajar",
+    categoryIcon: FileText,
+    categoryColor: "text-rose-400",
     items: [
-      { id: "rapor", label: "Rapor", icon: FileText, iconColor: "text-rose-500" },
-      { id: "rekap-akhir", label: "Rekap Akhir", icon: BarChart2, iconColor: "text-fuchsia-500" },
+      { id: "rapor", label: "Rapor", icon: FileText, iconColor: "text-rose-400" },
+      { id: "rekap-akhir", label: "Rekap Akhir", icon: BarChart2, iconColor: "text-fuchsia-400" },
     ],
   },
   {
     category: "Kokurikuler",
+    categoryIcon: GraduationCap,
+    categoryColor: "text-teal-400",
     items: [
-      { id: "tema-kokurikuler", label: "Daftar Tema", icon: BookOpen, koordinatorOnly: true, iconColor: "text-teal-500" },
-      { id: "kegiatan-kokurikuler", label: "Kegiatan Kokurikuler", icon: FileText, koordinatorOnly: true, iconColor: "text-cyan-500" },
-      { id: "setting-rubrik-koku", label: "Setting Rubrik", icon: Settings, koordinatorOnly: true, iconColor: "text-sky-500" },
-      { id: "absensi-kokurikuler", label: "Kehadiran Kokurikuler", icon: Users, koordinatorOnly: true, iconColor: "text-orange-500" },
-      { id: "rekap-absensi-kokurikuler", label: "Rekap Kehadiran", icon: Printer, koordinatorOnly: true, iconColor: "text-orange-600" },
-      { id: "asesmen-formatif-koku", label: "Asesmen Formatif", icon: CheckSquare, koordinatorOnly: true, iconColor: "text-purple-500" },
-      { id: "asesmen-sumatif-koku", label: "Asesmen Sumatif", icon: Award, koordinatorOnly: true, iconColor: "text-purple-600" },
-      { id: "fasilitator", label: "Fasilitator", icon: Users, koordinatorOnly: true, iconColor: "text-lime-500" },
+      { id: "tema-kokurikuler", label: "Daftar Tema", icon: BookOpen, koordinatorOnly: true, iconColor: "text-teal-400" },
+      { id: "kegiatan-kokurikuler", label: "Kegiatan Kokurikuler", icon: FileText, koordinatorOnly: true, iconColor: "text-sky-400" },
+      { id: "setting-rubrik-koku", label: "Setting Rubrik", icon: Settings, koordinatorOnly: true, iconColor: "text-blue-400" },
+      { id: "absensi-kokurikuler", label: "Kehadiran Kokurikuler", icon: Users, koordinatorOnly: true, iconColor: "text-orange-400" },
+      { id: "rekap-absensi-kokurikuler", label: "Rekap Kehadiran", icon: Printer, koordinatorOnly: true, iconColor: "text-amber-400" },
+      { id: "asesmen-formatif-koku", label: "Asesmen Formatif", icon: CheckSquare, koordinatorOnly: true, iconColor: "text-purple-400" },
+      { id: "asesmen-sumatif-koku", label: "Asesmen Sumatif", icon: Award, koordinatorOnly: true, iconColor: "text-violet-400" },
+      { id: "fasilitator", label: "Fasilitator", icon: Users, koordinatorOnly: true, iconColor: "text-lime-400" },
     ],
   },
   {
     category: "Sistem & Pengaturan",
+    categoryIcon: Settings,
+    categoryColor: "text-slate-400",
     items: [
       { id: "konfigurasi", label: "Pengaturan", icon: Settings, iconColor: "text-slate-400" },
-      { id: "database", label: "Database", icon: DatabaseIcon, iconColor: "text-red-500" },
-      { id: "pengguna", label: "Pengguna", icon: Shield, adminOnly: true, iconColor: "text-blue-500" },
-      { id: "monitoring", label: "Monitoring", icon: Activity, adminOnly: true, iconColor: "text-green-500" },
+      { id: "database", label: "Database", icon: DatabaseIcon, iconColor: "text-red-400" },
+      { id: "pengguna", label: "Pengguna", icon: Shield, adminOnly: true, iconColor: "text-blue-400" },
+      { id: "monitoring", label: "Monitoring", icon: Activity, adminOnly: true, iconColor: "text-emerald-400" },
     ],
   },
 ];
@@ -244,75 +263,116 @@ export default function Shell() {
   return (
     <div className="flex h-screen w-full bg-[#F5F5F7] print:h-auto print:block">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-[250px] bg-[#343a40] text-[#c2c7d0] border-r border-[#343a40] shadow-lg flex-shrink-0 z-20 relative print:hidden">
+      <aside className="hidden md:flex flex-col w-[260px] bg-[#111827] text-slate-200 border-r border-slate-800/80 shadow-2xl flex-shrink-0 z-20 relative print:hidden">
         {/* Brand Logo */}
-        <div className="p-4 flex items-center gap-3 border-b border-[#4b545c]">
-          <div className="w-8 h-8 bg-white rounded flex items-center justify-center text-[#343a40] font-bold text-lg shadow-sm">
+        <div className="p-4 flex items-center gap-3 border-b border-slate-800/80 bg-[#0f172a]/50">
+          <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center text-white font-extrabold text-lg shadow-md shadow-blue-500/20">
             A
           </div>
           <div>
-            <h1 className="text-sm font-bold text-white leading-tight">AGMP 2025</h1>
-            <p className="text-[10px] text-gray-400 uppercase tracking-widest">
+            <h1 className="text-sm font-bold text-white leading-tight tracking-wide">AGMP 2025</h1>
+            <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest">
               Admin Guru v2.0
             </p>
           </div>
         </div>
 
         {/* Sidebar Menu */}
-        <nav className="flex-1 py-4 overflow-y-auto no-scrollbar px-2">
+        <nav className="flex-1 py-4 overflow-y-auto no-scrollbar px-3 space-y-3">
           {MENU_CATEGORIES.map((category) => {
-            const filteredItems = category.items.filter(item => (!item.adminOnly || isAdmin) && (!item.koordinatorOnly || isAdmin || isKoordinator));
+            const filteredItems = category.items.filter(
+              (item) =>
+                (!item.adminOnly || isAdmin) &&
+                (!item.koordinatorOnly || isAdmin || isKoordinator)
+            );
             if (filteredItems.length === 0) return null;
 
             if (category.category === "Menu Utama") {
               return (
-                <div key={category.category} className="mb-2">
-                  <div className="px-3 py-2 text-[11px] font-bold text-[#6c757d] uppercase tracking-wider">
+                <div key={category.category} className="space-y-1">
+                  <div className="px-3 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                     {category.category}
                   </div>
-                  <div className="space-y-1">
-                    {filteredItems.map((item) => (
-                      <button
-                        key={item.id}
-                        onClick={() => setActiveTab(item.id)}
+                  {filteredItems.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveTab(item.id)}
+                      className={cn(
+                        "flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 group cursor-pointer",
+                        activeTab === item.id
+                          ? "bg-blue-600/25 text-white font-semibold shadow-inner border-l-2 border-blue-500"
+                          : "text-slate-300 hover:text-white hover:bg-slate-800/60"
+                      )}
+                    >
+                      <item.icon
                         className={cn(
-                          "flex items-center w-full px-3 py-2 text-sm rounded-md transition-colors",
-                          activeTab === item.id ? "bg-[#007bff] text-white shadow-sm" : "text-[#c2c7d0] hover:bg-[#ffffff0d] hover:text-white"
+                          "w-5 h-5 mr-3 transition-transform duration-200 group-hover:scale-110",
+                          item.iconColor || "text-sky-400"
                         )}
-                      >
-                        <item.icon className={cn("w-5 h-5 mr-3", activeTab === item.id ? "text-white" : item.iconColor)} />
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
+                      />
+                      <span className="flex-1 text-left">{item.label}</span>
+                    </button>
+                  ))}
                 </div>
               );
             }
 
             const isExpanded = expandedCategories[category.category];
+            const CategoryIcon = category.categoryIcon || BookOpen;
+
             return (
-              <div key={category.category} className="mb-2">
+              <div key={category.category} className="space-y-1">
                 <button
                   onClick={() => toggleCategory(category.category)}
-                  className="flex items-center justify-between w-full px-3 py-2 text-[11px] font-bold text-[#6c757d] hover:text-[#c2c7d0] uppercase tracking-wider transition-colors outline-none cursor-pointer"
+                  className="flex items-center justify-between w-full px-3 py-2.5 text-sm font-medium text-slate-200 hover:text-white hover:bg-slate-800/60 rounded-xl transition-all duration-200 group cursor-pointer outline-none"
                 >
-                  <span>{category.category}</span>
-                  <ChevronDown className={cn("w-4 h-4 transition-transform duration-300", isExpanded && "rotate-180")} />
+                  <div className="flex items-center min-w-0">
+                    <CategoryIcon
+                      className={cn(
+                        "w-5 h-5 mr-3 flex-shrink-0 transition-transform duration-200 group-hover:scale-110",
+                        category.categoryColor || "text-indigo-400"
+                      )}
+                    />
+                    <span className="truncate text-sm font-medium text-slate-200">
+                      {category.category}
+                    </span>
+                  </div>
+                  <ChevronRight
+                    className={cn(
+                      "w-4 h-4 text-slate-400 transition-transform duration-200 flex-shrink-0 ml-2",
+                      isExpanded && "rotate-90 text-slate-200"
+                    )}
+                  />
                 </button>
-                <div className={cn("grid transition-all duration-300", isExpanded ? "grid-rows-[1fr] opacity-100 mt-1" : "grid-rows-[0fr] opacity-0")}>
+
+                <div
+                  className={cn(
+                    "grid transition-all duration-300 ease-in-out",
+                    isExpanded
+                      ? "grid-rows-[1fr] opacity-100 mt-1"
+                      : "grid-rows-[0fr] opacity-0"
+                  )}
+                >
                   <div className="overflow-hidden">
-                    <div className="space-y-1">
+                    <div className="pl-4 pr-1 space-y-1 border-l border-slate-800 ml-5 my-1">
                       {filteredItems.map((item) => (
                         <button
                           key={item.id}
                           onClick={() => setActiveTab(item.id)}
                           className={cn(
-                            "flex items-center w-full pr-3 pl-8 py-2 text-sm rounded-md transition-colors",
-                            activeTab === item.id ? "bg-[#007bff] text-white shadow-sm" : "text-[#c2c7d0] hover:bg-[#ffffff0d] hover:text-white"
+                            "flex items-center w-full px-3 py-2 text-xs font-medium rounded-lg transition-all duration-150 group cursor-pointer",
+                            activeTab === item.id
+                              ? "bg-blue-600/30 text-white font-semibold shadow-sm text-blue-300"
+                              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
                           )}
                         >
-                          <item.icon className={cn("w-4 h-4 mr-3", activeTab === item.id ? "text-white" : item.iconColor)} />
-                          {item.label}
+                          <item.icon
+                            className={cn(
+                              "w-4 h-4 mr-2.5 transition-transform duration-200 group-hover:scale-110",
+                              item.iconColor || "text-indigo-400"
+                            )}
+                          />
+                          <span className="truncate">{item.label}</span>
                         </button>
                       ))}
                     </div>
@@ -324,18 +384,24 @@ export default function Shell() {
         </nav>
 
         {/* User Panel */}
-        <div className="p-3 border-t border-[#4b545c]">
-          <div className="flex items-center gap-3 p-2 hover:bg-[#ffffff0d] rounded-md transition-colors cursor-pointer">
-            <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-xs font-bold text-white">
+        <div className="p-3 border-t border-slate-800/80 bg-[#0f172a]/40">
+          <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-800/40 hover:bg-slate-800/80 transition-colors cursor-pointer">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-xs font-extrabold text-white shadow-sm">
               {userInitials || "U"}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold text-white truncate">{userName}</p>
-              <p className="text-[10px] text-gray-400 truncate">
-                {state.agmp_mapel?.find(m => m.id === state.agmp_pengaturan?.mapelId)?.nama || state.agmp_pengaturan.mapel || "Guru Mata Pelajaran"}
+              <p className="text-[10px] text-slate-400 truncate">
+                {state.agmp_mapel?.find((m) => m.id === state.agmp_pengaturan?.mapelId)?.nama ||
+                  state.agmp_pengaturan.mapel ||
+                  "Guru Mata Pelajaran"}
               </p>
             </div>
-            <button onClick={logout} className="p-1 hover:bg-[#dc3545] rounded text-[#c2c7d0] hover:text-white transition-colors" title="Keluar">
+            <button
+              onClick={logout}
+              className="p-1.5 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-lg transition-colors cursor-pointer"
+              title="Keluar"
+            >
               <LogOut size={16} />
             </button>
           </div>
