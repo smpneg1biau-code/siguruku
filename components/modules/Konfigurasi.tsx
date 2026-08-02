@@ -4,24 +4,23 @@ import { generateId } from "@/lib/utils";
 import { KKTPType, AspekRubrik } from "@/lib/types";
 import { Plus, Trash2, Edit, Download } from "lucide-react";
 import * as XLSX from "xlsx";
-import { ThemeSelector } from "@/components/theme/ThemeSelector";
 
 export default function Konfigurasi() {
   const { isAdmin } = useStore();
-  const [activeTab, setActiveTab] = useState<"profil" | "tema" | "ta" | "kelas" | "siswa" | "tp" | "kktp" | "mapel" | "dimensi" | "db">("profil");
+  const [activeTab, setActiveTab] = useState<"profil" | "ta" | "kelas" | "siswa" | "tp" | "kktp" | "mapel" | "dimensi" | "db">("profil");
 
   return (
     <div className="space-y-6">
       <header>
-        <h2 className="text-2xl font-bold">Konfigurasi Data</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Konfigurasi Data</h2>
         <p className="text-sm text-gray-500 mt-1">
-          Kelola data master referensi PPA 2025 dan preferensi tema tampilan.
+          Kelola data master referensi PPA 2025.
         </p>
       </header>
 
       {/* Tabs */}
       <div className="flex overflow-x-auto hide-scrollbar gap-2 pb-2">
-        {[{id:"profil", label:"Profil & Preferensi"}, {id:"tema", label:"Tema Tampilan"}, {id:"ta", label:"Tahun Ajaran"}, {id:"kelas", label:"Kelas"}, {id:"siswa", label: "Siswa"}, {id:"tp", label:"TP"}, {id:"kktp", label:"KKTP"}, ...(isAdmin ? [{id:"mapel", label:"Mata Pelajaran"}, {id:"dimensi", label:"Dimensi Lulusan"}] : [])].map((tab) => (
+        {[{id:"profil", label:"Profil & Preferensi"}, {id:"ta", label:"Tahun Ajaran"}, {id:"kelas", label:"Kelas"}, {id:"siswa", label: "Siswa"}, {id:"tp", label:"TP"}, {id:"kktp", label:"KKTP"}, ...(isAdmin ? [{id:"mapel", label:"Mata Pelajaran"}, {id:"dimensi", label:"Dimensi Lulusan"}] : [])].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
@@ -38,7 +37,6 @@ export default function Konfigurasi() {
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6">
         {activeTab === "profil" && <ManajemenProfil />}
-        {activeTab === "tema" && <ThemeSelector />}
         {activeTab === "ta" && <ManajemenTA />}
         {activeTab === "kelas" && <ManajemenKelas />}
         {activeTab === "siswa" && <ManajemenSiswa />}
