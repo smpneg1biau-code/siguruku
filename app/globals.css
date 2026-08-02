@@ -1,33 +1,54 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+:root {
+  --background: #F5F5F7;
+  --sidebar: #FFFFFF;
+  --sidebar-hover: rgba(0, 122, 255, 0.08);
+  --sidebar-active: rgba(0, 122, 255, 0.12);
+  --card: #FFFFFF;
+  --card-hover: #FAFAFC;
+  --border: #E5E5EA;
+  --text: #1C1C1E;
+  --text-secondary: #8E8E93;
+  --primary: #007AFF;
+  --primary-hover: #0056B3;
+  --success: #34C759;
+  --warning: #FF9500;
+  --danger: #FF3B30;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+*, ::before, ::after {
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
 body {
-  background-color: #F5F5F7;
-  color: #1C1C1E;
+  background-color: var(--background);
+  color: var(--text);
   font-family: system-ui, -apple-system, sans-serif;
   overflow: hidden;
 }
 
 .sidebar-item {
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
 }
 
 .sidebar-item:hover {
-  background-color: rgba(0, 122, 255, 0.08);
-  color: #007AFF;
+  background-color: var(--sidebar-hover);
+  color: var(--primary);
 }
 
 .sidebar-active {
-  background-color: rgba(0, 122, 255, 0.1);
-  color: #007AFF;
-  border-right: 4px solid #007AFF;
+  background-color: var(--sidebar-active);
+  color: var(--primary);
+  border-right: 4px solid var(--primary);
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
 }
 
 .status-dot {

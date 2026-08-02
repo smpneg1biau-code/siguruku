@@ -39,9 +39,11 @@ import AbsensiKokurikuler from "@/components/modules/AbsensiKokurikuler";
 import RekapAbsensiKokurikuler from "@/components/modules/RekapAbsensiKokurikuler";
 import AsesmenFormatifKoku from "@/components/modules/AsesmenFormatifKoku";
 import AsesmenSumatifKoku from "@/components/modules/AsesmenSumatifKoku";
-import { BarChart2, Activity, Database as DatabaseIcon, Shield } from "lucide-react";
+import { BarChart2, Activity, Database as DatabaseIcon, Shield, Palette } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { auth } from "@/lib/firebase";
+import { ThemeButton } from "@/components/theme/ThemeButton";
+import { ThemeSwitcher } from "@/components/theme/ThemeSwitcher";
 
 export type TabId =
   | "beranda"
@@ -137,7 +139,7 @@ const MENU_CATEGORIES: MenuCategory[] = [
 
 const NAV_ITEMS = MENU_CATEGORIES.flatMap((c) => c.items);
 
-export default function Shell() {
+export default function Shell({ children }: { children?: React.ReactNode } = {}) {
     const [activeTab, setActiveTab] = useState<TabId>("beranda");
   const { state, logout, isAdmin, isKoordinator } = useStore();
   const [isOnline, setIsOnline] = useState(true);
@@ -349,7 +351,9 @@ export default function Shell() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="text-right mr-4">
+            <ThemeSwitcher />
+            <ThemeButton />
+            <div className="text-right ml-2 mr-2">
               <div className="flex items-center justify-end gap-2 mb-1">
                 <div className={cn("w-2 h-2 rounded-full", isOnline ? "bg-green-500" : "bg-red-500")}></div>
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">
@@ -361,7 +365,7 @@ export default function Shell() {
         </header>
 
         <div className="flex-1 p-4 md:p-6 print:p-0 space-y-6 overflow-y-auto no-scrollbar flex flex-col items-center print:h-auto print:overflow-visible print:block">
-          <div className="max-w-6xl w-full h-full print:h-auto print:max-w-none print:block">{renderContent()}</div>
+          <div className="max-w-6xl w-full h-full print:h-auto print:max-w-none print:block">{children || renderContent()}</div>
         </div>
 
         <footer className="hidden md:flex h-10 bg-white border-t border-gray-200 px-6 items-center justify-between text-[10px] text-gray-400 flex-shrink-0 print:hidden">

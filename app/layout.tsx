@@ -1,5 +1,6 @@
 import type {Metadata, Viewport} from 'next';
 import './globals.css'; // Global styles
+import { ThemeProvider } from '@/lib/theme/theme-provider';
 
 export const viewport: Viewport = {
   themeColor: '#007AFF',
@@ -13,7 +14,12 @@ export const metadata: Metadata = {
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="en">
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   );
 }
+
