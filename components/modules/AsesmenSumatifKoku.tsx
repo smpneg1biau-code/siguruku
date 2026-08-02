@@ -28,26 +28,26 @@ export default function AsesmenSumatifKoku() {
   const filteredKegiatan = useMemo(() => {
     if (!selectedTemaId) return [];
     return kegiatanList.filter(k => k.temaId === selectedTemaId);
-  }, [state.agmp_kegiatan_kokurikuler, selectedTemaId]);
+  }, [kegiatanList, selectedTemaId]);
 
   const kegiatanDetails = useMemo(() => {
     return kegiatanList.find(k => k.id === selectedKegiatanId);
-  }, [state.agmp_kegiatan_kokurikuler, selectedKegiatanId]);
+  }, [kegiatanList, selectedKegiatanId]);
 
   const availableKelasIds = useMemo(() => kegiatanDetails?.kelasIds || [], [kegiatanDetails]);
-  const validKelas = useMemo(() => kelasList.filter(k => availableKelasIds.includes(k.id)), [filteredKelas, availableKelasIds]);
+  const validKelas = useMemo(() => kelasList.filter(k => availableKelasIds.includes(k.id)), [kelasList, availableKelasIds]);
 
   const filteredSiswa = useMemo(() => {
     if (!selectedKelasId) return [];
     return siswaList.filter(s => s.kelasId === selectedKelasId).sort((a,b) => a.nama.localeCompare(b.nama));
-  }, [state.agmp_siswa, selectedKelasId]);
+  }, [siswaList, selectedKelasId]);
 
   const targetDimensiIds = useMemo(() => {
     if (!kegiatanDetails) return [];
     return kegiatanDetails.capaianProfil?.map(c => c.dimensiId) || [];
   }, [kegiatanDetails]);
 
-  const targetDimensiList = useMemo(() => dimensiList.filter(d => targetDimensiIds.includes(d.id)), [state.agmp_dimensi, targetDimensiIds]);
+  const targetDimensiList = useMemo(() => dimensiList.filter(d => targetDimensiIds.includes(d.id)), [dimensiList, targetDimensiIds]);
 
   const [formTanggal, setFormTanggal] = useState(new Date().toISOString().split('T')[0]);
   const [formNilaiDimensi, setFormNilaiDimensi] = useState<Record<string, "SB" | "B" | "C" | "K">>({});
@@ -62,7 +62,7 @@ export default function AsesmenSumatifKoku() {
       s.kegiatanId === selectedKegiatanId &&
       (activeTaId ? (s.taId === activeTaId || !s.taId) : true)
     );
-  }, [state.agmp_asesmen_sumatif_koku, selectedSiswaId, selectedKegiatanId, activeTaId]);
+  }, [sumatifList, selectedSiswaId, selectedKegiatanId, activeTaId]);
 
   const formatifSiswaList = useMemo(() => {
     if (!selectedSiswaId || !selectedKegiatanId) return [];
@@ -71,7 +71,7 @@ export default function AsesmenSumatifKoku() {
       f.kegiatanId === selectedKegiatanId &&
       (activeTaId ? (f.taId === activeTaId || !f.taId) : true)
     ).sort((a,b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime());
-  }, [state.agmp_asesmen_formatif_koku, selectedSiswaId, selectedKegiatanId, activeTaId]);
+  }, [formatifList, selectedSiswaId, selectedKegiatanId, activeTaId]);
 
   const handleNextStep1 = () => {
     if (!selectedTemaId || !selectedKegiatanId || !selectedKelasId) {

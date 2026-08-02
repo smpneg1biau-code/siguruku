@@ -26,11 +26,11 @@ export default function AsesmenFormatifKoku() {
   const filteredKegiatan = useMemo(() => {
     if (!selectedTemaId) return [];
     return kegiatanList.filter(k => k.temaId === selectedTemaId);
-  }, [state.agmp_kegiatan_kokurikuler, selectedTemaId]);
+  }, [kegiatanList, selectedTemaId]);
 
   const kegiatanDetails = useMemo(() => {
     return kegiatanList.find(k => k.id === selectedKegiatanId);
-  }, [state.agmp_kegiatan_kokurikuler, selectedKegiatanId]);
+  }, [kegiatanList, selectedKegiatanId]);
 
   const availableKelasIds = kegiatanDetails?.kelasIds || [];
   const validKelas = kelasList.filter(k => availableKelasIds.includes(k.id));
@@ -38,7 +38,7 @@ export default function AsesmenFormatifKoku() {
   const filteredSiswa = useMemo(() => {
     if (!selectedKelasId) return [];
     return siswaList.filter(s => s.kelasId === selectedKelasId).sort((a,b) => a.nama.localeCompare(b.nama));
-  }, [state.agmp_siswa, selectedKelasId]);
+  }, [siswaList, selectedKelasId]);
 
   const targetDimensiIds = useMemo(() => {
     if (!kegiatanDetails) return [];
@@ -65,7 +65,7 @@ export default function AsesmenFormatifKoku() {
       f.kegiatanId === selectedKegiatanId &&
       (activeTaId ? (f.taId === activeTaId || !f.taId) : true)
     ).sort((a,b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime());
-  }, [state.agmp_asesmen_formatif_koku, selectedSiswaId, selectedKegiatanId, activeTaId]);
+  }, [formatifList, selectedSiswaId, selectedKegiatanId, activeTaId]);
 
   const handleNextStep1 = () => {
     if (!selectedTemaId || !selectedKegiatanId || !selectedKelasId) {

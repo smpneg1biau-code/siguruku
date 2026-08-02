@@ -376,7 +376,7 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
     return state.agmp_kelas.filter(k => state.agmp_pengaturan?.kelasIds?.includes(k.id));
   }, [state.agmp_kelas, state.agmp_pengaturan?.kelasIds, isAdmin]);
 
-  if (loadingAuth || loadingData || isAuthorized === null) {
+  if (loadingAuth || (user && (loadingData || isAuthorized === null))) {
     return (
       <div className="flex h-screen flex-col items-center justify-center space-y-4">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
