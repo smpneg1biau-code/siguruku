@@ -273,7 +273,7 @@ export default function Shell({ children }: { children?: React.ReactNode } = {})
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h1 className="text-base font-bold text-white tracking-tight leading-none">AGMP 2026</h1>
+            <h1 className="text-base font-bold text-white tracking-tight leading-none">SI-GURUKU</h1>
             <span className="text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full">
               v3.0
             </span>

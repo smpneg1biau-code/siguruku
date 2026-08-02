@@ -2,6 +2,8 @@ import { initializeApp } from "firebase/app";
 import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { 
   initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   getFirestore
 } from "firebase/firestore";
 import firebaseAppletConfig from "../firebase-applet-config.json";
@@ -23,10 +25,14 @@ export const app = initializeApp(firebaseConfig);
 // Initialize Firestore
 export const db = (() => {
   const dbId = firebaseConfig.firestoreDatabaseId;
+  const initConfig = {
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+  };
+  
   if (dbId && dbId !== 'remixed-firestore-database-id' && dbId !== 'default' && dbId !== '(default)') {
-    return initializeFirestore(app, {}, dbId);
+    return initializeFirestore(app, initConfig, dbId);
   }
-  return getFirestore(app);
+  return initializeFirestore(app, initConfig);
 })();
 
 export const auth = getAuth(app);
