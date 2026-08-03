@@ -249,6 +249,16 @@ export default function Formatif() {
           <option value="" disabled>Pilih TP</option>
           {tpList.map(t => <option key={t.id} value={t.id}>TP {t.kode}</option>)}
         </select>
+        
+        <div className="flex-1 sm:flex-none flex items-center gap-2 border border-gray-300 px-3 py-2 rounded-lg bg-white min-w-[200px]">
+          <label className="text-sm font-bold text-gray-700 whitespace-nowrap">Tanggal:</label>
+          <input 
+            type="date"
+            className="text-sm font-medium outline-none bg-transparent w-full text-gray-900 cursor-pointer"
+            value={selectedTanggal}
+            onChange={(e) => setSelectedTanggal(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="flex bg-gray-100 p-1 rounded-xl">
@@ -400,15 +410,15 @@ export default function Formatif() {
                     {activeTab === 'tengah' && teknikTengah === 'Catatan Anekdot' ? (
                       <div className="space-y-2">
                         {(hasil[s.id]?.anekdots || []).map((anekdot: any, idx: number) => (
-                          <div key={anekdot.id} className="flex gap-2 items-center">
+                          <div key={anekdot.id} className="flex flex-col sm:flex-row gap-2 sm:items-center border-b sm:border-b-0 pb-3 sm:pb-0">
                             <input 
                               type="date"
-                              className="text-xs px-2 py-1.5 border border-gray-200 rounded outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 bg-white"
+                              className="text-sm px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 bg-white w-full sm:w-auto"
                               value={anekdot.tanggal || ''}
                               onChange={(e) => handleUpdateAnekdot(s.id, idx, 'tanggal', e.target.value)}
                             />
                             <select 
-                              className="text-xs px-2 py-1.5 border border-gray-200 rounded outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 bg-white"
+                              className="text-sm px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 bg-white w-full sm:w-auto"
                               value={anekdot.kategori}
                               onChange={(e) => handleUpdateAnekdot(s.id, idx, 'kategori', e.target.value)}
                             >
@@ -419,11 +429,11 @@ export default function Formatif() {
                             <input 
                               type="text" 
                               placeholder="Ketik catatan..."
-                              className="flex-1 text-xs px-2 py-1.5 border border-gray-200 rounded outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 bg-white" 
+                              className="flex-1 text-sm px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 bg-white w-full" 
                               value={anekdot.teks}
                               onChange={(e) => handleUpdateAnekdot(s.id, idx, 'teks', e.target.value)}
                             />
-                            <button onClick={() => handleRemoveAnekdot(s.id, idx)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors">
+                            <button onClick={() => handleRemoveAnekdot(s.id, idx)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors w-full sm:w-auto flex justify-center border border-red-100 sm:border-transparent mt-1 sm:mt-0">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>

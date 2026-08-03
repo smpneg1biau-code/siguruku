@@ -159,7 +159,7 @@ export default function AbsensiKokurikuler() {
       )}
 
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row gap-3 flex-wrap">
-        <input type="date" className="px-3 py-2 border rounded-lg text-sm bg-gray-50 min-w-[140px]" value={tanggal} onChange={e => setTanggal(e.target.value)} />
+        <input type="date" className="w-full sm:w-auto px-4 py-2 border rounded-lg text-sm font-medium bg-gray-50 cursor-pointer min-w-[140px]" value={tanggal} onChange={e => setTanggal(e.target.value)} />
         
         <select className="px-3 py-2 border rounded-lg text-sm bg-gray-50 flex-1 min-w-[200px]" value={kegiatanId} onChange={e => setKegiatanId(e.target.value)}>
           {kegiatanList.length === 0 && <option value="">Belum ada Kegiatan</option>}

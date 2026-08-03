@@ -135,8 +135,8 @@ export default function Absensi() {
       )}
 
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row gap-3">
-        <input type="date" className="px-3 py-2 border rounded-lg text-sm bg-gray-50" value={tanggal} onChange={e => setTanggal(e.target.value)} />
-        <select className="px-3 py-2 border rounded-lg text-sm bg-gray-50" value={kelasId} onChange={e => setKelasId(e.target.value)}>
+        <input type="date" className="w-full sm:w-auto px-4 py-2 border rounded-lg text-sm font-medium bg-gray-50 cursor-pointer" value={tanggal} onChange={e => setTanggal(e.target.value)} />
+        <select className="w-full sm:w-auto px-4 py-2 border rounded-lg text-sm font-medium bg-gray-50 cursor-pointer" value={kelasId} onChange={e => setKelasId(e.target.value)}>
           {filteredKelas.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
         </select>
         <div className="flex gap-2 ml-auto">
