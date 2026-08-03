@@ -48,7 +48,7 @@ export default function LoginScreen() {
               </div>
               <div>
                 <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-                  AGMP <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-teal-400">2025</span>
+                  SIGURUKU <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-teal-400">2026</span>
                 </h1>
                 <p className="text-sm sm:text-base text-slate-400 font-medium">
                   Aplikasi Administrasi, Absensi & Asesmen Terintegrasi
@@ -140,7 +140,7 @@ export default function LoginScreen() {
                 </div>
               </div>
               <h2 className="text-xl font-bold text-white tracking-tight">
-                Selamat Datang di AGMP
+                Selamat Datang di SI-GURUKU
               </h2>
               <p className="text-xs text-slate-400 max-w-xs mx-auto">
                 Silakan masuk menggunakan Akun Google terdaftar Anda untuk mengakses portal guru.
