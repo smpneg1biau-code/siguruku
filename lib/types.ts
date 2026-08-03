@@ -127,6 +127,7 @@ export type Formatif = {
   jenis: "AWAL" | "TENGAH";
   teknik: string;
   hasil: any;
+  tanggal?: string;
 };
 export type SumatifRecord = {
   level: number;

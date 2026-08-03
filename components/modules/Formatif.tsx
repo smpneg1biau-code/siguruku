@@ -5,7 +5,7 @@ import { generateId, getInitials } from '@/lib/utils';
 import { TP, Siswa } from '@/lib/types';
 
 export default function Formatif() {
-  const { state, addItem, updateItem, showToast , filteredKelas } = useStore();
+  const { state, addItem, updateItem, deleteItem, showToast , filteredKelas } = useStore();
   const activeTA = state.agmp_tahun_ajaran.find(ta => ta.isActive);
   const activeTaId = activeTA?.id || '';
 
@@ -15,6 +15,7 @@ export default function Formatif() {
   
   const [teknikAwal, setTeknikAwal] = useState('Pertanyaan Pemantik');
   const [teknikTengah, setTeknikTengah] = useState('Exit Ticket');
+  const [selectedTanggal, setSelectedTanggal] = useState(new Date().toISOString().split('T')[0]);
 
   const siswaList = state.agmp_siswa.filter(s => s.kelasId === kelasId).sort((a,b) => a.nama.localeCompare(b.nama));
   const tpList = state.agmp_tp.filter(t => t.kelasIds.includes(kelasId));
@@ -23,9 +24,11 @@ export default function Formatif() {
   const tpId = tpList.find(t => t.id === tpIdState) ? tpIdState : (tpList[0]?.id || '');
 
   // Cari existing formatif record for this TP and type
-  const existingFormatif = state.agmp_formatif.find(
+  const allFormatifForTP = state.agmp_formatif.filter(
     f => f.jurnalId === `${kelasId}_${tpId}` && f.jenis === (activeTab === 'awal' ? 'AWAL' : 'TENGAH') && (activeTaId ? f.taId === activeTaId : true)
-  );
+  ).sort((a, b) => (b.tanggal || '').localeCompare(a.tanggal || ''));
+  
+  const existingFormatif = allFormatifForTP.find(f => (f.tanggal || '') === selectedTanggal);
 
   // Derive initial values from existing record
   const initialHasil = existingFormatif?.hasil || {};
@@ -35,7 +38,7 @@ export default function Formatif() {
   const [editedRecordId, setEditedRecordId] = useState<string | null>(null);
 
   // Sync edits if different record
-  const currentRecordId = existingFormatif?.id || `${kelasId}_${tpId}_${activeTab}`;
+  const currentRecordId = existingFormatif?.id || `${kelasId}_${tpId}_${activeTab}_${selectedTanggal}`;
   const hasil = currentRecordId === editedRecordId ? hasilState : initialHasil;
 
   const handleSetHasil = (updater: any) => {
@@ -115,6 +118,17 @@ export default function Formatif() {
     });
   };
 
+  const handleDelete = () => {
+    if (existingFormatif) {
+      if (confirm('Apakah Anda yakin ingin menghapus catatan asesmen formatif pada tanggal ini?')) {
+        deleteItem('agmp_formatif', existingFormatif.id);
+        showToast('Catatan formatif berhasil dihapus!', 'success');
+        setEditedRecordId(null);
+        setHasilState({});
+      }
+    }
+  };
+
   const handleSave = () => {
     if (!tpId) return;
     if (!activeTaId) {
@@ -125,7 +139,8 @@ export default function Formatif() {
     if (existingFormatif) {
       updateItem('agmp_formatif', existingFormatif.id, { 
         hasil: hasil,
-        teknik: activeTab === 'awal' ? teknikAwal : teknikTengah
+        teknik: activeTab === 'awal' ? teknikAwal : teknikTengah,
+        tanggal: selectedTanggal
       });
     } else {
       addItem('agmp_formatif', {
@@ -134,7 +149,8 @@ export default function Formatif() {
         jurnalId: `${kelasId}_${tpId}`, // Using combination as JurnalId for now
         jenis: activeTab === 'awal' ? 'AWAL' : 'TENGAH',
         teknik: activeTab === 'awal' ? teknikAwal : teknikTengah,
-        hasil: hasil
+        hasil: hasil,
+        tanggal: selectedTanggal
       });
     }
     showToast('Penilaian formatif berhasil disimpan!', 'success');
@@ -176,10 +192,34 @@ export default function Formatif() {
           <h2 className="text-2xl font-bold text-gray-900">Asesmen Formatif (Low Stake)</h2>
           <p className="text-sm text-gray-500 mt-1">Cek penguasaan kognitif tiap siswa tanpa nilai di rapor.</p>
         </div>
-        <button onClick={handleSave} className="flex items-center gap-1.5 text-sm bg-[#007AFF] text-white px-4 py-2 rounded-lg hover:bg-blue-600 shadow-sm transition-colors">
-           <Save className="w-4 h-4" /> Simpan Data
-        </button>
+        <div className="flex gap-2">
+          {existingFormatif && (
+            <button onClick={handleDelete} className="flex items-center gap-1.5 text-sm bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg hover:bg-red-100 shadow-sm transition-colors">
+              <Trash2 className="w-4 h-4" /> Hapus Data
+            </button>
+          )}
+          <button onClick={handleSave} className="flex items-center gap-1.5 text-sm bg-[#007AFF] text-white px-4 py-2 rounded-lg hover:bg-blue-600 shadow-sm transition-colors">
+             <Save className="w-4 h-4" /> Simpan Data
+          </button>
+        </div>
       </header>
+
+      
+      {/* Existing Dates for selected TP */}
+      {allFormatifForTP.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-sm bg-blue-50/50 p-2.5 rounded-lg border border-blue-100">
+          <span className="text-gray-600 text-xs font-medium mr-1">Riwayat Tanggal ({activeTab === 'awal' ? 'Awal' : 'Proses'}):</span>
+          {allFormatifForTP.map(f => (
+            <button
+              key={f.id}
+              onClick={() => setSelectedTanggal(f.tanggal || '')}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${selectedTanggal === (f.tanggal || '') ? 'bg-blue-500 text-white shadow-sm' : 'bg-white border border-blue-200 text-blue-700 hover:bg-blue-100'}`}
+            >
+              {f.tanggal}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-4">
         <select 
@@ -193,7 +233,18 @@ export default function Formatif() {
         <select 
           className="px-3 py-2 border rounded-lg text-sm bg-white min-w-[200px]"
           value={tpId}
-          onChange={(e) => setTpIdState(e.target.value)}
+          onChange={(e) => {
+            setTpIdState(e.target.value);
+            // set latest date if available
+            const latest = state.agmp_formatif.filter(
+              f => f.jurnalId === `${kelasId}_${e.target.value}` && f.jenis === (activeTab === 'awal' ? 'AWAL' : 'TENGAH') && (activeTaId ? f.taId === activeTaId : true)
+            ).sort((a, b) => (b.tanggal || '').localeCompare(a.tanggal || ''))[0];
+            if (latest && latest.tanggal) {
+              setSelectedTanggal(latest.tanggal);
+            } else {
+              setSelectedTanggal(new Date().toISOString().split("T")[0]);
+            }
+          }}
         >
           <option value="" disabled>Pilih TP</option>
           {tpList.map(t => <option key={t.id} value={t.id}>TP {t.kode}</option>)}
