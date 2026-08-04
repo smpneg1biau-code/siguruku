@@ -22,6 +22,7 @@ export default function AsesmenFormatifKoku() {
   const [selectedKegiatanId, setSelectedKegiatanId] = useState("");
   const [selectedKelasId, setSelectedKelasId] = useState("");
   const [selectedSiswaId, setSelectedSiswaId] = useState("");
+  const [selectedTanggal, setSelectedTanggal] = useState(new Date().toISOString().split('T')[0]);
 
   const filteredKegiatan = useMemo(() => {
     if (!selectedTemaId) return [];
@@ -81,7 +82,7 @@ export default function AsesmenFormatifKoku() {
   };
 
   const resetForm = () => {
-    setFormTanggal(new Date().toISOString().split('T')[0]);
+    setFormTanggal(selectedTanggal);
     setFormDimensiId("");
     setFormCatatan("");
     setFormStatus("Muncul");
@@ -283,11 +284,13 @@ export default function AsesmenFormatifKoku() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredSiswa.map(siswa => {
-              const recordCount = formatifList.filter(f => 
+              const studentRecords = formatifList.filter(f => 
                 f.siswaId === siswa.id && 
                 f.kegiatanId === selectedKegiatanId &&
                 (activeTaId ? (f.taId === activeTaId || !f.taId) : true)
-              ).length;
+              );
+              const recordCount = studentRecords.length;
+              const hasRecordToday = studentRecords.some(f => f.tanggal === selectedTanggal);
               
               return (
                 <div 
@@ -299,15 +302,18 @@ export default function AsesmenFormatifKoku() {
                     <h4 className="font-bold text-gray-900 group-hover:text-blue-700">{siswa.nama}</h4>
                     <p className="text-xs text-gray-500">NISN: {siswa.nisn}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {recordCount > 0 ? (
+                  <div className="flex flex-col items-end gap-1">
+                    {hasRecordToday ? (
                       <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-1 rounded-full flex items-center gap-1">
-                        <CheckCircle size={10} /> {recordCount} Observasi
+                        <CheckCircle size={10} /> Selesai
                       </span>
                     ) : (
-                      <span className="text-[10px] font-bold bg-gray-200 text-gray-600 px-2 py-1 rounded-full">
-                        Belum ada
+                      <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-1 rounded-full flex items-center gap-1">
+                        <Clock size={10} /> Belum
                       </span>
+                    )}
+                    {recordCount > 0 && (
+                      <span className="text-[10px] text-gray-500 font-medium">Total: {recordCount} Obs</span>
                     )}
                   </div>
                 </div>
