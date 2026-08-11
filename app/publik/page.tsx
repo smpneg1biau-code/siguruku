@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Loader2, BookOpen, User, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Search, Loader2, BookOpen, User, CheckCircle, XCircle, AlertCircle, Calendar, FileText, Activity } from 'lucide-react';
 import { collectionGroup, query, where, getDocs, doc, getDoc, collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Siswa, TP, Sumatif, Remedial, Absensi, Anekdot } from '@/lib/types';
+import { Siswa, TP, Sumatif, Remedial, Absensi, Anekdot, Formatif } from '@/lib/types';
 import Link from 'next/link';
 
 export default function PublikPage() {
@@ -112,10 +112,52 @@ export default function PublikPage() {
           };
         });
 
+        // Get Formatif
+        const formatifRef = collection(db, 'users', userId, 'agmp_formatif');
+        const formatifSnap = await getDocs(formatifRef);
+        const formatifs = formatifSnap.docs.map(d => ({ ...(d.data() as Formatif), id: d.id })).filter(f => f.hasil && f.hasil[siswa.id]);
+
         // Get Anekdot
         const anekdotRef = collection(db, 'users', userId, 'agmp_anekdot');
         const anekdotSnap = await getDocs(anekdotRef);
-        const anekdots = anekdotSnap.docs.map(d => d.data() as Anekdot).filter(a => a.siswaId === siswa.id).sort((a,b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime());
+        const anekdots = anekdotSnap.docs.map(d => ({ ...(d.data() as Anekdot), sumber: 'Perilaku' })).filter(a => a.siswaId === siswa.id);
+
+        // Extract formatif details and anekdots stored inside formatif
+        const formatifSummaries: any[] = [];
+        formatifs.forEach(f => {
+          const res = f.hasil[siswa.id];
+          if (res) {
+            formatifSummaries.push({
+              id: f.id,
+              jenis: f.jenis,
+              teknik: f.teknik,
+              tanggal: f.tanggal || '',
+              status: res.status || '',
+              catatan: res.catatan || '',
+              anekdots: res.anekdots || []
+            });
+
+            if (res.anekdots && Array.isArray(res.anekdots)) {
+              res.anekdots.forEach((an: any) => {
+                if (an.teks) {
+                  anekdots.push({
+                    id: an.id || Math.random().toString(),
+                    taId: f.taId || '',
+                    siswaId: siswa.id,
+                    tanggal: an.tanggal || f.tanggal || new Date().toISOString(),
+                    teks: `${an.kategori ? `[${an.kategori}] ` : ''}${an.teks}`,
+                    sumber: 'Formatif'
+                  });
+                }
+              });
+            }
+          }
+        });
+
+        // Sort combined anekdots descending by date
+        anekdots.sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime());
+        // Sort formatif summaries descending by date
+        formatifSummaries.sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime());
 
         // Get Absensi
         const absensiRef = collection(db, 'users', userId, 'agmp_absensi');
@@ -146,6 +188,7 @@ export default function PublikPage() {
           mapel,
           guruNama,
           tpStatuses,
+          formatifs: formatifSummaries,
           kehadiran: {
             hadir, sakit, izin, alpa, bolos, totalPertemuan, persentaseHadir
           },
@@ -257,17 +300,27 @@ export default function PublikPage() {
                         </h4>
                         <p className="text-xs text-gray-500 mt-1">Guru: {res.guruNama}</p>
                       </div>
-                      <div className="flex items-center gap-4 text-sm font-medium">
-                        <div className="flex flex-col items-end">
-                          <span className="text-xs text-gray-500 mb-0.5">Kehadiran</span>
-                          <span className={res.kehadiran.persentaseHadir < 80 ? 'text-red-600' : 'text-green-600'}>
-                            {res.kehadiran.persentaseHadir}% 
-                            <span className="text-gray-400 text-xs font-normal ml-1">({res.kehadiran.hadir}/{res.kehadiran.totalPertemuan})</span>
+                      
+                      {/* Rekap & Detail Persentase Kehadiran */}
+                      <div className="flex flex-col items-start sm:items-end gap-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500 font-medium">Persentase Kehadiran:</span>
+                          <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${res.kehadiran.persentaseHadir >= 80 ? 'bg-green-50 text-green-700 border-green-200' : res.kehadiran.persentaseHadir >= 70 ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                            {res.kehadiran.persentaseHadir}%
                           </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1 text-[11px]">
+                          <span title="Hadir" className="bg-green-50 text-green-700 px-2 py-0.5 rounded border border-green-100 font-semibold">H: {res.kehadiran.hadir}</span>
+                          <span title="Sakit" className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100 font-semibold">S: {res.kehadiran.sakit}</span>
+                          <span title="Izin" className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-100 font-semibold">I: {res.kehadiran.izin}</span>
+                          <span title="Alpa" className="bg-red-50 text-red-700 px-2 py-0.5 rounded border border-red-100 font-semibold">A: {res.kehadiran.alpa}</span>
+                          <span title="Bolos" className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded border border-purple-100 font-semibold">B: {res.kehadiran.bolos}</span>
+                          <span title="Total Pertemuan" className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium border border-gray-200">Total: {res.kehadiran.totalPertemuan}</span>
                         </div>
                       </div>
                     </div>
                     
+                    {/* Sumatif / TP Statuses */}
                     <div className="p-5">
                       <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Capaian Tujuan Pembelajaran (TP)</h5>
                       {res.tpStatuses.length === 0 ? (
@@ -306,11 +359,78 @@ export default function PublikPage() {
                       )}
                     </div>
 
+                    {/* Section Rekap Data Formatif Secara Umum */}
+                    <div className="p-5 border-t border-gray-100 bg-purple-50/10">
+                      <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+                        <Activity className="w-4 h-4 text-purple-600" />
+                        Rekapitulasi Penilaian Formatif Secara Umum
+                      </h5>
+                      {!res.formatifs || res.formatifs.length === 0 ? (
+                        <p className="text-sm text-gray-500 italic">Belum ada data evaluasi formatif untuk mata pelajaran ini.</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {res.formatifs.map((f: any, i: number) => {
+                            let statusBadge = null;
+                            if (f.status === 'Siap Belajar') {
+                              statusBadge = <span className="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-green-200">Siap Belajar</span>;
+                            } else if (f.status === 'Perlu Bimbingan') {
+                              statusBadge = <span className="bg-amber-100 text-amber-800 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-amber-200">Perlu Bimbingan</span>;
+                            } else if (f.status === '1') {
+                              statusBadge = <span className="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-red-200">Level 1 (Sangat Perlu Bimbingan)</span>;
+                            } else if (f.status === '2') {
+                              statusBadge = <span className="bg-orange-100 text-orange-800 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-orange-200">Level 2 (Perlu Perhatian)</span>;
+                            } else if (f.status === '3') {
+                              statusBadge = <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-blue-200">Level 3 (Paham)</span>;
+                            } else if (f.status === '4') {
+                              statusBadge = <span className="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-green-200">Level 4 (Sangat Paham)</span>;
+                            } else if (f.status) {
+                              statusBadge = <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-gray-200">{f.status}</span>;
+                            }
+
+                            return (
+                              <div key={`form-${i}`} className="p-3.5 rounded-xl border border-purple-100 bg-white shadow-xs space-y-2">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${f.jenis === 'AWAL' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
+                                      {f.jenis === 'AWAL' ? 'Diagnostic (Awal)' : 'Monitoring (Proses)'}
+                                    </span>
+                                    <span className="text-xs font-semibold text-gray-700">Teknik: {f.teknik}</span>
+                                  </div>
+                                  {f.tanggal && (
+                                    <span className="text-xs text-gray-500 font-medium">
+                                      {new Date(f.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {statusBadge && (
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <span className="text-gray-500 font-medium">Hasil Kesiapan/Pemahaman:</span>
+                                    {statusBadge}
+                                  </div>
+                                )}
+
+                                {f.catatan && (
+                                  <p className="text-xs text-gray-700 italic bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+                                    &quot;{f.catatan}&quot;
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Section Catatan Kehadiran & Anekdot (Terintegrasi dari Absensi dan Formatif) */}
                     <div className="p-5 border-t border-gray-100">
-                      <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Catatan Kehadiran & Anekdot</h5>
+                      <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+                        <FileText className="w-4 h-4 text-amber-500" />
+                        Catatan Kehadiran & Anekdot (Sikap / Formatif / Perilaku)
+                      </h5>
                       <div className="space-y-4">
                         {(!res.catatanKehadiran || res.catatanKehadiran.length === 0) && (!res.anekdots || res.anekdots.length === 0) ? (
-                          <p className="text-sm text-gray-500 italic">Belum ada catatan.</p>
+                          <p className="text-sm text-gray-500 italic">Belum ada catatan kehadiran maupun anekdot.</p>
                         ) : (
                           <>
                             {res.catatanKehadiran && res.catatanKehadiran.length > 0 && (
@@ -318,7 +438,9 @@ export default function PublikPage() {
                                 <h6 className="text-xs font-semibold text-gray-700">Catatan Kehadiran</h6>
                                 {res.catatanKehadiran.map((ck: any, i: number) => (
                                   <div key={`ck-${i}`} className="p-3 bg-blue-50/50 rounded-xl border border-blue-100">
-                                    <p className="text-[10px] text-gray-500 font-medium mb-1">{new Date(ck.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</p>
+                                    <p className="text-[10px] text-gray-500 font-medium mb-1">
+                                      {new Date(ck.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}
+                                    </p>
                                     <p className="text-sm text-gray-700">{ck.catatan}</p>
                                   </div>
                                 ))}
@@ -327,10 +449,19 @@ export default function PublikPage() {
 
                             {res.anekdots && res.anekdots.length > 0 && (
                               <div className="space-y-2 mt-4">
-                                <h6 className="text-xs font-semibold text-gray-700">Catatan Anekdot (Sikap/Perilaku)</h6>
+                                <h6 className="text-xs font-semibold text-gray-700">Catatan Anekdot (Perilaku / Penilaian Formatif)</h6>
                                 {res.anekdots.map((an: any, i: number) => (
-                                  <div key={`an-${i}`} className="p-3 bg-orange-50/50 rounded-xl border border-orange-100">
-                                    <p className="text-[10px] text-gray-500 font-medium mb-1">{new Date(an.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute:'2-digit'})}</p>
+                                  <div key={`an-${i}`} className="p-3 bg-amber-50/50 rounded-xl border border-amber-100">
+                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                      <p className="text-[10px] text-gray-500 font-medium">
+                                        {new Date(an.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute:'2-digit'})}
+                                      </p>
+                                      {an.sumber && (
+                                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${an.sumber === 'Formatif' ? 'bg-purple-100 text-purple-800 border border-purple-200' : 'bg-amber-100 text-amber-800 border border-amber-200'}`}>
+                                          Catatan {an.sumber}
+                                        </span>
+                                      )}
+                                    </div>
                                     <p className="text-sm text-gray-700">{an.teks}</p>
                                   </div>
                                 ))}
