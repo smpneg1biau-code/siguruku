@@ -11,7 +11,7 @@ export default function Absensi() {
   const activeTaId = activeTA?.id || '';
 
   const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
-  const [kelasId, setKelasId] = useState(filteredKelas[0]?.id || '');
+  const [kelasId, setKelasId] = useState('');
   const [selectedSiswaId, setSelectedSiswaId] = useState<string | null>(null);
   
   const [isScanning, setIsScanning] = useState(false);
@@ -28,15 +28,14 @@ export default function Absensi() {
        if(siswaList.length > 0) {
            const records: Record<string, AbsensiStatus> = {};
            siswaList.forEach(s => records[s.id] = 'HADIR');
-           addItem('agmp_absensi', { id: generateId(), taId: activeTaId, tanggal, kelasId, records }, true);
-           // eslint-disable-next-line react-hooks/set-state-in-effect
+           
            setLocalRecords(records);
        }
     } else if (existingRecord) {
         
        setLocalRecords(existingRecord.records || {});
     }
-  }, [tanggal, kelasId, existingRecord, addItem, state.agmp_siswa, activeTaId]);
+  }, [tanggal, kelasId, existingRecord, state.agmp_siswa, activeTaId]);
 
   const siswaList = state.agmp_siswa.filter(s => s.kelasId === kelasId);
   const sortedSiswaList = [...siswaList].sort((a, b) => a.nama.localeCompare(b.nama));
@@ -44,7 +43,6 @@ export default function Absensi() {
   const currentNotes = existingRecord?.catatan || {};
 
   const handleToggle = (siswaId: string) => {
-    if (!existingRecord) return;
     const currentStatus = currentRecords[siswaId] || 'HADIR';
     const cycle: Record<AbsensiStatus, AbsensiStatus> = {
       'HADIR': 'SAKIT', 'SAKIT': 'IZIN', 'IZIN': 'ALPA', 'ALPA': 'BOLOS', 'BOLOS': 'HADIR'
@@ -54,15 +52,20 @@ export default function Absensi() {
   };
 
   const setAllHadir = () => {
-    if (!existingRecord) return;
     const newRecords: Record<string, AbsensiStatus> = {};
     siswaList.forEach(s => newRecords[s.id] = 'HADIR');
     setLocalRecords(newRecords);
   };
 
   const simpanAbsensi = () => {
-    if (!existingRecord) return;
-    updateItem('agmp_absensi', existingRecord.id, { records: localRecords }, false);
+    if (!kelasId) return showToast('Pilih kelas terlebih dahulu', 'error');
+    if (!existingRecord) {
+        addItem('agmp_absensi', { id: generateId(), taId: activeTaId, tanggal, kelasId, records: localRecords }, false);
+        showToast('Kehadiran berhasil disimpan', 'success');
+    } else {
+        updateItem('agmp_absensi', existingRecord.id, { records: localRecords }, false);
+        showToast('Kehadiran berhasil diupdate', 'success');
+    }
   };
 
   const getStatusColor = (status: AbsensiStatus) => {
@@ -137,6 +140,7 @@ export default function Absensi() {
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row gap-3">
         <input type="date" className="w-full sm:w-auto px-4 py-2 border rounded-lg text-sm font-medium bg-gray-50 cursor-pointer" value={tanggal} onChange={e => setTanggal(e.target.value)} />
         <select className="w-full sm:w-auto px-4 py-2 border rounded-lg text-sm font-medium bg-gray-50 cursor-pointer" value={kelasId} onChange={e => setKelasId(e.target.value)}>
+          <option value="" disabled>Pilih Kelas</option>
           {filteredKelas.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
         </select>
         <div className="flex gap-2 ml-auto">
@@ -192,7 +196,7 @@ export default function Absensi() {
         })}
       </div>
       {siswaList.length === 0 && (
-         <div className="text-center py-10 text-gray-500">Pilih kelas yang memiliki murid.</div>
+         <div className="text-center py-10 text-gray-500">{kelasId ? "Pilih kelas yang memiliki murid." : "Silakan pilih kelas terlebih dahulu."}</div>
       )}
 
       {/* Modal / Slider for Detail Siswa */}
