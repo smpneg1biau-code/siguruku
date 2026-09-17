@@ -14,14 +14,14 @@ import {
 } from "lucide-react";
 import { TabId } from "@/components/Shell";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 export default function RekapAkhir({
   onNavigate,
 }: {
   onNavigate: (tab: TabId) => void;
 }) {
-  const { state , filteredKelas } = useStore();
+  const { state, filteredKelas, showToast } = useStore();
 
   const [selectedKelasId, setSelectedKelasId] = useState(
     filteredKelas[0]?.id || "",
@@ -35,6 +35,7 @@ export default function RekapAkhir({
   const [activeTab, setActiveTab] = useState<"umum" | "formatif" | "sumatif">(
     "umum",
   );
+  const [isExporting, setIsExporting] = useState(false);
 
   const selectedTA = state.agmp_tahun_ajaran.find(ta => ta.id === selectedTaId);
   const selectedSemester = selectedTA?.semester || "Ganjil";
@@ -153,108 +154,443 @@ export default function RekapAkhir({
 
   const selectedSiswa = siswaList.find((s) => s.id === selectedSiswaId);
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (!selectedSiswa) return;
-    
-    const doc = new jsPDF();
-    
-    // Header
-    doc.setFontSize(16);
-    doc.text(`Laporan Hasil Belajar (Rekap Akhir)`, 14, 20);
-    
-    // Info Umum
-    doc.setFontSize(12);
-    doc.text(`Nama: ${selectedSiswa.nama}`, 14, 30);
-    doc.text(`NISN: ${selectedSiswa.nisn || "-"}`, 14, 37);
-    const kelas = state.agmp_kelas.find(k => k.id === selectedSiswa.kelasId);
-    doc.text(`Kelas: ${kelas?.nama || "-"} (Fase ${kelas?.fase || "-"})`, 14, 51);
-    
-    const hadir = calculateKehadiran(selectedSiswa.id);
-    doc.text(`Kehadiran: ${hadir.percent}% (${hadir.hadir} H, ${hadir.sakit} S, ${hadir.izin} I, ${hadir.alpa} A, ${hadir.bolos} B)`, 14, 58);
-    
-    let currentY = 70;
-    
-    // Sumatif
-    doc.setFontSize(14);
-    doc.text("Nilai Sumatif", 14, currentY);
-    currentY += 5;
-    
-    const sumatifBody = tpList.map(tp => {
-      const res = calculateSumatifForTP(selectedSiswa.id, tp.id);
-      return [tp.kode, tp.deskripsi, res.nilai.toString(), res.status];
-    });
-    
-    (doc as any).autoTable({
-      startY: currentY,
-      head: [['TP', 'Deskripsi', 'Nilai', 'Status']],
-      body: sumatifBody,
-      theme: 'grid',
-      styles: { fontSize: 9 },
-      columnStyles: { 1: { cellWidth: 80 } }
-    });
-    
-    currentY = (doc as any).lastAutoTable.finalY + 15;
-    
-    // Formatif
-    doc.setFontSize(14);
-    doc.text("Nilai Formatif", 14, currentY);
-    currentY += 5;
-    
-    const studentFormatifs = state.agmp_formatif.filter(f => f.hasil[selectedSiswa.id]);
-    const tpKodeMap: Record<string, string> = {};
-    state.agmp_tp.forEach((t) => (tpKodeMap[t.id] = t.kode));
-    
-    const formatifBody = studentFormatifs.map(f => {
-       const [kelasF, tpIdF] = f.jurnalId.split("_");
-       const tpKode = tpKodeMap[tpIdF] || "?";
-       const res = f.hasil[selectedSiswa.id];
-       return [
-         `TP ${tpKode} - ${f.jenis === "AWAL" ? "Diagnostic" : "Monitoring"}`,
-         res.status || "Anekdot",
-         res.catatan || "Tidak ada catatan spesifik."
-       ];
-    });
-    
-    if (formatifBody.length > 0) {
-      (doc as any).autoTable({
-        startY: currentY,
-        head: [['Materi / TP', 'Status / Level', 'Catatan Guru']],
-        body: formatifBody,
-        theme: 'grid',
-        styles: { fontSize: 9 },
-      });
-      currentY = (doc as any).lastAutoTable.finalY + 15;
-    } else {
-      doc.setFontSize(10);
-      doc.text("Belum ada data formatif untuk siswa ini.", 14, currentY + 5);
-      currentY += 15;
-    }
-    
-    // Anekdot Global
-    const anekdots = state.agmp_anekdot.filter(a => a.siswaId === selectedSiswa.id && (selectedTaId ? a.taId === selectedTaId : true)).sort((a,b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime());
-    
-    if (anekdots.length > 0) {
-       doc.setFontSize(14);
-       doc.text("Catatan Anekdot Global", 14, currentY);
-       currentY += 5;
-       
-       const anekdotBody = anekdots.map(a => {
-          return [
-            new Date(a.tanggal).toLocaleDateString('id-ID'),
-            a.teks
-          ];
-       });
-       
-      (doc as any).autoTable({
-        startY: currentY,
-        head: [['Tanggal', 'Catatan']],
-        body: anekdotBody,
-        theme: 'grid',
-        styles: { fontSize: 9 },
-      });
-    }
+    setIsExporting(true);
 
-    doc.save(`Rekap_Akhir_${selectedSiswa.nama}.pdf`);
+    try {
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const callAutoTable = (options: any) => {
+        if (typeof autoTable === "function") {
+          autoTable(doc, options);
+        } else if (typeof (autoTable as any)?.default === "function") {
+          (autoTable as any).default(doc, options);
+        } else if (typeof (doc as any)?.autoTable === "function") {
+          (doc as any).autoTable(options);
+        }
+      };
+
+      const getFinalY = (fallback: number) => {
+        return (doc as any).lastAutoTable?.finalY ?? fallback;
+      };
+
+      const kelas = state.agmp_kelas.find((k) => k.id === selectedSiswa.kelasId);
+      const hadir = calculateKehadiran(selectedSiswa.id);
+
+      let tuntas = 0;
+      let blmTuntas = 0;
+      let blmDinilai = 0;
+      tpList.forEach((tp) => {
+        const st = calculateSumatifForTP(selectedSiswa.id, tp.id).status;
+        if (st === "TUNTAS" || st === "TUNTAS REMEDIAL") tuntas++;
+        else if (st === "BELUM TUNTAS") blmTuntas++;
+        else blmDinilai++;
+      });
+
+      let statusAkhir = "SIAP NAIK KELAS";
+      if (blmTuntas > 0) statusAkhir = "PERLU PERHATIAN";
+      if (blmTuntas >= 3) statusAkhir = "PERLU REMEDIAL INTENSIF";
+
+      // --- 1. HEADER DOKUMEN ---
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(15);
+      doc.setTextColor(26, 54, 93); // Dark Navy
+      doc.text("LAPORAN HASIL BELAJAR PESERTA DIDIK", 105, 18, { align: "center" });
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9.5);
+      doc.setTextColor(100, 116, 139); // Slate
+      doc.text("Rekap Detail Capaian Belajar (Tab Umum, Formatif, & Sumatif) • Kurikulum Merdeka", 105, 23.5, { align: "center" });
+
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.4);
+      doc.line(14, 27, 196, 27);
+
+      let currentY = 33;
+
+      // --- 2. TAB UMUM: IDENTITAS & PROFIL SISWA ---
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10.5);
+      doc.setTextColor(30, 41, 59);
+      doc.text("I. INFORMASI UMUM & PROFIL PESERTA DIDIK", 14, currentY);
+      currentY += 3.5;
+
+      const profileData = [
+        [
+          "Nama Siswa",
+          `: ${selectedSiswa.nama}`,
+          "Kelas / Fase",
+          `: ${kelas?.nama || "-"} (Fase ${kelas?.fase || "-"})`,
+        ],
+        [
+          "NISN",
+          `: ${selectedSiswa.nisn || "-"}`,
+          "Tahun Ajaran",
+          `: ${selectedTA ? selectedTA.nama : "-"}`,
+        ],
+        [
+          "Jenis Kelamin",
+          `: ${selectedSiswa.jk === "L" ? "Laki-Laki" : "Perempuan"}`,
+          "Semester",
+          `: ${selectedTA ? `Semester ${selectedTA.semester}` : "-"}`,
+        ],
+      ];
+
+      callAutoTable({
+        startY: currentY,
+        body: profileData,
+        theme: "plain",
+        styles: {
+          fontSize: 8.5,
+          cellPadding: 1.2,
+          textColor: [30, 41, 59],
+        },
+        columnStyles: {
+          0: { cellWidth: 32, fontStyle: "bold" },
+          1: { cellWidth: 65 },
+          2: { cellWidth: 32, fontStyle: "bold" },
+          3: { cellWidth: 53 },
+        },
+        margin: { left: 14, right: 14 },
+      });
+
+      currentY = getFinalY(currentY) + 4;
+
+      // --- TAB UMUM: REKAPITULASI KEHADIRAN (H, S, I, A, B) & KETERCAPAIAN ---
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.text("Rekapitulasi Kehadiran & Status Ketercapaian TP:", 14, currentY);
+      currentY += 2.5;
+
+      const attendanceData = [
+        [
+          `${hadir.hadir}`,
+          `${hadir.sakit}`,
+          `${hadir.izin}`,
+          `${hadir.alpa}`,
+          `${hadir.bolos}`,
+          `${hadir.total}`,
+          `${hadir.percent}%`,
+          statusAkhir,
+        ],
+      ];
+
+      callAutoTable({
+        startY: currentY,
+        head: [
+          [
+            "Hadir (H)",
+            "Sakit (S)",
+            "Izin (I)",
+            "Alpa (A)",
+            "Bolos (B)",
+            "Total Pertemuan",
+            "Kehadiran (%)",
+            "Status Akhir",
+          ],
+        ],
+        body: attendanceData,
+        theme: "grid",
+        headStyles: {
+          fillColor: [30, 58, 138],
+          textColor: 255,
+          fontStyle: "bold",
+          fontSize: 8,
+          halign: "center",
+        },
+        bodyStyles: {
+          fontSize: 8,
+          halign: "center",
+          textColor: [30, 41, 59],
+          fontStyle: "bold",
+        },
+        columnStyles: {
+          7: {
+            fontStyle: "bold",
+            textColor:
+              statusAkhir === "SIAP NAIK KELAS"
+                ? [22, 101, 52]
+                : [180, 83, 9],
+          },
+        },
+        margin: { left: 14, right: 14 },
+      });
+
+      currentY = getFinalY(currentY) + 7;
+
+      // --- 3. TAB FORMATIF: ASESMEN FORMATIF & OBSERVASI ---
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10.5);
+      doc.setTextColor(30, 41, 59);
+      doc.text("II. DETAIL ASESMEN FORMATIF & OBSERVASI GURU", 14, currentY);
+      currentY += 3.5;
+
+      const studentFormatifs = state.agmp_formatif.filter(
+        (f) => f.hasil[selectedSiswa.id],
+      );
+      const tpKodeMap: Record<string, string> = {};
+      state.agmp_tp.forEach((t) => (tpKodeMap[t.id] = t.kode));
+
+      const formatifBody = studentFormatifs.map((f, i) => {
+        const [, tpIdF] = f.jurnalId.split("_");
+        const tpKode = tpKodeMap[tpIdF] || "-";
+        const res = f.hasil[selectedSiswa.id];
+        const statusLabel = res.status
+          ? res.status.length <= 2
+            ? `Level ${res.status}`
+            : res.status
+          : "Anekdot";
+        const catatan = res.catatan || "-";
+
+        return [
+          (i + 1).toString(),
+          `TP ${tpKode}`,
+          f.jenis === "AWAL" ? "Diagnostik" : "Monitoring",
+          f.teknik || "Observasi",
+          statusLabel,
+          catatan,
+        ];
+      });
+
+      if (formatifBody.length > 0) {
+        callAutoTable({
+          startY: currentY,
+          head: [
+            [
+              "No",
+              "TP",
+              "Jenis Asesmen",
+              "Teknik",
+              "Status / Level",
+              "Catatan Guru & Evaluasi",
+            ],
+          ],
+          body: formatifBody,
+          theme: "grid",
+          headStyles: {
+            fillColor: [15, 118, 110], // Teal
+            textColor: 255,
+            fontStyle: "bold",
+            fontSize: 8,
+          },
+          styles: {
+            fontSize: 8,
+            textColor: [51, 65, 85],
+            cellPadding: 2,
+          },
+          columnStyles: {
+            0: { cellWidth: 10, halign: "center" },
+            1: { cellWidth: 18, fontStyle: "bold", halign: "center" },
+            2: { cellWidth: 26 },
+            3: { cellWidth: 26 },
+            4: { cellWidth: 26, fontStyle: "bold" },
+            5: { cellWidth: 76 },
+          },
+          margin: { left: 14, right: 14 },
+        });
+        currentY = getFinalY(currentY) + 5;
+      } else {
+        callAutoTable({
+          startY: currentY,
+          head: [["Informasi Asesmen Formatif"]],
+          body: [["Belum ada data rekaman asesmen formatif untuk peserta didik ini."]],
+          theme: "grid",
+          headStyles: {
+            fillColor: [241, 245, 249],
+            textColor: [100, 116, 139],
+            fontStyle: "bold",
+            fontSize: 8,
+          },
+          bodyStyles: {
+            fontStyle: "italic",
+            textColor: [148, 163, 184],
+            fontSize: 8,
+            cellPadding: 2.5,
+          },
+          margin: { left: 14, right: 14 },
+        });
+        currentY = getFinalY(currentY) + 5;
+      }
+
+      // Catatan Anekdot Sikap / Perilaku jika ada
+      const anekdots = state.agmp_anekdot
+        .filter(
+          (a) =>
+            a.siswaId === selectedSiswa.id &&
+            (selectedTaId ? a.taId === selectedTaId : true),
+        )
+        .sort(
+          (a, b) =>
+            new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime(),
+        );
+
+      if (anekdots.length > 0) {
+        if (currentY > 235) {
+          doc.addPage();
+          currentY = 20;
+        }
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(71, 85, 105);
+        doc.text("Catatan Anekdot Sikap & Perilaku:", 14, currentY);
+        currentY += 2.5;
+
+        const anekdotBody = anekdots.map((a, i) => [
+          (i + 1).toString(),
+          new Date(a.tanggal).toLocaleDateString("id-ID", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          }),
+          a.kategori || "Perilaku",
+          a.teks || "-",
+        ]);
+
+        callAutoTable({
+          startY: currentY,
+          head: [["No", "Tanggal", "Kategori", "Catatan Observasi Perilaku"]],
+          body: anekdotBody,
+          theme: "grid",
+          headStyles: {
+            fillColor: [194, 65, 12], // Amber/Orange
+            textColor: 255,
+            fontStyle: "bold",
+            fontSize: 8,
+          },
+          styles: {
+            fontSize: 8,
+            textColor: [51, 65, 85],
+            cellPadding: 2,
+          },
+          columnStyles: {
+            0: { cellWidth: 10, halign: "center" },
+            1: { cellWidth: 26 },
+            2: { cellWidth: 26, fontStyle: "bold" },
+            3: { cellWidth: 120 },
+          },
+          margin: { left: 14, right: 14 },
+        });
+        currentY = getFinalY(currentY) + 7;
+      }
+
+      // --- 4. TAB SUMATIF: ASESMEN SUMATIF & KETUNTASAN TP ---
+      if (currentY > 215) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10.5);
+      doc.setTextColor(30, 41, 59);
+      doc.text("III. DETAIL ASESMEN SUMATIF & KETUNTASAN TUJUAN PEMBELAJARAN (TP)", 14, currentY);
+      currentY += 3.5;
+
+      const sumatifBody = tpList.map((tp, i) => {
+        const res = calculateSumatifForTP(selectedSiswa.id, tp.id);
+        const sumatifObj = state.agmp_sumatif.find((s) => s.id === res.sumatifId);
+        const record = sumatifObj?.records[selectedSiswa.id];
+
+        let catatanDesc = record?.catatan || "-";
+        if (res.remedial && res.remedial.status === "Selesai") {
+          catatanDesc += ` [Remedial: Nilai Awal ${record?.nilai || 0} -> Nilai Baru ${res.nilai}]`;
+        }
+
+        return [
+          (i + 1).toString(),
+          `TP ${tp.kode}`,
+          tp.deskripsi,
+          sumatifObj?.teknik || "Tes Tertulis",
+          res.level ? `Level ${res.level}` : "-",
+          res.nilai.toString(),
+          res.status,
+          catatanDesc,
+        ];
+      });
+
+      if (sumatifBody.length > 0) {
+        callAutoTable({
+          startY: currentY,
+          head: [
+            [
+              "No",
+              "Kode",
+              "Tujuan Pembelajaran",
+              "Teknik",
+              "Level",
+              "Nilai",
+              "Status",
+              "Catatan Guru & Remedial",
+            ],
+          ],
+          body: sumatifBody,
+          theme: "grid",
+          headStyles: {
+            fillColor: [30, 41, 59], // Slate 800
+            textColor: 255,
+            fontStyle: "bold",
+            fontSize: 8,
+          },
+          styles: {
+            fontSize: 7.5,
+            textColor: [51, 65, 85],
+            cellPadding: 2,
+          },
+          columnStyles: {
+            0: { cellWidth: 8, halign: "center" },
+            1: { cellWidth: 16, fontStyle: "bold", halign: "center" },
+            2: { cellWidth: 50 },
+            3: { cellWidth: 20 },
+            4: { cellWidth: 14, halign: "center" },
+            5: { cellWidth: 13, halign: "center", fontStyle: "bold" },
+            6: { cellWidth: 24, fontStyle: "bold", halign: "center" },
+            7: { cellWidth: 37 },
+          },
+          margin: { left: 14, right: 14 },
+        });
+        currentY = getFinalY(currentY) + 12;
+      }
+
+      // --- 5. TANDA TANGAN / PENGESAHAN ---
+      if (currentY > 240) {
+        doc.addPage();
+        currentY = 25;
+      }
+
+      const todayStr = new Date().toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(51, 65, 85);
+
+      doc.text("Mengetahui,", 30, currentY);
+      doc.text(`Dicetak pada: ${todayStr}`, 135, currentY);
+
+      doc.text("Orang Tua / Wali Murid", 30, currentY + 5);
+      doc.text("Guru Mata Pelajaran / Wali Kelas", 135, currentY + 5);
+
+      doc.text("( ............................................ )", 30, currentY + 26);
+      doc.text("( ............................................ )", 135, currentY + 26);
+
+      const sanitizedName = selectedSiswa.nama.replace(/[/\\?%*:|"<>]/g, "_");
+      doc.save(`Laporan_Lengkap_${sanitizedName}.pdf`);
+      showToast("Laporan PDF siswa berhasil diekspor!", "success");
+    } catch (err) {
+      console.error("Gagal mengekspor PDF:", err);
+      showToast("Gagal mengekspor PDF. Silakan coba lagi.", "error");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
 
@@ -622,7 +958,7 @@ export default function RekapAkhir({
                             {keh.percent}%
                           </span>
                         </div>
-                        <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-sm">
+                        <div className="flex-1 grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-sm">
                           <div className="bg-green-50 rounded-lg py-2">
                             <span className="block font-black text-green-700 text-lg">
                               {keh.hadir}
@@ -653,6 +989,14 @@ export default function RekapAkhir({
                             </span>
                             <span className="text-[10px] font-bold text-red-600 uppercase">
                               Alpa
+                            </span>
+                          </div>
+                          <div className="bg-amber-50 rounded-lg py-2">
+                            <span className="block font-black text-amber-700 text-lg">
+                              {keh.bolos}
+                            </span>
+                            <span className="text-[10px] font-bold text-amber-600 uppercase">
+                              Bolos
                             </span>
                           </div>
                         </div>
@@ -981,8 +1325,12 @@ export default function RekapAkhir({
 
             {/* Modal Footer Actions */}
             <div className="bg-white p-4 border-t border-gray-100 flex gap-3 flex-shrink-0">
-              <button onClick={handleExportPDF} className="flex-1 bg-white border border-gray-200 text-gray-700 py-3 rounded-xl text-sm font-bold flex justify-center items-center gap-2 hover:bg-gray-50 transition-colors shadow-sm">
-                <Download className="w-4 h-4" /> Export PDF Siswa
+              <button
+                onClick={handleExportPDF}
+                disabled={isExporting}
+                className="flex-1 bg-white border border-gray-200 text-gray-700 py-3 rounded-xl text-sm font-bold flex justify-center items-center gap-2 hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <Download className="w-4 h-4" /> {isExporting ? "Mengekspor PDF..." : "Export PDF Siswa"}
               </button>
               <button className="flex-1 bg-green-600 text-white py-3 rounded-xl text-sm font-bold flex justify-center items-center gap-2 hover:bg-green-700 transition-colors shadow-sm">
                 Kirim Info ke Ortu (Simulasi)
