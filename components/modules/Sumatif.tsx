@@ -72,13 +72,26 @@ export default function Sumatif() {
   // Sync local records when entering wizard mode
   useEffect(() => {
     if (mode === "wizard" && existingSumatif) {
+      const recordsCopy = JSON.parse(JSON.stringify(existingSumatif.records));
+      // Auto-fill missing students that might have been added later
+      siswaList.forEach(s => {
+        if (!recordsCopy[s.id]) {
+          recordsCopy[s.id] = {
+            level: 0,
+            nilai: 0,
+            catatan: "",
+            status: "BELUM TUNTAS",
+            tesTulisScores: {},
+          };
+        }
+      });
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLocalRecords(JSON.parse(JSON.stringify(existingSumatif.records)));
+      setLocalRecords(recordsCopy);
     } else {
       setLocalRecords(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, existingSumatif?.id]);
+  }, [mode, existingSumatif?.id, siswaList]);
 
   // Set default state based on existing data
   useEffect(() => {
@@ -874,8 +887,13 @@ export default function Sumatif() {
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-sm">
                   {siswaList.map((s) => {
-                    const r = existingSumatif.records[s.id];
-                    if (!r) return null;
+                    const r = existingSumatif.records[s.id] || {
+                      level: 0,
+                      nilai: 0,
+                      catatan: "",
+                      status: "BELUM TUNTAS",
+                      tesTulisScores: {},
+                    };
 
                     const interval = {
                       batasBawahTuntas: 75,
