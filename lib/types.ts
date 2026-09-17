@@ -119,6 +119,7 @@ export type Anekdot = {
   siswaId: string;
   tanggal: string;
   teks: string;
+  kategori?: string;
 };
 export type Formatif = {
   id: string;
