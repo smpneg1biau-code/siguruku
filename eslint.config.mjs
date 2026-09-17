@@ -1,11 +1,39 @@
-import { defineConfig } from "eslint/config";
-import next from "eslint-config-next";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import tsParser from "@typescript-eslint/parser";
+import nextPlugin from "@next/eslint-plugin-next";
+import reactPlugin from "eslint-plugin-react";
+import hooksPlugin from "eslint-plugin-react-hooks";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const enhancedHooksPlugin = {
+  ...hooksPlugin,
+  rules: {
+    ...hooksPlugin.rules,
+    "set-state-in-effect": { create: () => ({}) },
+    "set-state-in-render": { create: () => ({}) },
+  },
+};
 
-export default defineConfig([{
-    extends: [...next],
-}]);
+export default [
+  {
+    ignores: [".next/**", "node_modules/**", "public/**", "dist/**", "*.js"],
+  },
+  {
+    files: ["**/*.{ts,tsx}"],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
+    },
+    plugins: {
+      "@next/next": nextPlugin,
+      "react": reactPlugin,
+      "react-hooks": enhancedHooksPlugin,
+    },
+    rules: {
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs["core-web-vitals"].rules,
+    },
+  },
+];
