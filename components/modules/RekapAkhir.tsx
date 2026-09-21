@@ -331,30 +331,105 @@ export default function RekapAkhir({
       doc.text("II. DETAIL ASESMEN FORMATIF & OBSERVASI GURU", 14, currentY);
       currentY += 3.5;
 
-      const studentFormatifs = state.agmp_formatif.filter(
-        (f) => f.hasil[selectedSiswa.id],
-      );
+      const studentFormatifs = state.agmp_formatif
+        .filter(
+          (f) =>
+            f.hasil &&
+            f.hasil[selectedSiswa.id] &&
+            (selectedTaId ? f.taId === selectedTaId || !f.taId : true),
+        )
+        .sort((a, b) => (a.tanggal || "").localeCompare(b.tanggal || ""));
+
       const tpKodeMap: Record<string, string> = {};
       state.agmp_tp.forEach((t) => (tpKodeMap[t.id] = t.kode));
 
       const formatifBody = studentFormatifs.map((f, i) => {
-        const [, tpIdF] = f.jurnalId.split("_");
-        const tpKode = tpKodeMap[tpIdF] || "-";
+        const matchedTp = state.agmp_tp.find(
+          (t) =>
+            f.jurnalId === t.id ||
+            f.jurnalId.endsWith(`_${t.id}`) ||
+            f.jurnalId.includes(`_${t.id}`) ||
+            f.jurnalId.includes(t.id),
+        );
+        const tpKode =
+          matchedTp?.kode ||
+          tpKodeMap[f.jurnalId.split("_").slice(1).join("_")] ||
+          tpKodeMap[f.jurnalId] ||
+          "-";
+
         const res = f.hasil[selectedSiswa.id];
         const statusLabel = res.status
           ? res.status.length <= 2
             ? `Level ${res.status}`
             : res.status
           : "Anekdot";
-        const catatan = res.catatan || "-";
+
+        // Extract and format all teacher notes from formative assessment
+        const teacherNotes: string[] = [];
+
+        // 1. Direct custom note in formative assessment
+        if (res.catatan && typeof res.catatan === "string" && res.catatan.trim()) {
+          teacherNotes.push(res.catatan.trim());
+        }
+
+        // 2. Formative anecdotes if present
+        if (Array.isArray(res.anekdots) && res.anekdots.length > 0) {
+          res.anekdots.forEach((an: any) => {
+            if (an?.teks && an.teks.trim()) {
+              const kat = an.kategori ? `[${an.kategori}] ` : "";
+              const tgl = an.tanggal
+                ? `(${new Date(an.tanggal).toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "short",
+                  })}) `
+                : "";
+              teacherNotes.push(`${kat}${tgl}${an.teks.trim()}`);
+            }
+          });
+        }
+
+        // 3. Evaluasi otomatis edukatif berdasarkan status / level
+        let evaluasiOtomatis = "";
+        const rawStatus = (res.status || "").toString().trim();
+        if (rawStatus === "Siap Belajar") {
+          evaluasiOtomatis = "Kesiapan belajar sangat baik, siap mengikuti materi inti.";
+        } else if (rawStatus === "Perlu Bimbingan") {
+          evaluasiOtomatis = "Perlu pendampingan belajar dan penguatan konsep dasar materi.";
+        } else if (rawStatus === "4" || rawStatus.toLowerCase().includes("level 4")) {
+          evaluasiOtomatis = "Sangat menguasai kompetensi materi, mandiri dan siap pengayaan.";
+        } else if (rawStatus === "3" || rawStatus.toLowerCase().includes("level 3")) {
+          evaluasiOtomatis = "Telah memahami kompetensi materi pembelajaran secara mandiri dan baik.";
+        } else if (rawStatus === "2" || rawStatus.toLowerCase().includes("level 2")) {
+          evaluasiOtomatis = "Mulai memahami sebagian konsep, perlu latihan terbimbing.";
+        } else if (rawStatus === "1" || rawStatus.toLowerCase().includes("level 1")) {
+          evaluasiOtomatis = "Tingkat pemahaman masih awal, membutuhkan bimbingan intensif.";
+        }
+
+        let catatanFinal = "-";
+        if (teacherNotes.length > 0 && evaluasiOtomatis) {
+          catatanFinal = `${teacherNotes.join("; ")}\n(Evaluasi: ${evaluasiOtomatis})`;
+        } else if (teacherNotes.length > 0) {
+          catatanFinal = teacherNotes.join("; ");
+        } else if (evaluasiOtomatis) {
+          catatanFinal = evaluasiOtomatis;
+        }
+
+        const jenisLabel =
+          f.jenis === "AWAL" ? "Diagnostik" : "Monitoring";
+        const tanggalLabel = f.tanggal
+          ? `\n(${new Date(f.tanggal).toLocaleDateString("id-ID", {
+              day: "numeric",
+              month: "short",
+            })})`
+          : "";
 
         return [
           (i + 1).toString(),
           `TP ${tpKode}`,
-          f.jenis === "AWAL" ? "Diagnostik" : "Monitoring",
+          `${jenisLabel}${tanggalLabel}`,
           f.teknik || "Observasi",
           statusLabel,
-          catatan,
+          catatanFinal,
         ];
       });
 
@@ -1071,8 +1146,18 @@ export default function RekapAkhir({
                   return (
                     <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
                       {studentFormatifs.map((f) => {
-                        const [kelasF, tpIdF] = f.jurnalId.split("_");
-                        const tpKode = tpKodeMap[tpIdF] || "?";
+                        const matchedTp = state.agmp_tp.find(
+                          (t) =>
+                            f.jurnalId === t.id ||
+                            f.jurnalId.endsWith(`_${t.id}`) ||
+                            f.jurnalId.includes(`_${t.id}`) ||
+                            f.jurnalId.includes(t.id),
+                        );
+                        const tpKode =
+                          matchedTp?.kode ||
+                          tpKodeMap[f.jurnalId.split("_").slice(1).join("_")] ||
+                          tpKodeMap[f.jurnalId] ||
+                          "?";
                         const res = f.hasil[selectedSiswa.id];
 
                         let badgeColor = "bg-gray-100 text-gray-700";
@@ -1129,8 +1214,20 @@ export default function RekapAkhir({
                                 </p>
                               )}
                               {!res.catatan && (!res.anekdots || res.anekdots.length === 0) && (
-                                <p className="text-sm text-gray-400 leading-relaxed italic border-l-2 border-gray-200 pl-2">
-                                  Tidak ada catatan spesifik.
+                                <p className="text-sm text-gray-500 leading-relaxed italic border-l-2 border-blue-200 pl-2">
+                                  {res.status === "Siap Belajar"
+                                    ? "Evaluasi: Kesiapan belajar sangat baik, siap mengikuti materi inti."
+                                    : res.status === "Perlu Bimbingan"
+                                    ? "Evaluasi: Perlu pendampingan belajar dan penguatan konsep dasar."
+                                    : res.status === "4"
+                                    ? "Evaluasi: Sangat menguasai materi, mandiri dan siap pengayaan."
+                                    : res.status === "3"
+                                    ? "Evaluasi: Memahami materi pembelajaran dengan baik dan mandiri."
+                                    : res.status === "2"
+                                    ? "Evaluasi: Mulai memahami konsep, memerlukan latihan terbimbing."
+                                    : res.status === "1"
+                                    ? "Evaluasi: Pemahaman masih awal, butuh bimbingan intensif."
+                                    : "Telah diobservasi dalam proses pembelajaran."}
                                 </p>
                               )}
                               {res.anekdots && res.anekdots.length > 0 && (
