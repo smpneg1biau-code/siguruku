@@ -34,6 +34,7 @@ import Formatif from "@/components/modules/Formatif";
 import Sumatif from "@/components/modules/Sumatif";
 import Remedial from "@/components/modules/Remedial";
 import Rapor from "@/components/modules/Rapor";
+import RekapNilai from "@/components/modules/RekapNilai";
 import RekapAkhir from "@/components/modules/RekapAkhir";
 import Database from "@/components/modules/Database";
 import Monitoring from "@/components/modules/Monitoring";
@@ -62,6 +63,7 @@ export type TabId =
   | "sumatif"
   | "remedial"
   | "rapor"
+  | "rekap-nilai"
   | "rekap-akhir"
   | "database"
   | "tema-bentuk"
@@ -125,6 +127,7 @@ const MENU_CATEGORIES: MenuCategory[] = [
     categoryColor: "text-rose-400",
     items: [
       { id: "rapor", label: "Rapor", icon: FileText, iconColor: "text-rose-400" },
+      { id: "rekap-nilai", label: "Rekap Nilai", icon: Award, iconColor: "text-amber-400" },
       { id: "rekap-akhir", label: "Rekap Akhir", icon: BarChart2, iconColor: "text-fuchsia-400" },
     ],
   },
@@ -225,6 +228,8 @@ export default function Shell() {
         return <Remedial />;
       case "rapor":
         return <Rapor />;
+      case "rekap-nilai":
+        return <RekapNilai onNavigate={setActiveTab} />;
       case "rekap-akhir":
         return <RekapAkhir onNavigate={setActiveTab} />;
       case "tema-bentuk":

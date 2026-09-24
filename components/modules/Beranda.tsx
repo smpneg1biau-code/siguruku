@@ -137,6 +137,12 @@ export default function Beranda({
       color: "bg-purple-100 text-purple-700",
     },
     {
+      id: "rekap-nilai",
+      label: "Rekap Nilai",
+      icon: Award,
+      color: "bg-amber-100 text-amber-700",
+    },
+    {
       id: "rekap-akhir",
       label: "Rekap Akhir",
       icon: BarChart2,
