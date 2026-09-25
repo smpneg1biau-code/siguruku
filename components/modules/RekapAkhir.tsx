@@ -744,41 +744,115 @@ export default function RekapAkhir({
         <div className="overflow-x-auto flex-1 p-0 print:p-0 print:overflow-visible print:block">
           <style>{`
             @media print {
-              @page { size: 215.9mm 330.2mm portrait; margin: 1cm; }
-              body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-              main { padding: 0 !important; }
-              table { width: 100%; table-layout: fixed; word-wrap: break-word; font-size: 9px !important; }
-              th, td { padding: 4px 2px !important; white-space: normal !important; }
+              @page { size: 215.9mm 330.2mm portrait; margin: 8mm 10mm; }
+              body { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+              main { padding: 0 !important; margin: 0 !important; }
+              table.rekap-akhir-table {
+                width: 100% !important;
+                table-layout: auto !important;
+                word-wrap: break-word !important;
+                font-size: 8.5pt !important;
+                border-collapse: collapse !important;
+              }
+              table.rekap-akhir-table th,
+              table.rekap-akhir-table td {
+                padding: 3.5px 4px !important;
+                white-space: normal !important;
+                border: 1px solid #cbd5e1 !important;
+              }
+              table.rekap-akhir-table th {
+                background-color: #f1f5f9 !important;
+                color: #0f172a !important;
+                font-weight: bold !important;
+                -webkit-print-color-adjust: exact !important;
+              }
+              /* Lebar kolom nomor urut disesuaikan pas dengan ukuran nomor urut siswa */
+              th.col-no,
+              td.col-no {
+                width: 28px !important;
+                max-width: 32px !important;
+                min-width: 24px !important;
+                text-align: center !important;
+                padding-left: 2px !important;
+                padding-right: 2px !important;
+                white-space: nowrap !important;
+              }
+              /* Kolom nama siswa langsung rapat ke kolom nomor urut tanpa jarak berlebih */
+              th.col-nama,
+              td.col-nama {
+                text-align: left !important;
+                padding-left: 6px !important;
+                padding-right: 6px !important;
+                width: auto !important;
+              }
+              th.col-kehadiran,
+              td.col-kehadiran {
+                width: 65px !important;
+                text-align: center !important;
+              }
+              th.col-tp,
+              td.col-tp {
+                width: 40px !important;
+                text-align: center !important;
+              }
             }
           `}</style>
           
-          <div className="hidden print:block text-center mb-6">
-            <h2 className="text-xl font-bold uppercase">
-              REKAP AKHIR SEMESTER {filteredKelas.find(k => k.id === selectedKelasId) ? `KELAS ${filteredKelas.find(k => k.id === selectedKelasId)?.nama}` : ''}
+          <div className="hidden print:block text-center mb-4">
+            <h2 className="text-lg font-bold uppercase tracking-wide text-gray-900">
+              REKAPITULASI HASIL BELAJAR SISWA (REKAP AKHIR SEMESTER)
             </h2>
-            {selectedTA && (
-              <p className="text-sm font-semibold uppercase text-gray-700 mt-1">
-                TAHUN AJARAN: {selectedTA.nama} | SEMESTER: {selectedTA.semester}
-              </p>
-            )}
+            <p className="text-xs font-semibold text-gray-700 mt-0.5">
+              {state.agmp_pengaturan?.sekolah || "SMP NEGERI 1 BIAU"}
+            </p>
+            <div className="flex justify-between items-center text-[10px] text-gray-600 mt-2 px-1 border-t border-b border-gray-300 py-1 font-medium">
+              <span>
+                <strong>Kelas:</strong> {filteredKelas.find(k => k.id === selectedKelasId)?.nama || "-"}
+              </span>
+              <span>
+                <strong>Mata Pelajaran:</strong> {state.agmp_pengaturan?.mapel || "-"}
+              </span>
+              <span>
+                <strong>Semester:</strong> {selectedTA ? selectedTA.semester : "-"}
+              </span>
+              <span>
+                <strong>Tahun Ajaran:</strong> {selectedTA ? selectedTA.nama : "-"}
+              </span>
+              <span>
+                <strong>Guru:</strong> {state.agmp_pengaturan?.guruNama || "-"}
+              </span>
+            </div>
           </div>
 
-          <table className="w-full text-left border-collapse whitespace-nowrap min-w-max print:min-w-0">
+          <table className="rekap-akhir-table w-full text-left border-collapse whitespace-nowrap min-w-max print:min-w-0">
+            <colgroup>
+              <col className="w-10 print:w-[28px]" style={{ width: "36px" }} />
+              <col className="w-auto" />
+              <col className="w-24 sm:w-28 print:w-[65px]" style={{ width: "90px" }} />
+              {tpList.map((tp) => (
+                <col
+                  key={tp.id}
+                  className="w-16 sm:w-20 print:w-[40px]"
+                  style={{ width: "65px" }}
+                />
+              ))}
+              <col className="w-20 print:hidden" />
+            </colgroup>
             <thead className="bg-gray-100 text-[10px] sm:text-xs text-gray-600 uppercase tracking-widest sticky top-0 z-10 print:static">
               <tr>
-                <th className="px-4 py-3 font-bold border-b border-gray-200">
+                <th className="col-no w-10 min-w-[32px] max-w-[42px] px-1 sm:px-2 py-3 font-bold border-b border-gray-200 text-center">
                   No
                 </th>
-                <th className="px-4 py-3 font-bold border-b border-gray-200 sticky left-0 bg-gray-100 z-20">
+                <th className="col-nama px-3 sm:px-4 py-3 font-bold border-b border-gray-200 text-left">
                   Nama Siswa
                 </th>
-                <th className="px-4 py-3 font-bold border-b border-gray-200 text-center">
+                <th className="col-kehadiran px-3 sm:px-4 py-3 font-bold border-b border-gray-200 text-center">
                   % Kehadiran
                 </th>
                 {tpList.map((tp, i) => (
                   <th
                     key={tp.id}
-                    className="px-4 py-3 font-bold border-b border-gray-200 text-center"
+                    className="col-tp px-2 sm:px-3 py-3 font-bold border-b border-gray-200 text-center"
                     title={tp.deskripsi}
                   >
                     TP {tp.kode}
@@ -807,23 +881,23 @@ export default function RekapAkhir({
                       key={s.id}
                       className="hover:bg-blue-50/30 transition-colors group"
                     >
-                      <td className="px-4 py-3 text-gray-500 font-medium">
+                      <td className="col-no w-10 min-w-[32px] max-w-[42px] px-1 sm:px-2 py-3 text-gray-500 font-medium text-center">
                         {idx + 1}
                       </td>
-                      <td className="px-4 py-3 font-semibold text-gray-900 sticky left-0 bg-white group-hover:bg-blue-50/30 print:bg-transparent">
+                      <td className="col-nama px-3 sm:px-4 py-3 font-semibold text-gray-900 text-left">
                         {s.nama}
                         <span className="block text-[10px] text-gray-400 font-normal">
                           {s.nisn}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center align-middle">
+                      <td className="col-kehadiran px-3 sm:px-4 py-3 text-center align-middle">
                         <div className="flex flex-col items-center gap-1">
                           <span
                             className={`font-bold ${keh.percent >= 85 ? "text-[#34C759]" : keh.percent >= 70 ? "text-[#FF9500]" : "text-[#FF3B30]"}`}
                           >
                             {keh.percent}%
                           </span>
-                          <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden print:hidden">
                             <div
                               className={`h-full ${keh.percent >= 85 ? "bg-[#34C759]" : keh.percent >= 70 ? "bg-[#FF9500]" : "bg-[#FF3B30]"}`}
                               style={{ width: `${keh.percent}%` }}
@@ -836,7 +910,7 @@ export default function RekapAkhir({
                         return (
                           <td
                             key={tp.id}
-                            className="px-4 py-3 text-center align-middle"
+                            className="col-tp px-2 sm:px-3 py-3 text-center align-middle"
                           >
                             {res.status === "BELUM DINILAI" ? (
                               <span
@@ -884,6 +958,28 @@ export default function RekapAkhir({
               )}
             </tbody>
           </table>
+
+          {/* Bagian Tanda Tangan Khusus Print */}
+          <div className="hidden print:block mt-6 text-xs text-gray-800">
+            <div className="flex justify-between items-start px-6">
+              <div className="text-center w-56">
+                <p>Mengetahui,</p>
+                <p className="font-semibold">Kepala Sekolah</p>
+                <div className="h-14"></div>
+                <p className="font-bold underline">( ............................................ )</p>
+                <p className="text-[10px] text-gray-500">NIP. ............................................</p>
+              </div>
+              <div className="text-center w-56">
+                <p>
+                  Dicetak: {new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                </p>
+                <p className="font-semibold">Guru Mata Pelajaran</p>
+                <div className="h-14"></div>
+                <p className="font-bold underline">{state.agmp_pengaturan?.guruNama ? `( ${state.agmp_pengaturan.guruNama} )` : "( ............................................ )"}</p>
+                <p className="text-[10px] text-gray-500">NIP. ............................................</p>
+              </div>
+            </div>
+          </div>
         </div>
         {/* Footer Table for specific class */}
         <div className="p-4 bg-gray-50 border-t border-gray-100 text-xs text-gray-600 print:hidden grid grid-cols-1 sm:grid-cols-3 gap-2">
