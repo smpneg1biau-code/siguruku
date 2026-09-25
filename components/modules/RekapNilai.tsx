@@ -45,7 +45,11 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
-  // Density control for 1-page Folio guarantee: "auto" | "compact" | "ultra" | "normal"
+  // Dynamic pagination mode: "auto" (default: 1 page if <=20, 2 pages if >20) | "force1" | "split2" | "split3"
+  const [pageLayoutMode, setPageLayoutMode] = useState<"auto" | "force1" | "split2" | "split3">("auto");
+  const [previewTab, setPreviewTab] = useState<"all" | number>("all");
+
+  // Density control for Folio guarantee: "auto" | "compact" | "ultra" | "normal"
   const [density, setDensity] = useState<"auto" | "compact" | "ultra" | "normal">("auto");
   const [showSignatures, setShowSignatures] = useState(true);
 
@@ -357,14 +361,68 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
     };
   }, [recapData]);
 
-  // Determine dynamic row density for 1-Page Folio guarantee
+  // Dynamic page pagination for Print, Preview, and PDF
+  const pagesData = useMemo(() => {
+    const total = recapData.length;
+    if (total === 0) return [[]];
+
+    if (pageLayoutMode === "force1") {
+      return [recapData];
+    }
+
+    if (pageLayoutMode === "split2") {
+      const half = Math.ceil(total / 2);
+      return [recapData.slice(0, half), recapData.slice(half)];
+    }
+
+    if (pageLayoutMode === "split3") {
+      const perPage = Math.ceil(total / 3);
+      return [
+        recapData.slice(0, perPage),
+        recapData.slice(perPage, perPage * 2),
+        recapData.slice(perPage * 2),
+      ].filter((p) => p.length > 0);
+    }
+
+    // Default "auto":
+    // If student count <= 20 (or <= 22 with compact density), fits in 1 page cleanly!
+    const singlePageLimit = density === "ultra" ? 24 : density === "compact" ? 22 : 20;
+    if (total <= singlePageLimit) {
+      return [recapData];
+    }
+
+    // If total > singlePageLimit:
+    // Split dynamically into balanced pages (max ~20 students per page)
+    if (total <= 40) {
+      // 2 balanced pages!
+      const half = Math.ceil(total / 2);
+      return [recapData.slice(0, half), recapData.slice(half)];
+    } else {
+      // 3 or more balanced pages
+      const pageCount = Math.ceil(total / 20);
+      const perPage = Math.ceil(total / pageCount);
+      const pages: (typeof recapData)[] = [];
+      for (let i = 0; i < pageCount; i++) {
+        pages.push(recapData.slice(i * perPage, (i + 1) * perPage));
+      }
+      return pages.filter((p) => p.length > 0);
+    }
+  }, [recapData, density, pageLayoutMode]);
+
+  // Determine dynamic row density for Folio guarantee
   const computedDensity = useMemo(() => {
     if (density !== "auto") return density;
-    const count = allSiswaInKelas.length;
-    if (count > 34) return "ultra";
-    if (count > 25) return "compact";
+    if (pageLayoutMode === "force1") {
+      const count = allSiswaInKelas.length;
+      if (count > 34) return "ultra";
+      if (count > 25) return "compact";
+      return "normal";
+    }
+    // With dynamic multi-page, average rows per page is <= 20
+    const rowsPerPage = Math.ceil(allSiswaInKelas.length / (pagesData.length || 1));
+    if (rowsPerPage > 22) return "compact";
     return "normal";
-  }, [density, allSiswaInKelas.length]);
+  }, [density, allSiswaInKelas.length, pagesData.length, pageLayoutMode]);
 
   // Density CSS helper
   const densityStyles = {
@@ -404,7 +462,7 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
     }
   };
 
-  // Export 1-Page Folio Landscape PDF using jsPDF
+  // Export Dynamic Folio Landscape PDF using jsPDF
   const handleExportPdfFolio = async () => {
     if (allSiswaInKelas.length === 0) {
       showToast("Tidak ada data siswa untuk diekspor!", "error");
@@ -435,197 +493,256 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
         ? `${selectedTA.nama} - Semester ${selectedTA.semester}`
         : "-";
 
-      // 1. KOP SURAT RESMI
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(13);
-      doc.setTextColor(20, 35, 60);
-      doc.text(schoolName.toUpperCase(), 165, 12, { align: "center" });
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.setTextColor(30, 41, 59);
-      doc.text("REKAPITULASI HASIL BELAJAR PESERTA DIDIK (REKAP NILAI)", 165, 17, {
-        align: "center",
-      });
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      doc.setTextColor(100, 116, 139);
-      doc.text(
-        `Kurikulum Merdeka • Rekapitulasi Presensi Kehadiran, Nilai Akhir Sumatif & Tindak Lanjut Pembelajaran`,
-        165,
-        21.5,
-        { align: "center" }
-      );
-
-      // Garis Kop Ganda
-      doc.setDrawColor(30, 58, 138);
-      doc.setLineWidth(0.6);
-      doc.line(10, 23.5, 320, 23.5);
-      doc.setDrawColor(148, 163, 184);
-      doc.setLineWidth(0.2);
-      doc.line(10, 24.3, 320, 24.3);
-
-      // 2. METADATA INFORMASI
-      const metaData = [
-        [
-          `Kelas / Fase: ${kelasName} (${faseName})`,
-          `Tahun Ajaran: ${taName}`,
-          `Mata Pelajaran: ${mapelName}`,
-          `KKTP: 75`,
-        ],
-      ];
-
-      callAutoTable(doc, {
-        startY: 25.5,
-        body: metaData,
-        theme: "plain",
-        styles: {
-          fontSize: 8,
-          cellPadding: 0.8,
-          fontStyle: "bold",
-          textColor: [51, 65, 85],
-        },
-        columnStyles: {
-          0: { cellWidth: 75 },
-          1: { cellWidth: 85 },
-          2: { cellWidth: 100 },
-          3: { cellWidth: 50, halign: "right" },
-        },
-        margin: { left: 10, right: 10 },
-      });
-
-      const startTableY = (doc as any).lastAutoTable?.finalY
-        ? (doc as any).lastAutoTable.finalY + 1.5
-        : 31;
-
-      // Dynamic sizing based on student count to strictly ensure 1-page fit
-      const count = allSiswaInKelas.length;
-      let pdfFontSize = 7.5;
-      let pdfCellPadding = 1.1;
-
-      if (count > 34) {
-        pdfFontSize = 6.2;
-        pdfCellPadding = 0.65;
-      } else if (count > 26) {
-        pdfFontSize = 6.8;
-        pdfCellPadding = 0.85;
-      } else if (count > 18) {
-        pdfFontSize = 7.2;
-        pdfCellPadding = 1.0;
-      }
-
-      // 3. TABLE BODY DATA
-      const tableRows = recapData.map((row) => {
-        const nisnText = row.siswa.nisn || "-";
-        const kehadiranText = `${row.kehadiran.percent}%\n(H:${row.kehadiran.hadir} S:${row.kehadiran.sakit} I:${row.kehadiran.izin} A:${row.kehadiran.alpa} B:${row.kehadiran.bolos})`;
-        const sumatifText =
-          row.sumatif.scoredCount > 0
-            ? `${row.sumatif.na} (${row.sumatif.predikat})\n[${row.sumatif.statusKetuntasan}]`
-            : "Belum Ada Nilai";
-        const catatanText = row.sumatif.catatanSumatif;
-        const tindakLanjutText = row.sumatif.tindakLanjut;
-
-        return [
-          row.no.toString(),
-          nisnText,
-          row.siswa.nama,
-          row.siswa.jk || "-",
-          kehadiranText,
-          sumatifText,
-          catatanText,
-          tindakLanjutText,
-        ];
-      });
-
-      callAutoTable(doc, {
-        startY: startTableY,
-        head: [
-          [
-            "No",
-            "NISN",
-            "Nama Peserta Didik",
-            "L/P",
-            "Rekap Kehadiran",
-            "Nilai Akhir Sumatif",
-            "Catatan Penilaian Sumatif",
-            "Tindak Lanjut",
-          ],
-        ],
-        body: tableRows,
-        theme: "grid",
-        headStyles: {
-          fillColor: [24, 43, 73], // Navy slate
-          textColor: 255,
-          fontStyle: "bold",
-          fontSize: pdfFontSize + 0.3,
-          halign: "center",
-          valign: "middle",
-          cellPadding: pdfCellPadding + 0.3,
-        },
-        bodyStyles: {
-          fontSize: pdfFontSize,
-          textColor: [30, 41, 59],
-          valign: "middle",
-          cellPadding: pdfCellPadding,
-          lineColor: [203, 213, 225],
-          lineWidth: 0.15,
-        },
-        columnStyles: {
-          0: { cellWidth: 8, halign: "center" },
-          1: { cellWidth: 24, halign: "center" },
-          2: { cellWidth: 62 },
-          3: { cellWidth: 9, halign: "center" },
-          4: { cellWidth: 42, halign: "center" },
-          5: { cellWidth: 38, halign: "center", fontStyle: "bold" },
-          6: { cellWidth: 75 },
-          7: { cellWidth: 52 },
-        },
-        margin: { left: 10, right: 10 },
-      });
-
-      // 4. TANDA TANGAN (SIGNATURES)
-      const finalY = (doc as any).lastAutoTable?.finalY || 160;
       const todayStr = new Date().toLocaleDateString("id-ID", {
         day: "numeric",
         month: "long",
         year: "numeric",
       });
 
-      // Calculate signature Y to ensure it fits on the same page
-      const maxFolioHeight = 210;
-      let sigY = Math.min(finalY + 3, maxFolioHeight - 22);
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(7.5);
-      doc.setTextColor(51, 65, 85);
-
-      // Kiri: Mengetahui Kepala Sekolah
-      doc.text("Mengetahui,", 30, sigY);
-      doc.text("Kepala Sekolah,", 30, sigY + 3.5);
-      doc.text("( Marlinda, S.Pd )", 30, sigY + 16);
-      doc.text("NIP.197911162006042016", 30, sigY + 19.5);
-
-      // Kanan: Guru Mata Pelajaran
-      const kotaSekolah = "Biau";
-      doc.text(`${kotaSekolah}, ${todayStr}`, 240, sigY);
-      doc.text("Guru Mata Pelajaran,", 240, sigY + 3.5);
-      doc.setFont("helvetica", "bold");
-      doc.text(guruName, 240, sigY + 16);
-      doc.setFont("helvetica", "normal");
-      doc.text("NIP.198808172019031014", 240, sigY + 19.5);
-
-      // Verify page count: if autoTable pushed to page 2, delete extra pages to guarantee 1 page
-      const totalPages = doc.getNumberOfPages();
-      if (totalPages > 1) {
-        for (let i = totalPages; i > 1; i--) {
-          doc.deletePage(i);
-        }
+      // Sizing configuration
+      let pdfFontSize = 7.5;
+      let pdfCellPadding = 1.1;
+      if (computedDensity === "ultra") {
+        pdfFontSize = 6.4;
+        pdfCellPadding = 0.7;
+      } else if (computedDensity === "compact") {
+        pdfFontSize = 7.0;
+        pdfCellPadding = 0.9;
       }
 
-      const sanitizedKelas = (selectedKelas?.nama || "Kelas").replace(/[^a-zA-Z0-9]/g, "_");
+      const totalPages = pagesData.length;
+
+      // Render each page cleanly
+      pagesData.forEach((pageRows, pageIdx) => {
+        if (pageIdx > 0) {
+          doc.addPage([215, 330], "landscape");
+        }
+
+        let startTableY = 32;
+
+        if (pageIdx === 0) {
+          // --- 1. KOP SURAT RESMI (Page 1) ---
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(13);
+          doc.setTextColor(20, 35, 60);
+          doc.text(schoolName.toUpperCase(), 165, 12, { align: "center" });
+
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(11);
+          doc.setTextColor(30, 41, 59);
+          doc.text("REKAPITULASI HASIL BELAJAR PESERTA DIDIK (REKAP NILAI)", 165, 17, {
+            align: "center",
+          });
+
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(8);
+          doc.setTextColor(100, 116, 139);
+          doc.text(
+            `Kurikulum Merdeka • Rekapitulasi Presensi Kehadiran, Nilai Akhir Sumatif & Tindak Lanjut Pembelajaran`,
+            165,
+            21.5,
+            { align: "center" }
+          );
+
+          // Garis Kop Ganda
+          doc.setDrawColor(30, 58, 138);
+          doc.setLineWidth(0.6);
+          doc.line(10, 23.5, 320, 23.5);
+          doc.setDrawColor(148, 163, 184);
+          doc.setLineWidth(0.2);
+          doc.line(10, 24.3, 320, 24.3);
+
+          // --- 2. METADATA INFORMASI ---
+          const metaData = [
+            [
+              `Kelas / Fase: ${kelasName} (${faseName})`,
+              `Tahun Ajaran: ${taName}`,
+              `Mata Pelajaran: ${mapelName}`,
+              `KKTP: 75`,
+            ],
+          ];
+
+          callAutoTable(doc, {
+            startY: 25.5,
+            body: metaData,
+            theme: "plain",
+            styles: {
+              fontSize: 8,
+              cellPadding: 0.8,
+              fontStyle: "bold",
+              textColor: [51, 65, 85],
+            },
+            columnStyles: {
+              0: { cellWidth: 75 },
+              1: { cellWidth: 85 },
+              2: { cellWidth: 100 },
+              3: { cellWidth: 50, halign: "right" },
+            },
+            margin: { left: 10, right: 10 },
+          });
+
+          startTableY = (doc as any).lastAutoTable?.finalY
+            ? (doc as any).lastAutoTable.finalY + 1.5
+            : 32;
+        } else {
+          // --- RUNNING HEADER (Page 2+) ---
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(9.5);
+          doc.setTextColor(20, 35, 60);
+          doc.text(
+            `${schoolName.toUpperCase()} • REKAP NILAI HASIL BELAJAR (Lanjutan Halaman ${pageIdx + 1})`,
+            165,
+            11,
+            { align: "center" }
+          );
+
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(7.5);
+          doc.setTextColor(100, 116, 139);
+          doc.text(
+            `Kelas: ${kelasName} (${faseName}) • Tahun Ajaran: ${taName} • Mata Pelajaran: ${mapelName} • KKTP: 75`,
+            165,
+            15,
+            { align: "center" }
+          );
+
+          doc.setDrawColor(148, 163, 184);
+          doc.setLineWidth(0.3);
+          doc.line(10, 16.5, 320, 16.5);
+
+          startTableY = 18.5;
+        }
+
+        // --- 3. TABLE BODY FOR THIS PAGE ---
+        const tableRows = pageRows.map((row) => {
+          const nisnText = row.siswa.nisn || "-";
+          const kehadiranText = `${row.kehadiran.percent}%\n(H:${row.kehadiran.hadir} S:${row.kehadiran.sakit} I:${row.kehadiran.izin} A:${row.kehadiran.alpa} B:${row.kehadiran.bolos})`;
+          const sumatifText =
+            row.sumatif.scoredCount > 0
+              ? `${row.sumatif.na} (${row.sumatif.predikat})\n[${row.sumatif.statusKetuntasan}]`
+              : "Belum Ada Nilai";
+          const catatanText = row.sumatif.catatanSumatif;
+          const tindakLanjutText = row.sumatif.tindakLanjut;
+
+          return [
+            row.no.toString(),
+            nisnText,
+            row.siswa.nama,
+            row.siswa.jk || "-",
+            kehadiranText,
+            sumatifText,
+            catatanText,
+            tindakLanjutText,
+          ];
+        });
+
+        callAutoTable(doc, {
+          startY: startTableY,
+          head: [
+            [
+              "No",
+              "NISN",
+              "Nama Peserta Didik",
+              "L/P",
+              "Rekap Kehadiran",
+              "Nilai Akhir Sumatif",
+              "Catatan Penilaian Sumatif",
+              "Tindak Lanjut",
+            ],
+          ],
+          body: tableRows,
+          theme: "grid",
+          headStyles: {
+            fillColor: [24, 43, 73], // Navy slate
+            textColor: 255,
+            fontStyle: "bold",
+            fontSize: pdfFontSize + 0.3,
+            halign: "center",
+            valign: "middle",
+            cellPadding: pdfCellPadding + 0.3,
+          },
+          bodyStyles: {
+            fontSize: pdfFontSize,
+            textColor: [30, 41, 59],
+            valign: "middle",
+            cellPadding: pdfCellPadding,
+            lineColor: [203, 213, 225],
+            lineWidth: 0.15,
+          },
+          columnStyles: {
+            0: { cellWidth: 8, halign: "center" },
+            1: { cellWidth: 24, halign: "center" },
+            2: { cellWidth: 62 },
+            3: { cellWidth: 9, halign: "center" },
+            4: { cellWidth: 42, halign: "center" },
+            5: { cellWidth: 38, halign: "center", fontStyle: "bold" },
+            6: { cellWidth: 75 },
+            7: { cellWidth: 52 },
+          },
+          margin: { left: 10, right: 10 },
+        });
+
+        // --- 4. SIGNATURES ON LAST PAGE ---
+        if (pageIdx === totalPages - 1 && showSignatures) {
+          const finalY = (doc as any).lastAutoTable?.finalY || 160;
+          const maxFolioHeight = 215;
+          let sigY = finalY + 4;
+          if (sigY + 22 > maxFolioHeight - 10) {
+            sigY = maxFolioHeight - 24;
+          }
+
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(7.5);
+          doc.setTextColor(51, 65, 85);
+
+          // Kiri: Mengetahui Kepala Sekolah
+          doc.text("Mengetahui,", 30, sigY);
+          doc.text("Kepala Sekolah,", 30, sigY + 3.5);
+          const kepsekName =
+            (state.agmp_pengaturan as any)?.kepalaSekolah ||
+            "( ..................................................... )";
+          doc.text(kepsekName, 30, sigY + 16);
+          doc.text(
+            `NIP. ${(state.agmp_pengaturan as any)?.nipKepalaSekolah || "....................................................."}`,
+            30,
+            sigY + 19.5
+          );
+
+          // Kanan: Guru Mata Pelajaran
+          const kotaSekolah = "Biau";
+          doc.text(`${kotaSekolah}, ${todayStr}`, 240, sigY);
+          doc.text("Guru Mata Pelajaran,", 240, sigY + 3.5);
+          doc.setFont("helvetica", "bold");
+          doc.text(guruName, 240, sigY + 16);
+          doc.setFont("helvetica", "normal");
+          doc.text(
+            `NIP. ${(state.agmp_pengaturan as any)?.nipGuru || "....................................................."}`,
+            240,
+            sigY + 19.5
+          );
+        }
+
+        // --- 5. PAGE FOOTER ---
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(148, 163, 184);
+        doc.text(
+          `Dokumen Resmi Rekap Nilai • ${schoolName} • Halaman ${pageIdx + 1} dari ${totalPages}`,
+          165,
+          210,
+          { align: "center" }
+        );
+      });
+
+      const sanitizedKelas = (selectedKelas?.nama || "Kelas").replace(
+        /[^a-zA-Z0-9]/g,
+        "_"
+      );
       doc.save(`Rekap_Nilai_${sanitizedKelas}_Folio.pdf`);
-      showToast("Rekap Nilai Folio 1 Halaman berhasil diunduh!", "success");
+      showToast(
+        `Rekap Nilai Folio (${totalPages} Halaman) berhasil diunduh lengkap!`,
+        "success"
+      );
     } catch (err) {
       console.error("Gagal cetak rekap:", err);
       showToast("Gagal menghasilkan file PDF. Silakan coba lagi.", "error");
@@ -636,7 +753,7 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
 
   return (
     <div className="space-y-6 pb-20 print:space-y-0 print:pb-0">
-      {/* Print CSS for Folio Landscape 1-Page */}
+      {/* Print CSS for Folio Landscape Dynamic Multi-Page */}
       <style>{`
         @media print {
           @page {
@@ -660,15 +777,29 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
           #print-folio-container {
             display: block !important;
             width: 100% !important;
-            page-break-after: avoid !important;
+          }
+          .print-page-sheet {
+            width: 314mm !important;
+            min-height: 202mm !important;
+            max-height: 202mm !important;
+            page-break-after: always !important;
+            break-after: page !important;
             page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+            padding: 2mm 0 !important;
+          }
+          .print-page-sheet:last-child {
+            page-break-after: auto !important;
+            break-after: auto !important;
           }
           table {
-            page-break-inside: avoid !important;
             width: 100% !important;
-          }
-          tr {
-            page-break-inside: avoid !important;
+            border-collapse: collapse !important;
           }
         }
       `}</style>
@@ -828,8 +959,13 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
             </h3>
           </div>
 
-          <div className="text-xs text-gray-500">
-            Orientasi Cetak: <span className="font-semibold text-gray-700">Landscape (Folio / F4)</span>
+          <div className="text-xs text-gray-500 flex items-center gap-2">
+            <span>
+              Orientasi Cetak: <span className="font-semibold text-gray-700">Landscape (Folio / F4)</span>
+            </span>
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+              Dinamis {pagesData.length} Halaman ({allSiswaInKelas.length} Siswa)
+            </span>
           </div>
         </div>
 
@@ -975,14 +1111,20 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
 
       {/* PRINT CONTAINER FOR BROWSER PRINT (Hidden on screen, Visible when window.print() is called) */}
       <div id="print-folio-container" className="hidden print:block">
-        <PrintPaperSheet
-          state={state}
-          selectedKelas={selectedKelas}
-          selectedTA={selectedTA}
-          recapData={recapData}
-          densityStyles={densityStyles}
-          showSignatures={showSignatures}
-        />
+        {pagesData.map((pRows, pageIdx) => (
+          <div key={pageIdx} className="print-page-sheet">
+            <PrintPaperPage
+              pageIndex={pageIdx}
+              totalPages={pagesData.length}
+              pageRows={pRows}
+              state={state}
+              selectedKelas={selectedKelas}
+              selectedTA={selectedTA}
+              densityStyles={densityStyles}
+              showSignatures={showSignatures}
+            />
+          </div>
+        ))}
       </div>
 
       {/* PRINT PREVIEW MODAL */}
@@ -1000,14 +1142,71 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
                   <span className="text-xs bg-indigo-500/30 text-indigo-300 px-2 py-0.5 rounded-full font-mono">
                     Folio Landscape (215 x 330 mm)
                   </span>
+                  <span className="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-semibold border border-emerald-500/30">
+                    {pagesData.length} Halaman Kertas
+                  </span>
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Didesain pas 1 halaman penuh tanpa ada baris siswa yang terpotong.
+                  Dinamis {pagesData.length} halaman ({allSiswaInKelas.length} siswa) • Semua data siswa termuat lengkap tanpa ada yang terpotong.
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Layout Mode Setting */}
+              <div className="flex items-center gap-1.5 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 text-xs">
+                <span className="text-slate-400">Tata Letak:</span>
+                <select
+                  value={pageLayoutMode}
+                  onChange={(e) => setPageLayoutMode(e.target.value as any)}
+                  className="bg-transparent text-white font-medium focus:outline-none cursor-pointer"
+                >
+                  <option value="auto" className="bg-slate-800">
+                    Otomatis Dinamis ({pagesData.length} Hal)
+                  </option>
+                  <option value="force1" className="bg-slate-800">
+                    Muat 1 Halaman ({allSiswaInKelas.length} Siswa)
+                  </option>
+                  <option value="split2" className="bg-slate-800">
+                    Bagi 2 Halaman ({Math.ceil(allSiswaInKelas.length / 2)} Siswa/Hal)
+                  </option>
+                  {allSiswaInKelas.length > 30 && (
+                    <option value="split3" className="bg-slate-800">
+                      Bagi 3 Halaman
+                    </option>
+                  )}
+                </select>
+              </div>
+
+              {/* Page Tabs in Preview (if multi-page) */}
+              {pagesData.length > 1 && (
+                <div className="flex items-center bg-slate-800 p-0.5 rounded-xl border border-slate-700 text-xs">
+                  <button
+                    onClick={() => setPreviewTab("all")}
+                    className={`px-2.5 py-1 rounded-lg transition-colors font-medium ${
+                      previewTab === "all"
+                        ? "bg-indigo-600 text-white shadow-sm"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Semua ({pagesData.length})
+                  </button>
+                  {pagesData.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setPreviewTab(idx)}
+                      className={`px-2.5 py-1 rounded-lg transition-colors font-medium ${
+                        previewTab === idx
+                          ? "bg-indigo-600 text-white shadow-sm"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      Hal {idx + 1}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {/* Density Setting */}
               <div className="flex items-center gap-1.5 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 text-xs">
                 <span className="text-slate-400">Kerapatan:</span>
@@ -1016,10 +1215,10 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
                   onChange={(e) => setDensity(e.target.value as any)}
                   className="bg-transparent text-white font-medium focus:outline-none cursor-pointer"
                 >
-                  <option value="auto" className="bg-slate-800">Auto (Fit 1 Halaman)</option>
-                  <option value="normal" className="bg-slate-800">Normal (s/d 20 Siswa)</option>
-                  <option value="compact" className="bg-slate-800">Kompak (21 - 32 Siswa)</option>
-                  <option value="ultra" className="bg-slate-800">Sangat Rapat (33+ Siswa)</option>
+                  <option value="auto" className="bg-slate-800">Auto ({computedDensity})</option>
+                  <option value="normal" className="bg-slate-800">Normal</option>
+                  <option value="compact" className="bg-slate-800">Kompak</option>
+                  <option value="ultra" className="bg-slate-800">Sangat Rapat</option>
                 </select>
               </div>
 
@@ -1049,7 +1248,7 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
                 className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
               >
                 <Download className="w-3.5 h-3.5" />
-                Unduh PDF
+                Unduh PDF ({pagesData.length} Hal)
               </button>
 
               <button
@@ -1063,32 +1262,43 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
           </div>
 
           {/* Modal Preview Canvas (Simulating Folio Landscape Paper 330mm x 215mm) */}
-          <div className="flex-1 overflow-auto p-4 sm:p-8 bg-slate-950 flex justify-center items-start">
-            <div
-              className="bg-white text-black shadow-2xl rounded-sm p-6 sm:p-8 transition-all"
-              style={{
-                width: "100%",
-                maxWidth: "1150px",
-                minHeight: "720px",
-                aspectRatio: "330 / 215",
-              }}
-            >
-              <PrintPaperSheet
-                state={state}
-                selectedKelas={selectedKelas}
-                selectedTA={selectedTA}
-                recapData={recapData}
-                densityStyles={densityStyles}
-                showSignatures={showSignatures}
-              />
-            </div>
+          <div className="flex-1 overflow-auto p-4 sm:p-8 bg-slate-950 flex flex-col items-center">
+            {pagesData.map((pRows, pageIdx) => {
+              if (previewTab !== "all" && previewTab !== pageIdx) return null;
+              return (
+                <div
+                  key={pageIdx}
+                  className="bg-white text-black shadow-2xl rounded-sm p-6 sm:p-7 transition-all mb-8 last:mb-2 relative"
+                  style={{
+                    width: "100%",
+                    maxWidth: "1150px",
+                    minHeight: "720px",
+                    aspectRatio: "330 / 215",
+                  }}
+                >
+                  <div className="absolute top-2 right-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                    Halaman {pageIdx + 1} dari {pagesData.length}
+                  </div>
+                  <PrintPaperPage
+                    pageIndex={pageIdx}
+                    totalPages={pagesData.length}
+                    pageRows={pRows}
+                    state={state}
+                    selectedKelas={selectedKelas}
+                    selectedTA={selectedTA}
+                    densityStyles={densityStyles}
+                    showSignatures={showSignatures}
+                  />
+                </div>
+              );
+            })}
           </div>
 
           {/* Modal Footer Info */}
           <div className="bg-slate-900 px-5 py-2.5 text-center text-xs text-slate-400 border-t border-slate-800 flex justify-between items-center flex-shrink-0">
             <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
               <CheckCircle className="w-4 h-4" />
-              Format 1 Halaman Siap Cetak (Folio 330 x 215 mm)
+              Format Dinamis {pagesData.length} Halaman Siap Cetak (Folio Landscape 330 x 215 mm)
             </span>
             <span>
               Total {allSiswaInKelas.length} Siswa • Kelas {selectedKelas?.nama || "-"}
@@ -1100,19 +1310,23 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
   );
 }
 
-// Subcomponent: The Print Paper Sheet (reused in both preview and print DOM)
-function PrintPaperSheet({
+// Subcomponent: The Print Paper Page (supports single and multi-page layouts)
+function PrintPaperPage({
+  pageIndex,
+  totalPages,
+  pageRows,
   state,
   selectedKelas,
   selectedTA,
-  recapData,
   densityStyles,
   showSignatures,
 }: {
+  pageIndex: number;
+  totalPages: number;
+  pageRows: any[];
   state: any;
   selectedKelas: any;
   selectedTA: any;
-  recapData: any[];
   densityStyles: {
     tableText: string;
     headerText: string;
@@ -1139,58 +1353,83 @@ function PrintPaperSheet({
     year: "numeric",
   });
 
+  const isLastPage = pageIndex === totalPages - 1;
+
   return (
     <div className="w-full flex flex-col justify-between h-full font-sans text-black">
-      {/* 1. KOP SURAT */}
-      <div className="border-b-2 border-slate-900 pb-2 mb-2">
-        <div className="flex items-center justify-between gap-4">
-          <div className="w-14 h-14 flex items-center justify-center flex-shrink-0">
-            {/* School / Education Emblem SVG */}
-            <svg
-              className="w-12 h-12 text-slate-800"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-              <path d="M6 12v5c3 3 9 3 12 0v-5" />
-            </svg>
+      {/* 1. HEADER (KOP SURAT on Page 1, RUNNING HEADER on Page 2+) */}
+      {pageIndex === 0 ? (
+        <div className="border-b-2 border-slate-900 pb-2 mb-2">
+          <div className="flex items-center justify-between gap-4">
+            <div className="w-14 h-14 flex items-center justify-center flex-shrink-0">
+              {/* School / Education Emblem SVG */}
+              <svg
+                className="w-12 h-12 text-slate-800"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                <path d="M6 12v5c3 3 9 3 12 0v-5" />
+              </svg>
+            </div>
+
+            <div className="text-center flex-1">
+              <h1 className="text-base sm:text-lg font-extrabold uppercase tracking-wide text-slate-900 leading-tight">
+                {schoolName}
+              </h1>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800 mt-0.5">
+                REKAPITULASI HASIL BELAJAR PESERTA DIDIK (REKAP NILAI)
+              </h2>
+              <p className="text-[10px] text-slate-600 mt-0.5">
+                Kurikulum Merdeka • Rekapitulasi Presensi Kehadiran, Nilai Akhir Sumatif & Tindak Lanjut Pembelajaran
+              </p>
+            </div>
+
+            <div className="w-14 flex-shrink-0" />
           </div>
 
-          <div className="text-center flex-1">
-            <h1 className="text-base sm:text-lg font-extrabold uppercase tracking-wide text-slate-900 leading-tight">
-              {schoolName}
-            </h1>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800 mt-0.5">
-              REKAPITULASI HASIL BELAJAR PESERTA DIDIK (REKAP NILAI)
-            </h2>
-            <p className="text-[10px] text-slate-600 mt-0.5">
-              Kurikulum Merdeka • Rekapitulasi Presensi Kehadiran, Nilai Akhir Sumatif & Tindak Lanjut Pembelajaran
-            </p>
+          {/* Double underline decoration */}
+          <div className="w-full border-t border-slate-400 mt-1" />
+        </div>
+      ) : (
+        <div className="border-b-2 border-slate-900 pb-1.5 mb-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xs font-bold uppercase tracking-wide text-slate-900">
+                {schoolName} • REKAP NILAI HASIL BELAJAR PESERTA DIDIK (Lanjutan)
+              </h2>
+              <p className="text-[9.5px] text-slate-600">
+                Kelas: <span className="font-semibold text-slate-800">{kelasName} ({faseName})</span> • Tahun Ajaran: <span className="font-semibold text-slate-800">{taName}</span> • Mata Pelajaran: <span className="font-semibold text-slate-800">{mapelName}</span> • KKTP: 75
+              </p>
+            </div>
+            <div className="text-right text-[9.5px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
+              Halaman {pageIndex + 1} dari {totalPages}
+            </div>
           </div>
+        </div>
+      )}
 
-          <div className="w-14 flex-shrink-0" />
+      {/* 2. METADATA TABLE (Page 1 Only) */}
+      {pageIndex === 0 && (
+        <div className="grid grid-cols-4 gap-2 text-[10px] font-semibold text-slate-800 mb-2 px-1">
+          <div>
+            Kelas / Fase: <span className="font-bold">{kelasName} ({faseName})</span>
+          </div>
+          <div>
+            Tahun Ajaran: <span className="font-bold">{taName}</span>
+          </div>
+          <div>
+            Mata Pelajaran: <span className="font-bold">{mapelName}</span>
+          </div>
+          <div className="text-right">
+            KKTP / KKM: <span className="font-bold">75</span>
+          </div>
         </div>
-      </div>
-
-      {/* 2. METADATA TABLE */}
-      <div className="grid grid-cols-4 gap-2 text-[10px] font-semibold text-slate-800 mb-2 px-1">
-        <div>
-          Kelas / Fase: <span className="font-bold">{kelasName} ({faseName})</span>
-        </div>
-        <div>
-          Tahun Ajaran: <span className="font-bold">{taName}</span>
-        </div>
-        <div>
-          Mata Pelajaran: <span className="font-bold">{mapelName}</span>
-        </div>
-        <div className="text-right">
-          KKTP / KKM: <span className="font-bold">75</span>
-        </div>
-      </div>
+      )}
 
       {/* 3. TABEL DATA SISWA */}
       <div className="flex-1 w-full overflow-hidden">
@@ -1218,8 +1457,8 @@ function PrintPaperSheet({
             </tr>
           </thead>
           <tbody>
-            {recapData.length > 0 ? (
-              recapData.map((row) => (
+            {pageRows.length > 0 ? (
+              pageRows.map((row) => (
                 <tr
                   key={row.siswa.id}
                   className={`border-b border-slate-400 ${densityStyles.lineHeight}`}
@@ -1272,7 +1511,7 @@ function PrintPaperSheet({
             ) : (
               <tr>
                 <td colSpan={8} className="border border-slate-900 text-center py-4 italic text-slate-500">
-                  Belum ada data siswa di kelas ini.
+                  Belum ada data siswa di halaman ini.
                 </td>
               </tr>
             )}
@@ -1280,19 +1519,19 @@ function PrintPaperSheet({
         </table>
       </div>
 
-      {/* 4. TANDA TANGAN (SIGNATURES) */}
-      {showSignatures && (
-        <div className="grid grid-cols-2 gap-4 mt-3 pt-2 text-[10px] leading-snug">
+      {/* 4. TANDA TANGAN (SIGNATURES - Last Page Only) */}
+      {isLastPage && showSignatures && (
+        <div className="grid grid-cols-2 gap-4 mt-2 pt-2 text-[10px] leading-snug">
           {/* Kolom Kiri: Mengetahui Kepala Sekolah */}
           <div className="text-left pl-6">
             <p>Mengetahui,</p>
             <p className="font-semibold">Kepala Sekolah</p>
             <div className="h-10" />
             <p className="font-bold underline">
-              {state.agmp_pengaturan.kepalaSekolah || "( ..................................................... )"}
+              {(state.agmp_pengaturan as any)?.kepalaSekolah || "( ..................................................... )"}
             </p>
             <p className="text-[9px] text-slate-600">
-              NIP. {state.agmp_pengaturan.nipKepalaSekolah || "....................................................."}
+              NIP. {(state.agmp_pengaturan as any)?.nipKepalaSekolah || "....................................................."}
             </p>
           </div>
 
@@ -1303,11 +1542,32 @@ function PrintPaperSheet({
             <div className="h-10" />
             <p className="font-bold underline">{guruName}</p>
             <p className="text-[9px] text-slate-600">
-              NIP. {state.agmp_pengaturan.nipGuru || "....................................................."}
+              NIP. {(state.agmp_pengaturan as any)?.nipGuru || "....................................................."}
             </p>
           </div>
         </div>
       )}
+
+      {/* 5. FOOTER */}
+      <div className="border-t border-slate-300 pt-1 mt-1 flex justify-between items-center text-[8.5px] text-slate-500">
+        <span>{schoolName} • Rekapitulasi Hasil Belajar</span>
+        <span>Kurikulum Merdeka • KKTP 75</span>
+        <span className="font-semibold">
+          Halaman {pageIndex + 1} dari {totalPages}
+        </span>
+      </div>
     </div>
+  );
+}
+
+// Subcomponent: The Print Paper Sheet (kept for backward compatibility)
+function PrintPaperSheet(props: any) {
+  return (
+    <PrintPaperPage
+      pageIndex={0}
+      totalPages={1}
+      pageRows={props.recapData || []}
+      {...props}
+    />
   );
 }
