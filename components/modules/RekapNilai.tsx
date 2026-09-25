@@ -603,8 +603,8 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
       // Kiri: Mengetahui Kepala Sekolah
       doc.text("Mengetahui,", 30, sigY);
       doc.text("Kepala Sekolah,", 30, sigY + 3.5);
-      doc.text("( ..................................................... )", 30, sigY + 16);
-      doc.text("NIP. .....................................................", 30, sigY + 19.5);
+      doc.text("( Marlinda, S.Pd )", 30, sigY + 16);
+      doc.text("NIP.197911162006042016", 30, sigY + 19.5);
 
       // Kanan: Guru Mata Pelajaran
       const kotaSekolah = "Biau";
@@ -613,7 +613,7 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
       doc.setFont("helvetica", "bold");
       doc.text(guruName, 240, sigY + 16);
       doc.setFont("helvetica", "normal");
-      doc.text("NIP. .....................................................", 240, sigY + 19.5);
+      doc.text("NIP.198808172019031014", 240, sigY + 19.5);
 
       // Verify page count: if autoTable pushed to page 2, delete extra pages to guarantee 1 page
       const totalPages = doc.getNumberOfPages();
