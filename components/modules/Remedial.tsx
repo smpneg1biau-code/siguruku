@@ -41,6 +41,19 @@ export default function Remedial() {
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  // Print Preview Modal states
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [printKelasId, setPrintKelasId] = useState<string>("");
+  const [printStatusFilter, setPrintStatusFilter] = useState<
+    "semua" | "sedang" | "selesai"
+  >("semua");
+  const [paperSize, setPaperSize] = useState<"folio" | "a4" | "legal" | "letter">("folio");
+  const [paperMargin, setPaperMargin] = useState<"normal" | "compact" | "spacious">("normal");
+  const [paperDensity, setPaperDensity] = useState<"auto" | "normal" | "compact" | "ultra">("auto");
+  const [paperLayoutMode, setPaperLayoutMode] = useState<"auto" | "force1" | "split2" | "split3">("auto");
+  const [previewTab, setPreviewTab] = useState<number | "all">("all");
+  const [showSignatures, setShowSignatures] = useState(true);
+
   const [showManualAdd, setShowManualAdd] = useState(false);
   const [manualKelasId, setManualKelasId] = useState("");
   const [manualSumatifId, setManualSumatifId] = useState("");
@@ -331,6 +344,8 @@ export default function Remedial() {
   });
 
   const selectedKelasObj = availableKelas.find((k) => k.id === selectedKelasId);
+  const selectedPrintKelasObj = availableKelas.find((k) => k.id === printKelasId);
+  const printKelasNama = selectedPrintKelasObj ? selectedPrintKelasObj.nama : "Semua Kelas";
 
   const kepsekName =
     (state.agmp_pengaturan as any)?.kepalaSekolah ||
@@ -341,6 +356,180 @@ export default function Remedial() {
   const guruNip = (state.agmp_pengaturan as any)?.nipGuru
     ? `NIP. ${(state.agmp_pengaturan as any).nipGuru}`
     : "NIP. ........................................";
+
+  // Data filtered specifically for Print / Preview based on Print Class and Status Filter
+  const printRows = useMemo(() => {
+    return remedialList.filter((r) => {
+      const siswa = state.agmp_siswa.find((s) => s.id === r.siswaId);
+      const kelasId = r.kelasId || siswa?.kelasId || "";
+
+      // Filter by selected print class
+      if (printKelasId && kelasId !== printKelasId) {
+        return false;
+      }
+
+      // Filter by print status
+      if (printStatusFilter === "sedang") {
+        if (r.status !== "Berlangsung" && r.status !== "Direncanakan") {
+          return false;
+        }
+      } else if (printStatusFilter === "selesai") {
+        if (r.status !== "Selesai") {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [remedialList, printKelasId, printStatusFilter, state.agmp_siswa]);
+
+  const paperConfig = useMemo(() => {
+    switch (paperSize) {
+      case "a4":
+        return {
+          name: "A4",
+          widthMm: 297,
+          heightMm: 210,
+          aspectRatio: "297 / 210",
+          label: "A4 Landscape (297 x 210 mm)",
+        };
+      case "legal":
+        return {
+          name: "Legal",
+          widthMm: 356,
+          heightMm: 216,
+          aspectRatio: "356 / 216",
+          label: "Legal Landscape (356 x 216 mm)",
+        };
+      case "letter":
+        return {
+          name: "Letter",
+          widthMm: 279,
+          heightMm: 216,
+          aspectRatio: "279 / 216",
+          label: "Letter Landscape (279 x 216 mm)",
+        };
+      case "folio":
+      default:
+        return {
+          name: "Folio / F4",
+          widthMm: 330,
+          heightMm: 215,
+          aspectRatio: "330 / 215",
+          label: "Folio / F4 Landscape (330 x 215 mm)",
+        };
+    }
+  }, [paperSize]);
+
+  const marginConfig = useMemo(() => {
+    switch (paperMargin) {
+      case "compact":
+        return {
+          marginMm: 6,
+          label: "Sempit (6 mm)",
+          paddingClass: "p-4 sm:p-5",
+        };
+      case "spacious":
+        return {
+          marginMm: 14,
+          label: "Lebar (14 mm)",
+          paddingClass: "p-8 sm:p-9",
+        };
+      case "normal":
+      default:
+        return {
+          marginMm: 9,
+          label: "Standar (9 mm)",
+          paddingClass: "p-6 sm:p-7",
+        };
+    }
+  }, [paperMargin]);
+
+  const densityStyles = useMemo(() => {
+    let effectiveDensity = paperDensity;
+    if (effectiveDensity === "auto") {
+      const count = printRows.length;
+      if (paperLayoutMode === "force1") {
+        if (count > 25) effectiveDensity = "ultra";
+        else if (count > 16) effectiveDensity = "compact";
+        else effectiveDensity = "normal";
+      } else {
+        effectiveDensity = count > 20 ? "compact" : "normal";
+      }
+    }
+
+    switch (effectiveDensity) {
+      case "ultra":
+        return {
+          tableText: "text-[9px]",
+          headerText: "text-[9px] py-1 px-1",
+          cellPadding: "py-0.5 px-1.5 leading-tight",
+          subText: "text-[8px]",
+          badgeText: "text-[8px] px-1 py-0.2",
+          kopText: "text-[10px]",
+          sigSpace: "h-8",
+        };
+      case "compact":
+        return {
+          tableText: "text-[10px]",
+          headerText: "text-[10px] py-1.5 px-1.5",
+          cellPadding: "py-1 px-2 leading-tight",
+          subText: "text-[9px]",
+          badgeText: "text-[9px] px-1.5 py-0.5",
+          kopText: "text-xs",
+          sigSpace: "h-10",
+        };
+      default: // normal
+        return {
+          tableText: "text-[11px]",
+          headerText: "text-[11px] py-2 px-2",
+          cellPadding: "py-1.5 px-2.5 leading-snug",
+          subText: "text-[10px]",
+          badgeText: "text-[10px] px-2 py-0.5",
+          kopText: "text-sm",
+          sigSpace: "h-12",
+        };
+    }
+  }, [paperDensity, paperLayoutMode, printRows.length]);
+
+  const printPagesData = useMemo(() => {
+    const total = printRows.length;
+    if (total === 0) return [[]];
+
+    if (paperLayoutMode === "force1") {
+      return [printRows];
+    }
+
+    if (paperLayoutMode === "split2") {
+      const mid = Math.ceil(total / 2);
+      return [printRows.slice(0, mid), printRows.slice(mid)];
+    }
+
+    if (paperLayoutMode === "split3") {
+      const chunk = Math.ceil(total / 3);
+      return [
+        printRows.slice(0, chunk),
+        printRows.slice(chunk, chunk * 2),
+        printRows.slice(chunk * 2),
+      ];
+    }
+
+    // "auto" dynamic pagination
+    if (total <= 14) {
+      return [printRows];
+    } else if (total <= 28) {
+      const page1Limit = 15;
+      return [printRows.slice(0, page1Limit), printRows.slice(page1Limit)];
+    } else {
+      const page1Limit = 15;
+      const page2Limit = 16;
+      return [
+        printRows.slice(0, page1Limit),
+        printRows.slice(page1Limit, page1Limit + page2Limit),
+        printRows.slice(page1Limit + page2Limit),
+      ];
+    }
+  }, [printRows, paperLayoutMode]);
 
   const handleExportCsv = () => {
     const headers = [
@@ -361,7 +550,9 @@ export default function Remedial() {
       "Ketuntasan Baru"
     ];
 
-    const rows = filteredRemedialList.map((r, idx) => {
+    const listToExport = showPreviewModal ? printRows : filteredRemedialList;
+
+    const rows = listToExport.map((r, idx) => {
       const s = state.agmp_siswa.find((sis) => sis.id === r.siswaId);
       const tp = state.agmp_tp.find((t) => t.id === r.tpId);
       const existingSumatif = state.agmp_sumatif.find((sum) => sum.id === r.sumatifId);
@@ -393,11 +584,11 @@ export default function Remedial() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    const kelasStr = selectedKelasObj ? selectedKelasObj.nama.replace(/\s+/g, "_") : "Semua_Kelas";
+    const kelasStr = (showPreviewModal ? selectedPrintKelasObj?.nama : selectedKelasObj?.nama)?.replace(/\s+/g, "_") || "Semua_Kelas";
     const statusStr =
-      remedialStatusFilter === "sedang"
+      (showPreviewModal ? printStatusFilter : remedialStatusFilter) === "sedang"
         ? "Sedang_Remedial"
-        : remedialStatusFilter === "selesai"
+        : (showPreviewModal ? printStatusFilter : remedialStatusFilter) === "selesai"
         ? "Tuntas_Remedial"
         : "Semua_Status";
     link.setAttribute("download", `Rekap_Remedial_${kelasStr}_${statusStr}.csv`);
@@ -412,33 +603,49 @@ export default function Remedial() {
       <style>{`
         @media print {
           @page {
-            size: landscape;
-            margin: 8mm 10mm;
+            size: ${paperConfig.widthMm}mm ${paperConfig.heightMm}mm landscape;
+            margin: ${marginConfig.marginMm}mm;
           }
-          body {
+          html, body {
             background: white !important;
             color: black !important;
+            margin: 0 !important;
+            padding: 0 !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          header, nav, aside, .print\\:hidden, #main-sidebar, button, input, select {
-            display: none !important;
+          body * {
+            visibility: hidden;
           }
-          main {
-            padding: 0 !important;
-            margin: 0 !important;
-            max-width: 100% !important;
+          #print-rekap-container,
+          #print-rekap-container * {
+            visibility: visible;
           }
           #print-rekap-container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
             display: block !important;
-            width: 100% !important;
           }
-          table {
-            width: 100% !important;
-            border-collapse: collapse !important;
-          }
-          tr {
+          .print-page-sheet {
+            page-break-after: always !important;
+            break-after: page !important;
             page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+            width: 100% !important;
+          }
+          .print-page-sheet:last-child {
+            page-break-after: auto !important;
+            break-after: auto !important;
+          }
+          header, nav, aside, .print\\:hidden, #main-sidebar, button, input, select {
+            display: none !important;
           }
         }
       `}</style>
@@ -462,8 +669,13 @@ export default function Remedial() {
         <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
           <button
             onClick={() => {
-              setActiveView("rekap");
-              setTimeout(() => window.print(), 150);
+              setPrintKelasId(selectedKelasId);
+              setPrintStatusFilter(
+                remedialStatusFilter === "Direncanakan" || remedialStatusFilter === "Berlangsung"
+                  ? "sedang"
+                  : remedialStatusFilter
+              );
+              setShowPreviewModal(true);
             }}
             className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all shadow-indigo-100 cursor-pointer"
           >
@@ -1362,9 +1574,17 @@ export default function Remedial() {
                 <Download className="w-3.5 h-3.5" /> Unduh CSV
               </button>
               <button
-                onClick={() => window.print()}
+                onClick={() => {
+                  setPrintKelasId(selectedKelasId);
+                  setPrintStatusFilter(
+                    remedialStatusFilter === "Direncanakan" || remedialStatusFilter === "Berlangsung"
+                      ? "sedang"
+                      : remedialStatusFilter
+                  );
+                  setShowPreviewModal(true);
+                }}
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
-                title="Cetak lembar rekapitulasi formal"
+                title="Buka pratinjau cetak lembar rekapitulasi formal"
               >
                 <Printer className="w-3.5 h-3.5" /> Cetak Lembar Rekap
               </button>
@@ -1554,129 +1774,501 @@ export default function Remedial() {
         </div>
       )}
 
-      {/* PRINT CONTAINER (KOP SURAT & FORMAL TABLE) */}
+      {/* PRINT CONTAINER FOR BROWSER PRINT (Hidden on screen, Visible when window.print() is called) */}
       <div id="print-rekap-container" className="hidden print:block text-black bg-white">
-        {/* KOP SURAT */}
-        <div className="text-center border-b-2 border-black pb-3 mb-4">
-          <h3 className="text-xs uppercase tracking-wider font-semibold">
-            PEMERINTAH KABUPATEN BUOL
-          </h3>
-          <h4 className="text-xs uppercase tracking-wider font-semibold">
-            DINAS PENDIDIKAN DAN KEBUDAYAAN
-          </h4>
-          <h2 className="text-base uppercase tracking-wider font-black mt-0.5">
-            {schoolName}
-          </h2>
-          <p className="text-[10px] text-gray-700 mt-0.5">
-            Alamat: Jl. Syarif Mansur No. 05 Kel. Biau, Kec. Biau, Kab. Buol, Prov. Sulawesi Tengah
-          </p>
-          <div className="border-t border-black mt-1 pt-0.5" />
-        </div>
+        {printPagesData.map((pageRows, pageIdx) => {
+          const startingIndex = printPagesData
+            .slice(0, pageIdx)
+            .reduce((sum, p) => sum + p.length, 0);
 
-        {/* JUDUL DOKUMEN */}
-        <div className="text-center mb-4">
-          <h2 className="text-sm font-black uppercase tracking-wide underline">
-            REKAPITULASI PELAKSANAAN PROGRAM REMEDIAL
-          </h2>
-          <p className="text-[11px] font-semibold text-gray-700 mt-1">
-            {remedialStatusFilter === "sedang"
-              ? "DAFTAR SISWA SEDANG MENGIKUTI PROGRAM REMEDIAL"
-              : remedialStatusFilter === "selesai"
-              ? "DAFTAR SISWA YANG TELAH MENYELESAIKAN PROGRAM REMEDIAL"
-              : "DAFTAR KESELURUHAN SISWA PROGRAM REMEDIAL"}
-          </p>
-        </div>
+          return (
+            <div key={pageIdx} className="print-page-sheet">
+              <RemedialPrintPaperSheet
+                pageIndex={pageIdx}
+                totalPages={printPagesData.length}
+                pageRows={pageRows}
+                startingIndex={startingIndex}
+                schoolName={schoolName}
+                mapelName={mapelName}
+                kelasName={printKelasNama}
+                activeTA={activeTA}
+                guruName={guruName}
+                todayStr={todayStr}
+                kepsekName={kepsekName}
+                kepsekNip={kepsekNip}
+                guruNip={guruNip}
+                densityStyles={densityStyles}
+                showSignatures={showSignatures}
+                printStatusFilter={printStatusFilter}
+                state={state}
+              />
+            </div>
+          );
+        })}
+      </div>
 
-        {/* META DATA TABLE */}
-        <div className="grid grid-cols-2 text-xs mb-3 font-medium">
-          <div className="space-y-1">
-            <div className="flex gap-2">
-              <span className="w-28 text-gray-600">Satuan Pendidikan</span>
-              <span>: <strong className="text-black">{schoolName}</strong></span>
+      {/* PRINT PREVIEW MODAL (Pratinjau Kertas Siap Cetak & Pengaturan Dinamis) */}
+      {showPreviewModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex flex-col justify-between overflow-hidden">
+          {/* Modal Header Controls */}
+          <div className="bg-slate-900 text-white px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-xl">
+                <Printer className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm sm:text-base text-white flex flex-wrap items-center gap-2">
+                  <span>Pratinjau Cetak: Rekap Siswa Remedial</span>
+                  <span className="text-xs bg-indigo-500/30 text-indigo-300 px-2 py-0.5 rounded-full font-mono">
+                    {paperConfig.name} Landscape
+                  </span>
+                  <span className="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-semibold border border-emerald-500/30">
+                    {printPagesData.length} Halaman Kertas
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Total {printRows.length} data siswa ({printKelasNama}) • Tata letak siap cetak rapi dengan margin simetris tanpa terpotong.
+                </p>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <span className="w-28 text-gray-600">Mata Pelajaran</span>
-              <span>: <strong className="text-black">{mapelName}</strong></span>
-            </div>
-            <div className="flex gap-2">
-              <span className="w-28 text-gray-600">Kelas / Rombel</span>
-              <span>: <strong className="text-black">{selectedKelasObj ? selectedKelasObj.nama : "Semua Kelas"}</strong></span>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Filter Kelas untuk Dicetak */}
+              <div className="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 text-xs">
+                <Users className="w-3.5 h-3.5 text-blue-400" />
+                <span className="text-slate-400 font-medium">Filter Kelas:</span>
+                <select
+                  value={printKelasId}
+                  onChange={(e) => {
+                    setPrintKelasId(e.target.value);
+                    setPreviewTab("all");
+                  }}
+                  className="bg-transparent text-white font-bold focus:outline-none cursor-pointer"
+                >
+                  <option value="" className="bg-slate-800">
+                    Semua Kelas ({remedialList.length} Siswa)
+                  </option>
+                  {availableKelas.map((k) => {
+                    const countInClass = remedialList.filter((r) => {
+                      const s = state.agmp_siswa.find((sis) => sis.id === r.siswaId);
+                      return (r.kelasId || s?.kelasId) === k.id;
+                    }).length;
+                    return (
+                      <option key={k.id} value={k.id} className="bg-slate-800">
+                        {k.nama} ({countInClass} Siswa)
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {/* Filter Status Cetak */}
+              <div className="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 text-xs">
+                <span className="text-slate-400">Status:</span>
+                <select
+                  value={printStatusFilter}
+                  onChange={(e) => {
+                    setPrintStatusFilter(e.target.value as any);
+                    setPreviewTab("all");
+                  }}
+                  className="bg-transparent text-white font-semibold focus:outline-none cursor-pointer"
+                >
+                  <option value="semua" className="bg-slate-800">Semua Status</option>
+                  <option value="sedang" className="bg-slate-800">Sedang Remedial Saja</option>
+                  <option value="selesai" className="bg-slate-800">Tuntas / Selesai Saja</option>
+                </select>
+              </div>
+
+              {/* Ukuran Kertas Dinamis */}
+              <div className="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 text-xs">
+                <span className="text-slate-400">Kertas:</span>
+                <select
+                  value={paperSize}
+                  onChange={(e) => setPaperSize(e.target.value as any)}
+                  className="bg-transparent text-white font-semibold focus:outline-none cursor-pointer"
+                >
+                  <option value="folio" className="bg-slate-800">Folio / F4 (215 x 330 mm)</option>
+                  <option value="a4" className="bg-slate-800">A4 (210 x 297 mm)</option>
+                  <option value="legal" className="bg-slate-800">Legal (216 x 356 mm)</option>
+                  <option value="letter" className="bg-slate-800">Letter (216 x 279 mm)</option>
+                </select>
+              </div>
+
+              {/* Margin Kertas Dinamis */}
+              <div className="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 text-xs">
+                <span className="text-slate-400">Margin:</span>
+                <select
+                  value={paperMargin}
+                  onChange={(e) => setPaperMargin(e.target.value as any)}
+                  className="bg-transparent text-white font-semibold focus:outline-none cursor-pointer"
+                >
+                  <option value="normal" className="bg-slate-800">Standar (9 mm)</option>
+                  <option value="compact" className="bg-slate-800">Sempit (6 mm)</option>
+                  <option value="spacious" className="bg-slate-800">Lebar (14 mm)</option>
+                </select>
+              </div>
+
+              {/* Tata Letak Halaman */}
+              <div className="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 text-xs">
+                <span className="text-slate-400">Tata Letak:</span>
+                <select
+                  value={paperLayoutMode}
+                  onChange={(e) => setPaperLayoutMode(e.target.value as any)}
+                  className="bg-transparent text-white font-semibold focus:outline-none cursor-pointer"
+                >
+                  <option value="auto" className="bg-slate-800">Otomatis Dinamis ({printPagesData.length} Hal)</option>
+                  <option value="force1" className="bg-slate-800">Muat 1 Halaman</option>
+                  <option value="split2" className="bg-slate-800">Bagi 2 Halaman</option>
+                  {printRows.length > 25 && (
+                    <option value="split3" className="bg-slate-800">Bagi 3 Halaman</option>
+                  )}
+                </select>
+              </div>
+
+              {/* Kerapatan Baris */}
+              <div className="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 text-xs">
+                <span className="text-slate-400">Kerapatan:</span>
+                <select
+                  value={paperDensity}
+                  onChange={(e) => setPaperDensity(e.target.value as any)}
+                  className="bg-transparent text-white font-semibold focus:outline-none cursor-pointer"
+                >
+                  <option value="auto" className="bg-slate-800">Auto</option>
+                  <option value="normal" className="bg-slate-800">Normal</option>
+                  <option value="compact" className="bg-slate-800">Kompak</option>
+                  <option value="ultra" className="bg-slate-800">Sangat Rapat</option>
+                </select>
+              </div>
+
+              {/* Toggle Tanda Tangan */}
+              <label className="flex items-center gap-1.5 text-xs text-slate-300 bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showSignatures}
+                  onChange={(e) => setShowSignatures(e.target.checked)}
+                  className="rounded text-indigo-500"
+                />
+                Tanda Tangan
+              </label>
+
+              {/* Tab Navigasi Halaman jika > 1 */}
+              {printPagesData.length > 1 && (
+                <div className="flex items-center bg-slate-800 p-0.5 rounded-xl border border-slate-700 text-xs">
+                  <button
+                    onClick={() => setPreviewTab("all")}
+                    className={`px-2.5 py-1 rounded-lg transition-colors font-medium cursor-pointer ${
+                      previewTab === "all"
+                        ? "bg-indigo-600 text-white shadow-sm"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    Semua ({printPagesData.length})
+                  </button>
+                  {printPagesData.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setPreviewTab(idx)}
+                      className={`px-2.5 py-1 rounded-lg transition-colors font-medium cursor-pointer ${
+                        previewTab === idx
+                          ? "bg-indigo-600 text-white shadow-sm"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      Hal {idx + 1}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+                title="Buka dialog cetak browser / simpan sebagai PDF"
+              >
+                <Printer className="w-4 h-4" />
+                Cetak Sekarang
+              </button>
+
+              <button
+                onClick={() => setShowPreviewModal(false)}
+                className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
+                title="Tutup Pratinjau Cetak"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           </div>
-          <div className="space-y-1">
-            <div className="flex gap-2">
-              <span className="w-28 text-gray-600">Tahun Pelajaran</span>
-              <span>: <strong className="text-black">{activeTA?.nama || "2024/2025"}</strong></span>
+
+          {/* Modal Paper Sheet Canvas (Realistic View) */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-8 bg-slate-950/80 flex flex-col items-center">
+            {printPagesData.map((pageRows, pageIdx) => {
+              if (previewTab !== "all" && previewTab !== pageIdx) return null;
+              const startingIndex = printPagesData
+                .slice(0, pageIdx)
+                .reduce((sum, p) => sum + p.length, 0);
+
+              return (
+                <div key={pageIdx} className="w-full max-w-5xl flex flex-col items-center">
+                  <div className="w-full flex items-center justify-between text-xs text-slate-400 mb-2 px-1">
+                    <span className="font-semibold text-slate-300">
+                      Lembar Cetak #{pageIdx + 1} dari {printPagesData.length} — {paperConfig.label}
+                    </span>
+                    <span className="text-slate-400">
+                      {pageRows.length} Siswa pada Halaman Ini
+                    </span>
+                  </div>
+
+                  {/* Simulated Paper Sheet */}
+                  <div
+                    className="w-full bg-white text-black shadow-2xl rounded-sm border border-gray-300 overflow-hidden flex flex-col justify-between"
+                    style={{
+                      aspectRatio: paperConfig.aspectRatio,
+                      minHeight: "185mm",
+                    }}
+                  >
+                    <div className={`flex-1 flex flex-col justify-between ${marginConfig.paddingClass}`}>
+                      <RemedialPrintPaperSheet
+                        pageIndex={pageIdx}
+                        totalPages={printPagesData.length}
+                        pageRows={pageRows}
+                        startingIndex={startingIndex}
+                        schoolName={schoolName}
+                        mapelName={mapelName}
+                        kelasName={printKelasNama}
+                        activeTA={activeTA}
+                        guruName={guruName}
+                        todayStr={todayStr}
+                        kepsekName={kepsekName}
+                        kepsekNip={kepsekNip}
+                        guruNip={guruNip}
+                        densityStyles={densityStyles}
+                        showSignatures={showSignatures}
+                        printStatusFilter={printStatusFilter}
+                        state={state}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==========================================
+// REMEDIAL PRINT PAPER SHEET HELPER COMPONENT
+// ==========================================
+function RemedialPrintPaperSheet({
+  pageIndex,
+  totalPages,
+  pageRows,
+  startingIndex,
+  schoolName,
+  mapelName,
+  kelasName,
+  activeTA,
+  guruName,
+  todayStr,
+  kepsekName,
+  kepsekNip,
+  guruNip,
+  densityStyles,
+  showSignatures,
+  printStatusFilter,
+  state,
+}: {
+  pageIndex: number;
+  totalPages: number;
+  pageRows: TRemedial[];
+  startingIndex: number;
+  schoolName: string;
+  mapelName: string;
+  kelasName: string;
+  activeTA: any;
+  guruName: string;
+  todayStr: string;
+  kepsekName: string;
+  kepsekNip: string;
+  guruNip: string;
+  densityStyles: any;
+  showSignatures: boolean;
+  printStatusFilter: string;
+  state: any;
+}) {
+  const isFirstPage = pageIndex === 0;
+  const isLastPage = pageIndex === totalPages - 1;
+
+  return (
+    <div className="w-full flex-1 flex flex-col justify-between text-black">
+      {/* KOP / HEADER */}
+      {isFirstPage ? (
+        <div className="mb-2.5">
+          {/* Formal School Kop */}
+          <div className="text-center border-b-2 border-black pb-2 mb-2">
+            <h3 className="text-[10px] uppercase tracking-wider font-semibold">
+              PEMERINTAH KABUPATEN BUOL
+            </h3>
+            <h4 className="text-[10px] uppercase tracking-wider font-semibold">
+              DINAS PENDIDIKAN DAN KEBUDAYAAN
+            </h4>
+            <h2 className="text-sm sm:text-base uppercase tracking-wider font-black mt-0.5">
+              {schoolName}
+            </h2>
+            <p className="text-[9px] text-gray-700 mt-0.5">
+              Alamat: Jl. Syarif Mansur No. 05 Kel. Biau, Kec. Biau, Kab. Buol, Prov. Sulawesi Tengah
+            </p>
+            <div className="border-t border-black mt-1 pt-0.5" />
+          </div>
+
+          {/* Judul Dokumen */}
+          <div className="text-center mb-2">
+            <h2 className="text-xs sm:text-sm font-black uppercase tracking-wide underline">
+              REKAPITULASI PELAKSANAAN PROGRAM REMEDIAL
+            </h2>
+            <p className="text-[10px] font-bold text-gray-800 mt-0.5">
+              {printStatusFilter === "sedang"
+                ? "DAFTAR SISWA SEDANG MENGIKUTI PROGRAM REMEDIAL"
+                : printStatusFilter === "selesai"
+                ? "DAFTAR SISWA YANG TELAH MENYELESAIKAN PROGRAM REMEDIAL"
+                : "DAFTAR KESELURUHAN SISWA PROGRAM REMEDIAL"}
+            </p>
+          </div>
+
+          {/* Meta Identitas */}
+          <div className="grid grid-cols-2 text-[10px] mb-2 font-medium bg-gray-50/70 p-2 rounded border border-gray-300">
+            <div className="space-y-0.5">
+              <div className="flex gap-2">
+                <span className="w-24 text-gray-600">Satuan Pendidikan</span>
+                <span>: <strong className="text-black">{schoolName}</strong></span>
+              </div>
+              <div className="flex gap-2">
+                <span className="w-24 text-gray-600">Mata Pelajaran</span>
+                <span>: <strong className="text-black">{mapelName}</strong></span>
+              </div>
+              <div className="flex gap-2">
+                <span className="w-24 text-gray-600">Kelas / Rombel</span>
+                <span>: <strong className="text-black">{kelasName}</strong></span>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <span className="w-28 text-gray-600">Semester</span>
-              <span>: <strong className="text-black">{activeTA?.semester || "Ganjil"}</strong></span>
-            </div>
-            <div className="flex gap-2">
-              <span className="w-28 text-gray-600">Guru Pengampu</span>
-              <span>: <strong className="text-black">{guruName}</strong></span>
+            <div className="space-y-0.5">
+              <div className="flex gap-2">
+                <span className="w-24 text-gray-600">Tahun Pelajaran</span>
+                <span>: <strong className="text-black">{activeTA?.nama || "2024/2025"}</strong></span>
+              </div>
+              <div className="flex gap-2">
+                <span className="w-24 text-gray-600">Semester</span>
+                <span>: <strong className="text-black">{activeTA?.semester || "Ganjil"}</strong></span>
+              </div>
+              <div className="flex gap-2">
+                <span className="w-24 text-gray-600">Guru Pengampu</span>
+                <span>: <strong className="text-black">{guruName}</strong></span>
+              </div>
             </div>
           </div>
         </div>
+      ) : (
+        /* Continuation Header on Page 2+ */
+        <div className="flex justify-between items-center text-[10px] border-b border-black pb-1.5 mb-2.5">
+          <div>
+            <strong className="uppercase">{schoolName}</strong> — Rekapitulasi Program Remedial
+          </div>
+          <div className="text-gray-700">
+            Kelas: <strong className="text-black">{kelasName}</strong> | Mapel: <strong className="text-black">{mapelName}</strong>{" "}
+            <em>(Lanjutan Hal {pageIndex + 1} dari {totalPages})</em>
+          </div>
+        </div>
+      )}
 
-        {/* PRINT TABLE */}
-        <table className="w-full text-[10px] border border-black border-collapse mb-5">
+      {/* TABLE */}
+      <div className="flex-1">
+        <table className={`w-full border-collapse border border-black ${densityStyles.tableText}`}>
           <thead>
-            <tr className="bg-gray-100 border border-black text-center font-bold">
-              <th className="border border-black p-1.5 w-6">No</th>
-              <th className="border border-black p-1.5 min-w-[120px] text-left">Nama Siswa</th>
-              <th className="border border-black p-1.5 w-20">NISN</th>
-              <th className="border border-black p-1.5 w-14">Kelas</th>
-              <th className="border border-black p-1.5 min-w-[120px] text-left">Materi / TP</th>
-              <th className="border border-black p-1.5 w-14">Nilai Awal</th>
-              <th className="border border-black p-1.5 min-w-[100px] text-left">Bentuk Remedial</th>
-              <th className="border border-black p-1.5 w-16">PIC</th>
-              <th className="border border-black p-1.5 w-20">Jadwal</th>
-              <th className="border border-black p-1.5 w-20">Status</th>
-              <th className="border border-black p-1.5 w-14">Nilai Baru</th>
-              <th className="border border-black p-1.5 w-16">Hasil Akhir</th>
+            <tr className="bg-gray-100 text-gray-900 border border-black text-center font-bold">
+              <th className={`border border-black w-8 ${densityStyles.headerText}`}>No</th>
+              <th className={`border border-black w-[20%] text-left ${densityStyles.headerText}`}>Nama Siswa & NISN</th>
+              <th className={`border border-black w-[7%] ${densityStyles.headerText}`}>Kelas</th>
+              <th className={`border border-black w-[20%] text-left ${densityStyles.headerText}`}>Materi / TP Asesmen</th>
+              <th className={`border border-black w-[9%] ${densityStyles.headerText}`}>Nilai Awal</th>
+              <th className={`border border-black w-[15%] text-left ${densityStyles.headerText}`}>Bentuk Remedial & PIC</th>
+              <th className={`border border-black w-[9%] ${densityStyles.headerText}`}>Jadwal</th>
+              <th className={`border border-black w-[9%] ${densityStyles.headerText}`}>Status</th>
+              <th className={`border border-black w-[8%] ${densityStyles.headerText}`}>Nilai Baru</th>
+              <th className={`border border-black w-[8%] ${densityStyles.headerText}`}>Hasil Akhir</th>
             </tr>
           </thead>
           <tbody>
-            {filteredRemedialList.length === 0 ? (
+            {pageRows.length === 0 ? (
               <tr>
-                <td colSpan={12} className="border border-black p-4 text-center italic text-gray-500">
+                <td colSpan={10} className="border border-black p-4 text-center italic text-gray-500">
                   Tidak ada data siswa remedial untuk filter yang dipilih.
                 </td>
               </tr>
             ) : (
-              filteredRemedialList.map((r, idx) => {
-                const siswa = state.agmp_siswa.find((s) => s.id === r.siswaId);
-                const tp = state.agmp_tp.find((t) => t.id === r.tpId);
-                const existingSumatif = state.agmp_sumatif.find((s) => s.id === r.sumatifId);
+              pageRows.map((r, idx) => {
+                const siswa = state.agmp_siswa.find((s: any) => s.id === r.siswaId);
+                const tp = state.agmp_tp.find((t: any) => t.id === r.tpId);
+                const existingSumatif = state.agmp_sumatif.find((s: any) => s.id === r.sumatifId);
                 const sumatifAsli = existingSumatif?.records?.[r.siswaId];
-                const kelasNama = state.agmp_kelas.find((k) => k.id === (r.kelasId || siswa?.kelasId))?.nama || "-";
+                const rowKelas = state.agmp_kelas.find((k: any) => k.id === (r.kelasId || siswa?.kelasId))?.nama || "-";
 
                 return (
                   <tr key={r.id} className="border border-black">
-                    <td className="border border-black p-1 text-center font-medium">{idx + 1}</td>
-                    <td className="border border-black p-1 font-semibold">{siswa?.nama || "-"}</td>
-                    <td className="border border-black p-1 text-center font-mono">{siswa?.nisn || "-"}</td>
-                    <td className="border border-black p-1 text-center font-medium">{kelasNama}</td>
-                    <td className="border border-black p-1">
-                      <strong>TP {tp?.kode || "-"}</strong>: {tp?.deskripsi?.substring(0, 40) || "-"}
+                    <td className={`border border-black text-center font-medium ${densityStyles.cellPadding}`}>
+                      {startingIndex + idx + 1}
                     </td>
-                    <td className="border border-black p-1 text-center font-bold text-red-600">
+                    <td className={`border border-black font-semibold text-gray-950 ${densityStyles.cellPadding}`}>
+                      <div>{siswa?.nama || "-"}</div>
+                      <div className={`font-mono text-gray-600 ${densityStyles.subText}`}>NISN: {siswa?.nisn || "-"}</div>
+                    </td>
+                    <td className={`border border-black text-center font-medium ${densityStyles.cellPadding}`}>
+                      {rowKelas}
+                    </td>
+                    <td className={`border border-black ${densityStyles.cellPadding}`}>
+                      <div className="font-bold text-gray-900">TP {tp?.kode || "-"}</div>
+                      <div className={`text-gray-700 line-clamp-1 ${densityStyles.subText}`} title={tp?.deskripsi}>
+                        {tp?.deskripsi || "-"}
+                      </div>
+                    </td>
+                    <td className={`border border-black text-center font-bold text-red-600 ${densityStyles.cellPadding}`}>
                       {sumatifAsli?.nilai ?? "-"}
+                      {sumatifAsli?.level && (
+                        <span className={`block font-normal text-gray-500 ${densityStyles.subText}`}>
+                          L{sumatifAsli.level}
+                        </span>
+                      )}
                     </td>
-                    <td className="border border-black p-1">{r.jenis || "-"}</td>
-                    <td className="border border-black p-1 text-center">{r.pic || "-"}</td>
-                    <td className="border border-black p-1 text-center">
-                      {r.jadwal ? r.jadwal.split("T")[0] : "-"}
+                    <td className={`border border-black ${densityStyles.cellPadding}`}>
+                      <div className="font-medium">{r.jenis || "-"}</div>
+                      <div className={`text-gray-600 ${densityStyles.subText}`}>PIC: {r.pic || "-"}</div>
                     </td>
-                    <td className="border border-black p-1 text-center font-medium">
-                      {r.status}
+                    <td className={`border border-black text-center ${densityStyles.cellPadding}`}>
+                      <div>{r.jadwal ? r.jadwal.split("T")[0] : "-"}</div>
+                      {r.target && (
+                        <div className={`text-gray-500 ${densityStyles.subText}`}>T: {r.target}</div>
+                      )}
                     </td>
-                    <td className="border border-black p-1 text-center font-bold">
+                    <td className={`border border-black text-center font-medium ${densityStyles.cellPadding}`}>
+                      <span className={`inline-block font-semibold ${
+                        r.status === "Selesai"
+                          ? "text-emerald-800"
+                          : r.status === "Berlangsung"
+                          ? "text-amber-800"
+                          : "text-blue-800"
+                      }`}>
+                        {r.status}
+                      </span>
+                    </td>
+                    <td className={`border border-black text-center font-black ${densityStyles.cellPadding}`}>
                       {r.nilaiBaru !== undefined ? r.nilaiBaru : "-"}
                     </td>
-                    <td className="border border-black p-1 text-center font-bold">
-                      {r.statusBaru || (r.status === "Selesai" ? "TUNTAS" : "-")}
+                    <td className={`border border-black text-center font-bold ${densityStyles.cellPadding}`}>
+                      <span className={r.statusBaru === "TUNTAS" || r.status === "Selesai" ? "text-emerald-700 font-extrabold" : "text-gray-700"}>
+                        {r.statusBaru || (r.status === "Selesai" ? "TUNTAS" : "-")}
+                      </span>
                     </td>
                   </tr>
                 );
@@ -1684,24 +2276,35 @@ export default function Remedial() {
             )}
           </tbody>
         </table>
+      </div>
 
-        {/* TANDA TANGAN FORMAL */}
-        <div className="grid grid-cols-2 text-xs pt-4 break-inside-avoid">
-          <div className="text-left pl-6">
-            <p>Mengetahui,</p>
-            <p className="font-bold">Kepala Sekolah</p>
-            <div className="h-16" />
-            <p className="font-bold underline">{kepsekName}</p>
-            <p className="text-[11px] text-gray-700">{kepsekNip}</p>
-          </div>
-          <div className="text-right pr-6">
-            <p>Biau, {todayStr}</p>
-            <p className="font-bold">Guru Mata Pelajaran</p>
-            <div className="h-16" />
-            <p className="font-bold underline">{guruName}</p>
-            <p className="text-[11px] text-gray-700">{guruNip}</p>
+      {/* TANDA TANGAN (Hanya pada Halaman Terakhir jika showSignatures aktif) */}
+      {isLastPage && showSignatures && (
+        <div className="pt-3 break-inside-avoid">
+          <div className="grid grid-cols-2 text-[10px]">
+            <div className="text-left pl-6">
+              <p>Mengetahui,</p>
+              <p className="font-bold">Kepala Sekolah</p>
+              <div className={densityStyles.sigSpace} />
+              <p className="font-bold underline">{kepsekName}</p>
+              <p className="text-[9px] text-gray-700">{kepsekNip}</p>
+            </div>
+            <div className="text-right pr-6">
+              <p>Biau, {todayStr}</p>
+              <p className="font-bold">Guru Mata Pelajaran</p>
+              <div className={densityStyles.sigSpace} />
+              <p className="font-bold underline">{guruName}</p>
+              <p className="text-[9px] text-gray-700">{guruNip}</p>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* FOOTER */}
+      <div className="border-t border-gray-300 mt-2 pt-1 flex justify-between items-center text-[9px] text-gray-500">
+        <div>{schoolName} • Dokumen Rekapitulasi Pelaksanaan Remedial</div>
+        <div>Tanggal Cetak: {todayStr}</div>
+        <div className="font-bold text-gray-700">Halaman {pageIndex + 1} dari {totalPages}</div>
       </div>
     </div>
   );
