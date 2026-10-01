@@ -10,14 +10,34 @@ import {
   BookOpen,
   AlertTriangle,
   Plus,
+  Search,
+  Filter,
+  Printer,
+  FileText,
+  X,
+  RotateCcw,
+  Check,
+  ExternalLink,
+  Sparkles,
+  Download,
 } from "lucide-react";
 import { Remedial as TRemedial } from "@/lib/types";
 import { generateId } from "@/lib/utils";
 
 export default function Remedial() {
-  const { state, updateItem, addItem, showToast , filteredKelas } = useStore();
-  const activeTA = state.agmp_tahun_ajaran.find(ta => ta.isActive);
-  const activeTaId = activeTA?.id || '';
+  const { state, updateItem, addItem, showToast, filteredKelas } = useStore();
+  const activeTA = state.agmp_tahun_ajaran.find((ta) => ta.isActive);
+  const activeTaId = activeTA?.id || "";
+
+  // View state: "daftar" (card view) or "rekap" (recap table view)
+  const [activeView, setActiveView] = useState<"daftar" | "rekap">("daftar");
+
+  // Filter & Search states
+  const [selectedKelasId, setSelectedKelasId] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [remedialStatusFilter, setRemedialStatusFilter] = useState<
+    "semua" | "sedang" | "selesai" | "Direncanakan" | "Berlangsung"
+  >("semua");
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -26,18 +46,92 @@ export default function Remedial() {
   const [manualSumatifId, setManualSumatifId] = useState("");
   const [manualSiswaId, setManualSiswaId] = useState("");
 
-  const remedialList = state.agmp_remedial.filter(r => (activeTaId ? r.taId === activeTaId : true));
+  const remedialList = useMemo(() => {
+    return state.agmp_remedial.filter((r) =>
+      activeTaId ? r.taId === activeTaId || !r.taId : true
+    );
+  }, [state.agmp_remedial, activeTaId]);
+
+  const availableKelas = useMemo(() => {
+    return filteredKelas.length > 0 ? filteredKelas : state.agmp_kelas;
+  }, [filteredKelas, state.agmp_kelas]);
+
+  // Filtered remedial list based on Class, Search Query, and Status
+  const filteredRemedialList = useMemo(() => {
+    return remedialList.filter((r) => {
+      const siswa = state.agmp_siswa.find((s) => s.id === r.siswaId);
+      const kelasId = r.kelasId || siswa?.kelasId || "";
+      const tp = state.agmp_tp.find((t) => t.id === r.tpId);
+
+      // Class Filter
+      if (selectedKelasId && kelasId !== selectedKelasId) {
+        return false;
+      }
+
+      // Status Filter
+      if (remedialStatusFilter === "sedang") {
+        if (r.status !== "Berlangsung" && r.status !== "Direncanakan") {
+          return false;
+        }
+      } else if (remedialStatusFilter === "selesai") {
+        if (r.status !== "Selesai") {
+          return false;
+        }
+      } else if (remedialStatusFilter !== "semua") {
+        if (r.status !== remedialStatusFilter) {
+          return false;
+        }
+      }
+
+      // Search Query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const nama = (siswa?.nama || "").toLowerCase();
+        const nisn = (siswa?.nisn || "").toLowerCase();
+        const tpKode = (tp?.kode || "").toLowerCase();
+        const tpDeskripsi = (tp?.deskripsi || "").toLowerCase();
+        const jenis = (r.jenis || "").toLowerCase();
+        const pic = (r.pic || "").toLowerCase();
+        const status = (r.status || "").toLowerCase();
+        const kelasNama = (
+          state.agmp_kelas.find((k) => k.id === kelasId)?.nama || ""
+        ).toLowerCase();
+
+        const match =
+          nama.includes(q) ||
+          nisn.includes(q) ||
+          tpKode.includes(q) ||
+          tpDeskripsi.includes(q) ||
+          jenis.includes(q) ||
+          pic.includes(q) ||
+          status.includes(q) ||
+          kelasNama.includes(q);
+
+        if (!match) return false;
+      }
+
+      return true;
+    });
+  }, [
+    remedialList,
+    selectedKelasId,
+    remedialStatusFilter,
+    searchQuery,
+    state.agmp_siswa,
+    state.agmp_tp,
+    state.agmp_kelas,
+  ]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Direncanakan":
-        return "bg-gray-100 text-gray-700";
+        return "bg-blue-50 text-blue-700 border border-blue-200";
       case "Berlangsung":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-amber-100 text-amber-800 border border-amber-300";
       case "Selesai":
-        return "bg-green-100 text-green-800";
+        return "bg-emerald-100 text-emerald-800 border border-emerald-300";
       case "Dibatalkan":
-        return "bg-red-100 text-red-800";
+        return "bg-red-100 text-red-800 border border-red-200";
       default:
         return "bg-gray-100 text-gray-700";
     }
@@ -48,15 +142,28 @@ export default function Remedial() {
     let berlangsung = 0;
     let selesai = 0;
 
-    remedialList.forEach((r) => {
+    const listToCount = selectedKelasId
+      ? remedialList.filter((r) => {
+          const siswa = state.agmp_siswa.find((s) => s.id === r.siswaId);
+          return (r.kelasId || siswa?.kelasId) === selectedKelasId;
+        })
+      : remedialList;
+
+    listToCount.forEach((r) => {
       if (r.status === "Direncanakan" || r.status === "Dibatalkan")
         perluPerhatian++;
       else if (r.status === "Berlangsung") berlangsung++;
       else if (r.status === "Selesai") selesai++;
     });
 
-    return { perluPerhatian, berlangsung, selesai };
-  }, [remedialList]);
+    return {
+      perluPerhatian,
+      berlangsung,
+      selesai,
+      total: listToCount.length,
+      sedangRemedial: perluPerhatian + berlangsung,
+    };
+  }, [remedialList, selectedKelasId, state.agmp_siswa]);
 
   const handleSimpanNilai = (id: string, level: number) => {
     let nilai = 0;
@@ -211,18 +318,182 @@ export default function Remedial() {
     });
   };
 
+  const schoolName = state.agmp_pengaturan?.sekolah?.trim() || "SMP NEGERI 1 BIAU";
+  const guruName = state.agmp_pengaturan?.guruNama?.trim() || "Guru Mata Pelajaran";
+  const mapelName =
+    state.agmp_mapel?.find((m) => m.id === state.agmp_pengaturan?.mapelId)?.nama ||
+    state.agmp_pengaturan?.mapel ||
+    "Mata Pelajaran";
+  const todayStr = new Date().toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  const selectedKelasObj = availableKelas.find((k) => k.id === selectedKelasId);
+
+  const kepsekName =
+    (state.agmp_pengaturan as any)?.kepalaSekolah ||
+    "( ............................................ )";
+  const kepsekNip = (state.agmp_pengaturan as any)?.nipKepsek
+    ? `NIP. ${(state.agmp_pengaturan as any).nipKepsek}`
+    : "NIP. ........................................";
+  const guruNip = (state.agmp_pengaturan as any)?.nipGuru
+    ? `NIP. ${(state.agmp_pengaturan as any).nipGuru}`
+    : "NIP. ........................................";
+
+  const handleExportCsv = () => {
+    const headers = [
+      "No",
+      "Nama Siswa",
+      "NISN",
+      "Kelas",
+      "TP / Asesmen",
+      "Deskripsi TP",
+      "Nilai Awal Sumatif",
+      "Level Awal",
+      "Jenis Program Remedial",
+      "PIC / Pendamping",
+      "Jadwal",
+      "Target Selesai",
+      "Status Pelaksanaan",
+      "Nilai Baru Remedial",
+      "Ketuntasan Baru"
+    ];
+
+    const rows = filteredRemedialList.map((r, idx) => {
+      const s = state.agmp_siswa.find((sis) => sis.id === r.siswaId);
+      const tp = state.agmp_tp.find((t) => t.id === r.tpId);
+      const existingSumatif = state.agmp_sumatif.find((sum) => sum.id === r.sumatifId);
+      const sumatifAsli = existingSumatif?.records?.[r.siswaId];
+      const kelasNama = state.agmp_kelas.find((k) => k.id === (r.kelasId || s?.kelasId))?.nama || "-";
+
+      return [
+        idx + 1,
+        `"${(s?.nama || '-').replace(/"/g, '""')}"`,
+        `"${s?.nisn || '-'}"`,
+        `"${kelasNama}"`,
+        `"TP ${tp?.kode || '-'}"`,
+        `"${(tp?.deskripsi || '-').replace(/"/g, '""')}"`,
+        sumatifAsli?.nilai ?? "-",
+        sumatifAsli?.level ? `L${sumatifAsli.level}` : "-",
+        `"${(r.jenis || '-').replace(/"/g, '""')}"`,
+        `"${(r.pic || '-').replace(/"/g, '""')}"`,
+        `"${r.jadwal || '-'}"`,
+        `"${r.target || '-'}"`,
+        `"${r.status}"`,
+        r.nilaiBaru !== undefined ? r.nilaiBaru : "-",
+        `"${r.statusBaru || (r.status === 'Selesai' ? 'TUNTAS' : '-')}"`
+      ];
+    });
+
+    const csvContent =
+      "data:text/csv;charset=utf-8,\uFEFF" +
+      [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    const kelasStr = selectedKelasObj ? selectedKelasObj.nama.replace(/\s+/g, "_") : "Semua_Kelas";
+    const statusStr =
+      remedialStatusFilter === "sedang"
+        ? "Sedang_Remedial"
+        : remedialStatusFilter === "selesai"
+        ? "Tuntas_Remedial"
+        : "Semua_Status";
+    link.setAttribute("download", `Rekap_Remedial_${kelasStr}_${statusStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
-    <div className="space-y-6 pb-20">
-      <header>
-        <h2 className="text-2xl font-bold text-gray-900">Program Remedial</h2>
-        <p className="text-sm text-gray-500 mt-1">
-          Kelola dan pantau program perbaikan murid secara komprehensif.
-        </p>
+    <div className="space-y-6 pb-20 print:space-y-0 print:pb-0">
+      {/* Print CSS for Rekap Siswa Remedial */}
+      <style>{`
+        @media print {
+          @page {
+            size: landscape;
+            margin: 8mm 10mm;
+          }
+          body {
+            background: white !important;
+            color: black !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          header, nav, aside, .print\\:hidden, #main-sidebar, button, input, select {
+            display: none !important;
+          }
+          main {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+          }
+          #print-rekap-container {
+            display: block !important;
+            width: 100% !important;
+          }
+          table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+          }
+          tr {
+            page-break-inside: avoid !important;
+          }
+        }
+      `}</style>
+
+      {/* Main Header & Actions (Hidden in Print) */}
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+            Program Remedial
+            {selectedKelasObj && (
+              <span className="text-xs font-semibold px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full">
+                {selectedKelasObj.nama}
+              </span>
+            )}
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Kelola program perbaikan, pantau siswa yang sedang remedial per kelas, dan cetak rekap data hasil remedial.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+          <button
+            onClick={() => {
+              setActiveView("rekap");
+              setTimeout(() => window.print(), 150);
+            }}
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all shadow-indigo-100 cursor-pointer"
+          >
+            <Printer className="w-4 h-4" />
+            Cetak Rekap
+          </button>
+          <button
+            onClick={() => setShowManualAdd(!showManualAdd)}
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-xl text-sm font-bold border border-blue-200 transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4" /> Flag Manual
+          </button>
+        </div>
       </header>
 
-      {/* DASHBOARD TRACKING */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-center gap-4 shadow-sm">
+      {/* DASHBOARD TRACKING (Interactive Status Filter) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 print:hidden">
+        <div
+          onClick={() =>
+            setRemedialStatusFilter(
+              remedialStatusFilter === "Direncanakan" ? "semua" : "Direncanakan"
+            )
+          }
+          className={`bg-red-50 border p-4 rounded-2xl flex items-center gap-4 shadow-sm cursor-pointer transition-all hover:shadow-md ${
+            remedialStatusFilter === "Direncanakan"
+              ? "border-red-400 ring-2 ring-red-400"
+              : "border-red-100 hover:border-red-200"
+          }`}
+          title="Klik untuk filter status Direncanakan"
+        >
           <div className="bg-white p-3 rounded-xl shadow-sm text-red-600">
             <AlertTriangle className="w-6 h-6" />
           </div>
@@ -231,11 +502,24 @@ export default function Remedial() {
               {dashboardStats.perluPerhatian}
             </p>
             <p className="text-xs font-bold text-red-900 uppercase tracking-widest mt-1">
-              Perlu Perhatian
+              Perlu Perhatian (Direncanakan)
             </p>
           </div>
         </div>
-        <div className="bg-yellow-50 border border-yellow-100 p-4 rounded-2xl flex items-center gap-4 shadow-sm">
+
+        <div
+          onClick={() =>
+            setRemedialStatusFilter(
+              remedialStatusFilter === "Berlangsung" ? "semua" : "Berlangsung"
+            )
+          }
+          className={`bg-yellow-50 border p-4 rounded-2xl flex items-center gap-4 shadow-sm cursor-pointer transition-all hover:shadow-md ${
+            remedialStatusFilter === "Berlangsung"
+              ? "border-yellow-400 ring-2 ring-yellow-400"
+              : "border-yellow-100 hover:border-yellow-200"
+          }`}
+          title="Klik untuk filter siswa yang Sedang Berlangsung"
+        >
           <div className="bg-white p-3 rounded-xl shadow-sm text-yellow-600">
             <Clock className="w-6 h-6" />
           </div>
@@ -248,7 +532,20 @@ export default function Remedial() {
             </p>
           </div>
         </div>
-        <div className="bg-green-50 border border-green-100 p-4 rounded-2xl flex items-center gap-4 shadow-sm">
+
+        <div
+          onClick={() =>
+            setRemedialStatusFilter(
+              remedialStatusFilter === "selesai" ? "semua" : "selesai"
+            )
+          }
+          className={`bg-green-50 border p-4 rounded-2xl flex items-center gap-4 shadow-sm cursor-pointer transition-all hover:shadow-md ${
+            remedialStatusFilter === "selesai"
+              ? "border-green-400 ring-2 ring-green-400"
+              : "border-green-100 hover:border-green-200"
+          }`}
+          title="Klik untuk filter siswa yang Tuntas Remedial"
+        >
           <div className="bg-white p-3 rounded-xl shadow-sm text-green-600">
             <CheckCircle2 className="w-6 h-6" />
           </div>
@@ -263,24 +560,226 @@ export default function Remedial() {
         </div>
       </div>
 
-      {dashboardStats.perluPerhatian > 0 && (
-        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-xl text-sm text-blue-800">
-          Terdapat <strong>{dashboardStats.perluPerhatian} murid</strong> yang
-          perlu segera ditindaklanjuti untuk program remedial.
+      {dashboardStats.sedangRemedial > 0 && (
+        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-xl text-sm text-blue-800 print:hidden flex items-center justify-between gap-4">
+          <div>
+            Terdapat <strong>{dashboardStats.sedangRemedial} siswa</strong> yang sedang atau perlu mengikuti program remedial
+            {selectedKelasObj ? ` di ${selectedKelasObj.nama}` : ""}.
+          </div>
+          {remedialStatusFilter !== "sedang" && (
+            <button
+              onClick={() => setRemedialStatusFilter("sedang")}
+              className="text-xs font-bold text-blue-700 underline hover:text-blue-900 whitespace-nowrap cursor-pointer"
+            >
+              Tampilkan Siswa Sedang Remedial
+            </button>
+          )}
         </div>
       )}
 
-      {/* LIST OF REMEDIAL */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h3 className="font-bold text-gray-900">Daftar Murid Remedial</h3>
-          <button
-            onClick={() => setShowManualAdd(!showManualAdd)}
-            className="flex items-center gap-1 text-sm bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-100 font-bold transition-colors w-fit"
-          >
-            <Plus className="w-4 h-4" /> Flag Manual
-          </button>
+      {/* FILTER & SEARCH BAR (Fitur Pencarian & Filter Kelas) */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-sm print:hidden space-y-3.5">
+        <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+          {/* Fitur Pencarian Data Siswa */}
+          <div className="relative flex-1 min-w-[240px]">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Cari murid (nama siswa, NISN, materi / TP, jenis program)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-9 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-gray-400 font-medium"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 p-0.5 rounded-full hover:bg-gray-200 transition-colors cursor-pointer"
+                title="Hapus pencarian"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Filter Berdasarkan Kelas */}
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5">
+            <div className="relative min-w-[190px] flex-1 sm:flex-initial">
+              <div className="absolute left-3 top-2.5 pointer-events-none text-gray-500">
+                <Users className="w-4 h-4" />
+              </div>
+              <select
+                value={selectedKelasId}
+                onChange={(e) => setSelectedKelasId(e.target.value)}
+                className="w-full pl-9 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all cursor-pointer"
+              >
+                <option value="">Semua Kelas ({availableKelas.length})</option>
+                {availableKelas.map((k) => {
+                  const countInClass = remedialList.filter((r) => {
+                    const s = state.agmp_siswa.find((sis) => sis.id === r.siswaId);
+                    return (r.kelasId || s?.kelasId) === k.id;
+                  }).length;
+                  return (
+                    <option key={k.id} value={k.id}>
+                      {k.nama} {countInClass > 0 ? `(${countInClass} Siswa)` : ""}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            {/* Filter Status Dropdown */}
+            <div className="relative min-w-[170px] flex-1 sm:flex-initial">
+              <select
+                value={remedialStatusFilter}
+                onChange={(e) => setRemedialStatusFilter(e.target.value as any)}
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all cursor-pointer"
+              >
+                <option value="semua">Semua Status</option>
+                <option value="sedang">Sedang Remedial (Aktif)</option>
+                <option value="Berlangsung">Sedang Berlangsung</option>
+                <option value="Direncanakan">Direncanakan</option>
+                <option value="selesai">Tuntas / Selesai</option>
+              </select>
+            </div>
+
+            {/* Reset Filters button if any is active */}
+            {(selectedKelasId || searchQuery || remedialStatusFilter !== "semua") && (
+              <button
+                onClick={() => {
+                  setSelectedKelasId("");
+                  setSearchQuery("");
+                  setRemedialStatusFilter("semua");
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors whitespace-nowrap cursor-pointer"
+                title="Reset semua filter dan pencarian"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Reset
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Quick Status Filter Pills Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-100 text-xs">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-gray-400 font-medium mr-1 flex items-center gap-1">
+              <Filter className="w-3 h-3" /> Status:
+            </span>
+            <button
+              onClick={() => setRemedialStatusFilter("semua")}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                remedialStatusFilter === "semua"
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Semua ({dashboardStats.total})
+            </button>
+            <button
+              onClick={() => setRemedialStatusFilter("sedang")}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                remedialStatusFilter === "sedang"
+                  ? "bg-amber-600 text-white shadow-sm"
+                  : "bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200/60"
+              }`}
+            >
+              <Clock className="w-3 h-3" />
+              Sedang Remedial ({dashboardStats.sedangRemedial})
+            </button>
+            <button
+              onClick={() => setRemedialStatusFilter("Berlangsung")}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                remedialStatusFilter === "Berlangsung"
+                  ? "bg-yellow-600 text-white shadow-sm"
+                  : "bg-yellow-50 text-yellow-800 hover:bg-yellow-100 border border-yellow-200/60"
+              }`}
+            >
+              Berlangsung ({dashboardStats.berlangsung})
+            </button>
+            <button
+              onClick={() => setRemedialStatusFilter("Direncanakan")}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                remedialStatusFilter === "Direncanakan"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200/60"
+              }`}
+            >
+              Direncanakan ({dashboardStats.perluPerhatian})
+            </button>
+            <button
+              onClick={() => setRemedialStatusFilter("selesai")}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                remedialStatusFilter === "selesai"
+                  ? "bg-emerald-600 text-white shadow-sm"
+                  : "bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200/60"
+              }`}
+            >
+              <CheckCircle2 className="w-3 h-3" />
+              Tuntas ({dashboardStats.selesai})
+            </button>
+          </div>
+
+          <div className="text-gray-500 font-medium text-[11px]">
+            {searchQuery && (
+              <span className="text-blue-600 font-semibold mr-2">
+                Hasil pencarian: &quot;{searchQuery}&quot;
+              </span>
+            )}
+            Menampilkan <strong className="text-gray-900">{filteredRemedialList.length}</strong> data siswa
+          </div>
+        </div>
+      </div>
+
+      {/* VIEW TABS: "Kelola Program" (Cards) vs "Rekap Remedial Kelas" (Table) */}
+      <div className="flex border-b border-gray-200 print:hidden">
+        <button
+          onClick={() => setActiveView("daftar")}
+          className={`flex items-center gap-2 px-6 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${
+            activeView === "daftar"
+              ? "border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-xl"
+              : "border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300"
+          }`}
+        >
+          <BookOpen className="w-4 h-4" />
+          Kelola Program ({filteredRemedialList.length})
+        </button>
+
+        <button
+          onClick={() => setActiveView("rekap")}
+          className={`flex items-center gap-2 px-6 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${
+            activeView === "rekap"
+              ? "border-blue-600 text-blue-600 bg-blue-50/50 rounded-t-xl"
+              : "border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300"
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          Rekap Remedial Kelas
+          {remedialStatusFilter === "sedang" && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold border border-amber-200">
+              Sedang Remedial
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* VIEW SWITCH: "daftar" (Kelola Program) OR "rekap" (Rekap Remedial Kelas) */}
+      {activeView === "daftar" ? (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="font-bold text-gray-900 text-base">Kelola Program Remedial</h3>
+              <p className="text-xs text-gray-500">
+                Pilih murid untuk membuka instrumen penilaian ulang dan mencatat nilai perbaikan.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowManualAdd(!showManualAdd)}
+              className="flex items-center gap-1.5 text-xs bg-blue-50 text-blue-700 px-3.5 py-2 rounded-xl border border-blue-200 hover:bg-blue-100 font-bold transition-colors w-fit cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> Flag Manual
+            </button>
+          </div>
 
         {showManualAdd && (
           <div className="bg-white p-5 rounded-2xl border border-blue-100 shadow-sm flex flex-col md:flex-row gap-4 items-end flex-wrap">
@@ -410,18 +909,46 @@ export default function Remedial() {
           </div>
         )}
 
-        {remedialList.length === 0 ? (
-          <div className="bg-white border rounded-2xl p-10 text-center">
-            <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="w-8 h-8 text-green-500" />
+        {filteredRemedialList.length === 0 ? (
+          remedialList.length === 0 ? (
+            <div className="bg-white border rounded-2xl p-10 text-center">
+              <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 className="w-8 h-8 text-green-500" />
+              </div>
+              <p className="font-bold text-gray-900">Semua Tuntas!</p>
+              <p className="text-sm text-gray-500 mt-2">
+                Belum ada data remedial dari modul sumatif akhir.
+              </p>
             </div>
-            <p className="font-bold text-gray-900">Semua Tuntas!</p>
-            <p className="text-sm text-gray-500 mt-2">
-              Belum ada data remedial dari modul sumatif akhir.
-            </p>
-          </div>
+          ) : (
+            <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center">
+              <div className="bg-gray-50 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 text-gray-400">
+                <Search className="w-6 h-6" />
+              </div>
+              <p className="font-bold text-gray-900 text-base">Tidak Ditemukan Siswa Remedial</p>
+              <p className="text-sm text-gray-500 mt-1 max-w-md mx-auto">
+                {searchQuery
+                  ? `Tidak ada siswa yang sesuai dengan kata kunci "${searchQuery}".`
+                  : remedialStatusFilter === "sedang"
+                  ? `Tidak ada siswa yang sedang berstatus remedial pada filter ${selectedKelasObj ? selectedKelasObj.nama : 'kelas ini'}.`
+                  : remedialStatusFilter === "selesai"
+                  ? `Belum ada siswa yang selesai program remedial pada filter ${selectedKelasObj ? selectedKelasObj.nama : 'kelas ini'}.`
+                  : "Tidak ada siswa yang sesuai dengan filter kelas saat ini."}
+              </p>
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedKelasId("");
+                  setRemedialStatusFilter("semua");
+                }}
+                className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" /> Reset Filter & Pencarian
+              </button>
+            </div>
+          )
         ) : (
-          remedialList.map((r) => {
+          filteredRemedialList.map((r) => {
             const siswa = state.agmp_siswa.find((s) => s.id === r.siswaId);
             const tp = state.agmp_tp.find((t) => t.id === r.tpId);
             const existingSumatif = state.agmp_sumatif.find((s) => s.id === r.sumatifId);
@@ -796,6 +1323,385 @@ export default function Remedial() {
             );
           })
         )}
+      </div>
+      ) : (
+        /* REKAP REMEDIAL KELAS VIEW (Tampilan Rekap Berdasarkan Filter Kelas & Pencarian) */
+        <div className="space-y-5">
+          {/* Header Card for Rekap View */}
+          <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-lg font-bold text-gray-900">
+                  Rekapitulasi Siswa Remedial
+                </h3>
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                  {selectedKelasObj ? selectedKelasObj.nama : "Semua Kelas"}
+                </span>
+                {remedialStatusFilter === "sedang" && (
+                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                    Sedang Remedial
+                  </span>
+                )}
+                {remedialStatusFilter === "selesai" && (
+                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    Tuntas / Selesai
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Daftar rekap pemantauan siswa yang sedang berlangsung maupun yang sudah menyelesaikan program remedial berdasarkan filter kelas.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleExportCsv}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                title="Unduh data rekap ke format spreadsheet CSV"
+              >
+                <Download className="w-3.5 h-3.5" /> Unduh CSV
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+                title="Cetak lembar rekapitulasi formal"
+              >
+                <Printer className="w-3.5 h-3.5" /> Cetak Lembar Rekap
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Metrics in Rekap View */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Total Siswa Terdata</p>
+              <p className="text-2xl font-black text-gray-900 mt-1">{dashboardStats.total}</p>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-amber-200 bg-amber-50/30 shadow-sm">
+              <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Sedang Remedial (Aktif)</p>
+              <p className="text-2xl font-black text-amber-700 mt-1">{dashboardStats.sedangRemedial}</p>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-emerald-200 bg-emerald-50/30 shadow-sm">
+              <p className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Tuntas / Selesai</p>
+              <p className="text-2xl font-black text-emerald-700 mt-1">{dashboardStats.selesai}</p>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-blue-200 bg-blue-50/30 shadow-sm">
+              <p className="text-[11px] font-bold text-blue-700 uppercase tracking-wider">% Ketuntasan</p>
+              <p className="text-2xl font-black text-blue-700 mt-1">
+                {dashboardStats.total > 0
+                  ? `${Math.round((dashboardStats.selesai / dashboardStats.total) * 100)}%`
+                  : "0%"}
+              </p>
+            </div>
+          </div>
+
+          {/* Rekap Table Container */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <div className="text-xs text-gray-600 font-medium">
+                Menampilkan <strong className="text-gray-900">{filteredRemedialList.length}</strong> data siswa remedial
+                {selectedKelasObj ? ` di kelas ${selectedKelasObj.nama}` : ""}
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span className="flex items-center gap-1">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-400"></span> Sedang Remedial
+                </span>
+                <span className="flex items-center gap-1 ml-2">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Tuntas / Selesai
+                </span>
+              </div>
+            </div>
+
+            {filteredRemedialList.length === 0 ? (
+              <div className="p-10 text-center">
+                <div className="bg-gray-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 text-gray-400">
+                  <Search className="w-6 h-6" />
+                </div>
+                <p className="font-bold text-gray-800 text-base">Tidak Ada Data Siswa Remedial</p>
+                <p className="text-xs text-gray-500 mt-1 max-w-md mx-auto">
+                  {searchQuery
+                    ? `Tidak ditemukan data siswa dengan kata kunci "${searchQuery}". Coba kata kunci lain atau reset pencarian.`
+                    : remedialStatusFilter === "sedang"
+                    ? `Tidak ada siswa yang sedang berstatus remedial pada filter ${selectedKelasObj ? selectedKelasObj.nama : 'ini'}.`
+                    : remedialStatusFilter === "selesai"
+                    ? `Belum ada siswa yang selesai program remedial pada filter ${selectedKelasObj ? selectedKelasObj.nama : 'ini'}.`
+                    : "Belum ada catatan remedial pada filter kelas ini."}
+                </p>
+                {(searchQuery || selectedKelasId || remedialStatusFilter !== "semua") && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSelectedKelasId("");
+                      setRemedialStatusFilter("semua");
+                    }}
+                    className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" /> Reset Semua Filter
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead className="bg-slate-50 text-slate-700 border-b border-gray-200 uppercase font-bold text-[11px] tracking-wider">
+                    <tr>
+                      <th className="py-3 px-3 text-center w-10">No</th>
+                      <th className="py-3 px-3 min-w-[160px]">Nama Siswa & NISN</th>
+                      <th className="py-3 px-3 text-center min-w-[70px]">Kelas</th>
+                      <th className="py-3 px-3 min-w-[150px]">TP / Materi Asesmen</th>
+                      <th className="py-3 px-3 text-center min-w-[80px]">Nilai Awal</th>
+                      <th className="py-3 px-3 min-w-[150px]">Program & PIC</th>
+                      <th className="py-3 px-3 min-w-[110px]">Jadwal / Target</th>
+                      <th className="py-3 px-3 text-center min-w-[110px]">Status Remedial</th>
+                      <th className="py-3 px-3 text-center min-w-[90px]">Nilai Remedial</th>
+                      <th className="py-3 px-3 text-center min-w-[90px]">Ketuntasan</th>
+                      <th className="py-3 px-3 text-center min-w-[80px]">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200/80">
+                    {filteredRemedialList.map((r, idx) => {
+                      const siswa = state.agmp_siswa.find((s) => s.id === r.siswaId);
+                      const tp = state.agmp_tp.find((t) => t.id === r.tpId);
+                      const existingSumatif = state.agmp_sumatif.find((s) => s.id === r.sumatifId);
+                      const sumatifAsli = existingSumatif?.records?.[r.siswaId];
+                      const kelasNama = state.agmp_kelas.find((k) => k.id === (r.kelasId || siswa?.kelasId))?.nama || "-";
+
+                      return (
+                        <tr key={r.id} className="hover:bg-blue-50/40 transition-colors">
+                          <td className="py-3 px-3 text-center font-medium text-gray-500">
+                            {idx + 1}
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="font-bold text-gray-900">{siswa?.nama || "-"}</div>
+                            <div className="text-[10px] text-gray-400 font-mono">NISN: {siswa?.nisn || "-"}</div>
+                          </td>
+                          <td className="py-3 px-3 text-center font-semibold text-gray-700">
+                            {kelasNama}
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="font-semibold text-blue-700">TP {tp?.kode || "-"}</div>
+                            <div className="text-[11px] text-gray-600 line-clamp-1" title={tp?.deskripsi}>
+                              {tp?.deskripsi || "-"}
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <span className="inline-block font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded">
+                              {sumatifAsli?.nilai ?? "-"}
+                            </span>
+                            {sumatifAsli?.level && (
+                              <div className="text-[10px] text-gray-400 font-medium">L{sumatifAsli.level}</div>
+                            )}
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="font-medium text-gray-800">{r.jenis || "-"}</div>
+                            <div className="text-[10px] text-gray-500">PIC: {r.pic || "-"}</div>
+                          </td>
+                          <td className="py-3 px-3 text-gray-600">
+                            <div>{r.jadwal ? r.jadwal.replace("T", " ") : "-"}</div>
+                            {r.target && <div className="text-[10px] text-gray-400">Target: {r.target}</div>}
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <span className={`inline-block px-2.5 py-1 rounded-md text-[11px] font-bold ${getStatusColor(r.status)}`}>
+                              {r.status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            {r.nilaiBaru !== undefined ? (
+                              <span className="font-black text-gray-900 text-sm">
+                                {r.nilaiBaru}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 italic">Belum dinilai</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            {r.statusBaru ? (
+                              <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${
+                                r.statusBaru === "TUNTAS"
+                                  ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                                  : "bg-red-100 text-red-800 border border-red-300"
+                              }`}>
+                                {r.statusBaru}
+                              </span>
+                            ) : r.status === "Selesai" ? (
+                              <span className="inline-block px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                TUNTAS
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <button
+                              onClick={() => {
+                                setActiveView("daftar");
+                                setExpandedId(r.id);
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                              title="Buka untuk kelola dan input nilai remedial"
+                            >
+                              Kelola <ExternalLink className="w-3 h-3" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* PRINT CONTAINER (KOP SURAT & FORMAL TABLE) */}
+      <div id="print-rekap-container" className="hidden print:block text-black bg-white">
+        {/* KOP SURAT */}
+        <div className="text-center border-b-2 border-black pb-3 mb-4">
+          <h3 className="text-xs uppercase tracking-wider font-semibold">
+            PEMERINTAH KABUPATEN BUOL
+          </h3>
+          <h4 className="text-xs uppercase tracking-wider font-semibold">
+            DINAS PENDIDIKAN DAN KEBUDAYAAN
+          </h4>
+          <h2 className="text-base uppercase tracking-wider font-black mt-0.5">
+            {schoolName}
+          </h2>
+          <p className="text-[10px] text-gray-700 mt-0.5">
+            Alamat: Jl. Syarif Mansur No. 05 Kel. Biau, Kec. Biau, Kab. Buol, Prov. Sulawesi Tengah
+          </p>
+          <div className="border-t border-black mt-1 pt-0.5" />
+        </div>
+
+        {/* JUDUL DOKUMEN */}
+        <div className="text-center mb-4">
+          <h2 className="text-sm font-black uppercase tracking-wide underline">
+            REKAPITULASI PELAKSANAAN PROGRAM REMEDIAL
+          </h2>
+          <p className="text-[11px] font-semibold text-gray-700 mt-1">
+            {remedialStatusFilter === "sedang"
+              ? "DAFTAR SISWA SEDANG MENGIKUTI PROGRAM REMEDIAL"
+              : remedialStatusFilter === "selesai"
+              ? "DAFTAR SISWA YANG TELAH MENYELESAIKAN PROGRAM REMEDIAL"
+              : "DAFTAR KESELURUHAN SISWA PROGRAM REMEDIAL"}
+          </p>
+        </div>
+
+        {/* META DATA TABLE */}
+        <div className="grid grid-cols-2 text-xs mb-3 font-medium">
+          <div className="space-y-1">
+            <div className="flex gap-2">
+              <span className="w-28 text-gray-600">Satuan Pendidikan</span>
+              <span>: <strong className="text-black">{schoolName}</strong></span>
+            </div>
+            <div className="flex gap-2">
+              <span className="w-28 text-gray-600">Mata Pelajaran</span>
+              <span>: <strong className="text-black">{mapelName}</strong></span>
+            </div>
+            <div className="flex gap-2">
+              <span className="w-28 text-gray-600">Kelas / Rombel</span>
+              <span>: <strong className="text-black">{selectedKelasObj ? selectedKelasObj.nama : "Semua Kelas"}</strong></span>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <div className="flex gap-2">
+              <span className="w-28 text-gray-600">Tahun Pelajaran</span>
+              <span>: <strong className="text-black">{activeTA?.nama || "2024/2025"}</strong></span>
+            </div>
+            <div className="flex gap-2">
+              <span className="w-28 text-gray-600">Semester</span>
+              <span>: <strong className="text-black">{activeTA?.semester || "Ganjil"}</strong></span>
+            </div>
+            <div className="flex gap-2">
+              <span className="w-28 text-gray-600">Guru Pengampu</span>
+              <span>: <strong className="text-black">{guruName}</strong></span>
+            </div>
+          </div>
+        </div>
+
+        {/* PRINT TABLE */}
+        <table className="w-full text-[10px] border border-black border-collapse mb-5">
+          <thead>
+            <tr className="bg-gray-100 border border-black text-center font-bold">
+              <th className="border border-black p-1.5 w-6">No</th>
+              <th className="border border-black p-1.5 min-w-[120px] text-left">Nama Siswa</th>
+              <th className="border border-black p-1.5 w-20">NISN</th>
+              <th className="border border-black p-1.5 w-14">Kelas</th>
+              <th className="border border-black p-1.5 min-w-[120px] text-left">Materi / TP</th>
+              <th className="border border-black p-1.5 w-14">Nilai Awal</th>
+              <th className="border border-black p-1.5 min-w-[100px] text-left">Bentuk Remedial</th>
+              <th className="border border-black p-1.5 w-16">PIC</th>
+              <th className="border border-black p-1.5 w-20">Jadwal</th>
+              <th className="border border-black p-1.5 w-20">Status</th>
+              <th className="border border-black p-1.5 w-14">Nilai Baru</th>
+              <th className="border border-black p-1.5 w-16">Hasil Akhir</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredRemedialList.length === 0 ? (
+              <tr>
+                <td colSpan={12} className="border border-black p-4 text-center italic text-gray-500">
+                  Tidak ada data siswa remedial untuk filter yang dipilih.
+                </td>
+              </tr>
+            ) : (
+              filteredRemedialList.map((r, idx) => {
+                const siswa = state.agmp_siswa.find((s) => s.id === r.siswaId);
+                const tp = state.agmp_tp.find((t) => t.id === r.tpId);
+                const existingSumatif = state.agmp_sumatif.find((s) => s.id === r.sumatifId);
+                const sumatifAsli = existingSumatif?.records?.[r.siswaId];
+                const kelasNama = state.agmp_kelas.find((k) => k.id === (r.kelasId || siswa?.kelasId))?.nama || "-";
+
+                return (
+                  <tr key={r.id} className="border border-black">
+                    <td className="border border-black p-1 text-center font-medium">{idx + 1}</td>
+                    <td className="border border-black p-1 font-semibold">{siswa?.nama || "-"}</td>
+                    <td className="border border-black p-1 text-center font-mono">{siswa?.nisn || "-"}</td>
+                    <td className="border border-black p-1 text-center font-medium">{kelasNama}</td>
+                    <td className="border border-black p-1">
+                      <strong>TP {tp?.kode || "-"}</strong>: {tp?.deskripsi?.substring(0, 40) || "-"}
+                    </td>
+                    <td className="border border-black p-1 text-center font-bold text-red-600">
+                      {sumatifAsli?.nilai ?? "-"}
+                    </td>
+                    <td className="border border-black p-1">{r.jenis || "-"}</td>
+                    <td className="border border-black p-1 text-center">{r.pic || "-"}</td>
+                    <td className="border border-black p-1 text-center">
+                      {r.jadwal ? r.jadwal.split("T")[0] : "-"}
+                    </td>
+                    <td className="border border-black p-1 text-center font-medium">
+                      {r.status}
+                    </td>
+                    <td className="border border-black p-1 text-center font-bold">
+                      {r.nilaiBaru !== undefined ? r.nilaiBaru : "-"}
+                    </td>
+                    <td className="border border-black p-1 text-center font-bold">
+                      {r.statusBaru || (r.status === "Selesai" ? "TUNTAS" : "-")}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+
+        {/* TANDA TANGAN FORMAL */}
+        <div className="grid grid-cols-2 text-xs pt-4 break-inside-avoid">
+          <div className="text-left pl-6">
+            <p>Mengetahui,</p>
+            <p className="font-bold">Kepala Sekolah</p>
+            <div className="h-16" />
+            <p className="font-bold underline">{kepsekName}</p>
+            <p className="text-[11px] text-gray-700">{kepsekNip}</p>
+          </div>
+          <div className="text-right pr-6">
+            <p>Biau, {todayStr}</p>
+            <p className="font-bold">Guru Mata Pelajaran</p>
+            <div className="h-16" />
+            <p className="font-bold underline">{guruName}</p>
+            <p className="text-[11px] text-gray-700">{guruNip}</p>
+          </div>
+        </div>
       </div>
     </div>
   );
