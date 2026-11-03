@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useStore } from "@/lib/store";
 import {
   Printer,
@@ -20,6 +20,7 @@ import {
   ChevronDown,
   Layers,
   Sparkles,
+  BookOpen,
 } from "lucide-react";
 import { TabId } from "@/components/Shell";
 import jsPDF from "jspdf";
@@ -91,6 +92,20 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
       )
       .sort((a, b) => a.kode.localeCompare(b.kode, undefined, { numeric: true }));
   }, [state.agmp_tp, selectedKelasId, selectedSemester, tpSemesterToMatch, selectedTA]);
+
+  // Filter by TP
+  const [selectedTpId, setSelectedTpId] = useState<string>("");
+
+  // Sync selectedTpId when class changes or tpList changes
+  useEffect(() => {
+    if (selectedTpId && !tpList.some((tp) => tp.id === selectedTpId)) {
+      setSelectedTpId("");
+    }
+  }, [selectedKelasId, tpList, selectedTpId]);
+
+  const activeTp = useMemo(() => {
+    return state.agmp_tp.find((tp) => tp.id === selectedTpId);
+  }, [state.agmp_tp, selectedTpId]);
 
   // KKTP Constants
   const interval = {
@@ -168,7 +183,12 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
     const needRemedialTPs: string[] = [];
     let completedRemedialCount = 0;
 
-    tpList.forEach((tp) => {
+    // Filter by selected TP if one is chosen, otherwise all TPs in class
+    const targetTps = selectedTpId
+      ? tpList.filter((tp) => tp.id === selectedTpId)
+      : tpList;
+
+    targetTps.forEach((tp) => {
       // Find sumatif for this TP & Kelas
       const sumatifMatches = state.agmp_sumatif.filter(
         (s) => s.tpId === tp.id && s.kelasId === selectedKelasId
@@ -320,7 +340,7 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
         sumatif,
       };
     });
-  }, [allSiswaInKelas, selectedKelasId, selectedTaId, tpList]);
+  }, [allSiswaInKelas, selectedKelasId, selectedTaId, tpList, selectedTpId]);
 
   // Class Summary Metrics
   const classMetrics = useMemo(() => {
@@ -558,7 +578,7 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
               `Kelas / Fase: ${kelasName} (${faseName})`,
               `Tahun Ajaran: ${taName}`,
               `Mata Pelajaran: ${mapelName}`,
-              `KKTP: 75`,
+              activeTp ? `Filter TP: TP ${activeTp.kode} (KKTP 75)` : `KKTP / KKM: 75`,
             ],
           ];
 
@@ -600,7 +620,9 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
           doc.setFontSize(7.5);
           doc.setTextColor(100, 116, 139);
           doc.text(
-            `Kelas: ${kelasName} (${faseName}) • Tahun Ajaran: ${taName} • Mata Pelajaran: ${mapelName} • KKTP: 75`,
+            activeTp
+              ? `Kelas: ${kelasName} (${faseName}) • TA: ${taName} • TP: ${activeTp.kode} • Mapel: ${mapelName} • KKTP: 75`
+              : `Kelas: ${kelasName} (${faseName}) • Tahun Ajaran: ${taName} • Mata Pelajaran: ${mapelName} • KKTP: 75`,
             165,
             15,
             { align: "center" }
@@ -844,7 +866,7 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
 
       {/* Filter Bar (Hidden in Print) */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 print:hidden space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
           {/* Filter Kelas */}
           <div>
             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
@@ -883,6 +905,26 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
             </select>
           </div>
 
+          {/* Filter Tujuan Pembelajaran (TP) */}
+          <div>
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+              <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
+              Filter TP (Tujuan Pembelajaran)
+            </label>
+            <select
+              value={selectedTpId}
+              onChange={(e) => setSelectedTpId(e.target.value)}
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 font-medium text-gray-800"
+            >
+              <option value="">Semua TP (Rata-rata Komprehensif)</option>
+              {tpList.map((tp) => (
+                <option key={tp.id} value={tp.id}>
+                  TP {tp.kode} - {tp.deskripsi.substring(0, 36)}...
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Search Box */}
           <div>
             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
@@ -910,6 +952,24 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
           </div>
         </div>
 
+        {/* Active Filter TP Banner */}
+        {activeTp && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-blue-50/90 border border-blue-200 rounded-xl text-xs text-blue-900 shadow-2xs">
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold bg-blue-600 text-white px-2 py-0.5 rounded-md text-[11px] shrink-0">
+                Filter TP Aktif: TP {activeTp.kode}
+              </span>
+              <span className="font-semibold text-blue-950 line-clamp-1">{activeTp.deskripsi}</span>
+            </div>
+            <button
+              onClick={() => setSelectedTpId("")}
+              className="text-xs font-bold text-blue-700 hover:text-blue-900 underline shrink-0 self-start sm:self-auto"
+            >
+              Reset ke Semua TP
+            </button>
+          </div>
+        )}
+
         {/* Info Badges & Metrics Row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-gray-100">
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
@@ -920,7 +980,9 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
           </div>
 
           <div className="bg-blue-50/70 p-3 rounded-xl border border-blue-100">
-            <span className="text-[11px] font-medium text-blue-600 block">Rata-rata Nilai</span>
+            <span className="text-[11px] font-medium text-blue-600 block">
+              {activeTp ? `Rata-rata TP ${activeTp.kode}` : "Rata-rata Nilai (Semua TP)"}
+            </span>
             <div className="text-xl font-bold text-blue-900 mt-0.5">
               {classMetrics.avgNilai} <span className="text-xs font-normal text-blue-600">/ 100</span>
             </div>
@@ -934,7 +996,9 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
           </div>
 
           <div className="bg-amber-50/70 p-3 rounded-xl border border-amber-100">
-            <span className="text-[11px] font-medium text-amber-700 block">Ketuntasan Belajar</span>
+            <span className="text-[11px] font-medium text-amber-700 block">
+              {activeTp ? `Ketuntasan TP ${activeTp.kode}` : "Ketuntasan Belajar"}
+            </span>
             <div className="text-xl font-bold text-amber-900 mt-0.5">
               {classMetrics.tuntasCount} <span className="text-xs font-normal text-amber-700">Tuntas</span>
               {classMetrics.remedialCount > 0 && (
@@ -978,7 +1042,9 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
                 <th className="py-3 px-4 min-w-[180px]">Nama Peserta Didik</th>
                 <th className="py-3 px-2 w-12 text-center">L/P</th>
                 <th className="py-3 px-3 min-w-[140px] text-center">Persentase Kehadiran</th>
-                <th className="py-3 px-3 min-w-[120px] text-center">Nilai Akhir Sumatif</th>
+                <th className="py-3 px-3 min-w-[120px] text-center">
+                  {activeTp ? `Nilai TP ${activeTp.kode}` : "Nilai Akhir Sumatif"}
+                </th>
                 <th className="py-3 px-4 min-w-[240px]">Catatan Penilaian Sumatif</th>
                 <th className="py-3 px-3 min-w-[170px]">Tindak Lanjut</th>
               </tr>
@@ -1122,6 +1188,7 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
               selectedTA={selectedTA}
               densityStyles={densityStyles}
               showSignatures={showSignatures}
+              activeTp={activeTp}
             />
           </div>
         ))}
@@ -1288,6 +1355,7 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
                     selectedTA={selectedTA}
                     densityStyles={densityStyles}
                     showSignatures={showSignatures}
+                    activeTp={activeTp}
                   />
                 </div>
               );
@@ -1320,6 +1388,7 @@ function PrintPaperPage({
   selectedTA,
   densityStyles,
   showSignatures,
+  activeTp,
 }: {
   pageIndex: number;
   totalPages: number;
@@ -1334,6 +1403,7 @@ function PrintPaperPage({
     lineHeight: string;
   };
   showSignatures: boolean;
+  activeTp?: any;
 }) {
   const schoolName = state.agmp_pengaturan.sekolah?.trim() || "SMP NEGERI 1 BIAU";
   const guruName = state.agmp_pengaturan.guruNama?.trim() || "Guru Mata Pelajaran";
@@ -1403,7 +1473,8 @@ function PrintPaperPage({
                 {schoolName} • REKAP NILAI HASIL BELAJAR PESERTA DIDIK (Lanjutan)
               </h2>
               <p className="text-[9.5px] text-slate-600">
-                Kelas: <span className="font-semibold text-slate-800">{kelasName} ({faseName})</span> • Tahun Ajaran: <span className="font-semibold text-slate-800">{taName}</span> • Mata Pelajaran: <span className="font-semibold text-slate-800">{mapelName}</span> • KKTP: 75
+                Kelas: <span className="font-semibold text-slate-800">{kelasName} ({faseName})</span> • Tahun Ajaran: <span className="font-semibold text-slate-800">{taName}</span> • Mata Pelajaran: <span className="font-semibold text-slate-800">{mapelName}</span>
+                {activeTp ? ` • TP: TP ${activeTp.kode} (KKTP 75)` : ` • KKTP: 75`}
               </p>
             </div>
             <div className="text-right text-[9.5px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
@@ -1426,7 +1497,11 @@ function PrintPaperPage({
             Mata Pelajaran: <span className="font-bold">{mapelName}</span>
           </div>
           <div className="text-right">
-            KKTP / KKM: <span className="font-bold">75</span>
+            {activeTp ? (
+              <span>Filter TP: <span className="font-bold text-blue-700">TP {activeTp.kode}</span> (KKTP 75)</span>
+            ) : (
+              <span>KKTP / KKM: <span className="font-bold">75</span></span>
+            )}
           </div>
         </div>
       )}
@@ -1446,7 +1521,7 @@ function PrintPaperPage({
                 Rekap Kehadiran
               </th>
               <th className={`border border-slate-900 min-w-[100px] ${densityStyles.headerText}`}>
-                Nilai Akhir Sumatif
+                {activeTp ? `Nilai TP ${activeTp.kode}` : "Nilai Akhir Sumatif"}
               </th>
               <th className={`border border-slate-900 text-left min-w-[200px] ${densityStyles.headerText}`}>
                 Catatan Penilaian Sumatif
