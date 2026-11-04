@@ -909,7 +909,7 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
           <div>
             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
               <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
-              Filter TP (Tujuan Pembelajaran)
+              Tujuan Pembelajaran
             </label>
             <select
               value={selectedTpId}
