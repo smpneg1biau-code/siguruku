@@ -1,128 +1,75 @@
-"use client";
-
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import { useStore } from "@/lib/store";
 import {
-  Printer,
-  Download,
-  Search,
   Filter,
-  Users,
-  Award,
-  Calendar,
-  CheckCircle,
-  AlertTriangle,
-  FileText,
+  Search,
   RotateCcw,
-  Eye,
   X,
-  Maximize2,
-  ChevronDown,
-  Layers,
-  Sparkles,
-  BookOpen,
+  FileText,
+  Download,
+  Printer,
+  UserCircle,
+  Target,
+  Award,
+  Sliders,
+  Calculator,
 } from "lucide-react";
 import { TabId } from "@/components/Shell";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-interface RekapNilaiProps {
-  onNavigate?: (tab: TabId) => void;
-}
-
-export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
+export default function RekapAkhir({
+  onNavigate,
+}: {
+  onNavigate: (tab: TabId) => void;
+}) {
   const { state, filteredKelas, showToast } = useStore();
 
-  const [selectedKelasId, setSelectedKelasId] = useState<string>(
-    filteredKelas[0]?.id || state.agmp_kelas[0]?.id || ""
+  const [selectedKelasId, setSelectedKelasId] = useState(
+    filteredKelas[0]?.id || "",
   );
+  
+  const activeTA = state.agmp_tahun_ajaran.find(ta => ta.isActive);
+  const [selectedTaId, setSelectedTaId] = useState(activeTA?.id || "");
 
-  const activeTA = state.agmp_tahun_ajaran.find((ta) => ta.isActive);
-  const [selectedTaId, setSelectedTaId] = useState<string>(
-    activeTA?.id || state.agmp_tahun_ajaran[0]?.id || ""
+  // For Modal
+  const [selectedSiswaId, setSelectedSiswaId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"umum" | "formatif" | "sumatif">(
+    "umum",
   );
+  const [isExporting, setIsExporting] = useState(false);
+  const [showSimulasiRapor, setShowSimulasiRapor] = useState(true);
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
-
-  // Dynamic pagination mode: "auto" (default: 1 page if <=20, 2 pages if >20) | "force1" | "split2" | "split3"
-  const [pageLayoutMode, setPageLayoutMode] = useState<"auto" | "force1" | "split2" | "split3">("auto");
-  const [previewTab, setPreviewTab] = useState<"all" | number>("all");
-
-  // Density control for Folio guarantee: "auto" | "compact" | "ultra" | "normal"
-  const [density, setDensity] = useState<"auto" | "compact" | "ultra" | "normal">("auto");
-  const [showSignatures, setShowSignatures] = useState(true);
-
-  // Selected TA and semester
-  const selectedTA = state.agmp_tahun_ajaran.find((ta) => ta.id === selectedTaId);
+  const selectedTA = state.agmp_tahun_ajaran.find(ta => ta.id === selectedTaId);
   const selectedSemester = selectedTA?.semester || "Ganjil";
   const tpSemesterToMatch = selectedSemester === "Ganjil" ? "1" : "2";
 
-  // Selected Kelas
-  const selectedKelas = state.agmp_kelas.find((k) => k.id === selectedKelasId);
-
-  // Siswa in selected class
-  const allSiswaInKelas = useMemo(() => {
+  const siswaList = useMemo(() => {
     return state.agmp_siswa
       .filter((s) => s.kelasId === selectedKelasId)
       .sort((a, b) => a.nama.localeCompare(b.nama));
   }, [state.agmp_siswa, selectedKelasId]);
 
-  // Filtered by search
-  const siswaList = useMemo(() => {
-    if (!searchQuery.trim()) return allSiswaInKelas;
-    const q = searchQuery.toLowerCase().trim();
-    return allSiswaInKelas.filter(
-      (s) =>
-        s.nama.toLowerCase().includes(q) ||
-        (s.nisn && s.nisn.toLowerCase().includes(q))
-    );
-  }, [allSiswaInKelas, searchQuery]);
-
-  // TP list for selected class & semester
   const tpList = useMemo(() => {
-    return state.agmp_tp
-      .filter(
-        (tp) =>
-          tp.kelasIds.includes(selectedKelasId) &&
-          (selectedTA
-            ? tp.semester === selectedSemester || tp.semester === tpSemesterToMatch
-            : true)
-      )
-      .sort((a, b) => a.kode.localeCompare(b.kode, undefined, { numeric: true }));
-  }, [state.agmp_tp, selectedKelasId, selectedSemester, tpSemesterToMatch, selectedTA]);
+    return state.agmp_tp.filter(
+      (tp) =>
+        tp.kelasIds.includes(selectedKelasId) &&
+        (tp.semester === selectedSemester || tp.semester === tpSemesterToMatch),
+    );
+  }, [state.agmp_tp, selectedKelasId, selectedSemester, tpSemesterToMatch]);
 
-  // Filter by TP
-  const [selectedTpId, setSelectedTpId] = useState<string>("");
-
-  // Sync selectedTpId when class changes or tpList changes
-  useEffect(() => {
-    if (selectedTpId && !tpList.some((tp) => tp.id === selectedTpId)) {
-      setSelectedTpId("");
-    }
-  }, [selectedKelasId, tpList, selectedTpId]);
-
-  const activeTp = useMemo(() => {
-    return state.agmp_tp.find((tp) => tp.id === selectedTpId);
-  }, [state.agmp_tp, selectedTpId]);
-
-  // KKTP Constants
   const interval = {
     batasBawahTuntas: 75,
     batasAtasLanjut: 85,
     batasBawahSelektif: 61,
   };
 
-  // Helper: Kehadiran Calculation
-  const calculateKehadiran = (siswaId: string) => {
+  // Helper calculation functions
+  const calculateKehadiran = (sId: string) => {
     const classAbsensi = state.agmp_absensi.filter(
-      (a) =>
-        a.kelasId === selectedKelasId &&
-        (selectedTaId ? a.taId === selectedTaId : true)
+      (a) => a.kelasId === selectedKelasId && (selectedTaId ? a.taId === selectedTaId : true),
     );
-
-    if (classAbsensi.length === 0) {
+    if (classAbsensi.length === 0)
       return {
         percent: 0,
         hadir: 0,
@@ -131,23 +78,20 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
         alpa: 0,
         bolos: 0,
         total: 0,
-        statusText: "Belum Ada Presensi",
       };
-    }
 
     let hadir = 0,
       sakit = 0,
       izin = 0,
       alpa = 0,
       bolos = 0;
-
     classAbsensi.forEach((a) => {
-      const st = a.records?.[siswaId];
-      if (st === "HADIR") hadir++;
-      else if (st === "SAKIT") sakit++;
-      else if (st === "IZIN") izin++;
-      else if (st === "ALPA") alpa++;
-      else if (st === "BOLOS") bolos++;
+      const status = a.records[sId];
+      if (status === "HADIR") hadir++;
+      else if (status === "SAKIT") sakit++;
+      else if (status === "IZIN") izin++;
+      else if (status === "ALPA") alpa++;
+      else if (status === "BOLOS") bolos++;
     });
 
     const percent = Math.round((hadir / classAbsensi.length) * 100);
@@ -159,359 +103,565 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
       alpa,
       bolos,
       total: classAbsensi.length,
-      statusText: `${percent}% (H:${hadir} S:${sakit} I:${izin} A:${alpa} B:${bolos})`,
     };
   };
 
-  // Helper: Nilai Akhir Sumatif, Catatan, & Tindak Lanjut Calculation
-  const calculateSumatifData = (siswaId: string) => {
-    let totalScore = 0;
-    let scoredCount = 0;
-    const tpDetails: {
-      tpKode: string;
-      deskripsi: string;
-      nilai: number;
-      level: number;
-      status: string;
-      isRemedial: boolean;
-      catatan: string;
-    }[] = [];
+  const calculateSumatifForTP = (sId: string, tpId: string) => {
+    // A TP can have multiple sumatifs, but in our app we usually have 1 sumatif per TP per Kelas
+    // Let's find the sumatif for this TP
+    const sumatifMatches = state.agmp_sumatif.filter((s) => s.tpId === tpId && s.kelasId === selectedKelasId);
+    const sumatif = selectedTaId
+      ? sumatifMatches.find((s) => s.taId === selectedTaId) || sumatifMatches.find((s) => !s.taId)
+      : sumatifMatches[0];
+    if (!sumatif) return { status: "BELUM DINILAI", nilai: 0, isLocked: false, sumatifId: null };
 
-    const customNotes: string[] = [];
-    const highTPs: string[] = [];
-    const lowTPs: string[] = [];
-    const needRemedialTPs: string[] = [];
-    let completedRemedialCount = 0;
+    let record = sumatif.records[sId];
+    if (!record) return { status: "BELUM DINILAI", nilai: 0, isLocked: false, sumatifId: sumatif.id };
 
-    // Filter by selected TP if one is chosen, otherwise all TPs in class
-    const targetTps = selectedTpId
-      ? tpList.filter((tp) => tp.id === selectedTpId)
-      : tpList;
+    // Override with remedial
+    const remedialMatches = state.agmp_remedial.filter((r) => r.sumatifId === sumatif.id && r.siswaId === sId);
+    const remedial = selectedTaId
+      ? remedialMatches.find((r) => r.taId === selectedTaId) || remedialMatches.find((r) => !r.taId)
+      : remedialMatches[0];
+    let finalNilai = record.nilai;
+    let finalLevel = record.level;
+    let finalStatus: string = record.status || "BELUM TUNTAS";
 
-    targetTps.forEach((tp) => {
-      // Find sumatif for this TP & Kelas
-      const sumatifMatches = state.agmp_sumatif.filter(
-        (s) => s.tpId === tp.id && s.kelasId === selectedKelasId
-      );
-      const sumatif = selectedTaId
-        ? sumatifMatches.find((s) => s.taId === selectedTaId) ||
-          sumatifMatches.find((s) => !s.taId)
-        : sumatifMatches[0];
-
-      if (sumatif && sumatif.records?.[siswaId]) {
-        let record = sumatif.records[siswaId];
-        let finalNilai = record.nilai;
-        let finalLevel = record.level;
-        let finalStatus = record.status || "BELUM TUNTAS";
-        let isRemedial = false;
-
-        // Check Remedial override
-        const remedialMatches = state.agmp_remedial.filter(
-          (r) =>
-            r.sumatifId === sumatif.id &&
-            r.siswaId === siswaId &&
-            (selectedTaId ? r.taId === selectedTaId || !r.taId : true)
-        );
-        const remedial = remedialMatches[0];
-
-        if (remedial && remedial.status === "Selesai") {
-          isRemedial = true;
-          completedRemedialCount++;
-          if (remedial.nilaiBaru !== undefined) finalNilai = remedial.nilaiBaru;
-          if (remedial.levelBaru !== undefined) finalLevel = remedial.levelBaru;
-          if (remedial.statusBaru) finalStatus = remedial.statusBaru;
-        }
-
-        if (finalNilai > 0 || record.status === "TUNTAS" || record.status === "BELUM TUNTAS") {
-          totalScore += finalNilai;
-          scoredCount++;
-
-          tpDetails.push({
-            tpKode: tp.kode,
-            deskripsi: tp.deskripsi,
-            nilai: finalNilai,
-            level: finalLevel,
-            status: finalStatus,
-            isRemedial,
-            catatan: record.catatan || "",
-          });
-
-          if (record.catatan && record.catatan.trim()) {
-            customNotes.push(`TP ${tp.kode}: ${record.catatan.trim()}`);
-          }
-
-          if (finalNilai >= interval.batasBawahTuntas) {
-            highTPs.push(tp.kode);
-          } else {
-            lowTPs.push(tp.kode);
-            needRemedialTPs.push(tp.kode);
-          }
-        }
-      }
-    });
-
-    // Nilai Akhir (NA)
-    const na = scoredCount > 0 ? Math.round(totalScore / scoredCount) : 0;
-
-    // Predikat & Status
-    let predikat = "Belum Ada Nilai";
-    let statusKetuntasan = "Belum Dinilai";
-    if (scoredCount > 0) {
-      if (na >= interval.batasAtasLanjut) {
-        predikat = "Sangat Baik";
-      } else if (na >= interval.batasBawahTuntas) {
-        predikat = "Baik";
-      } else if (na >= interval.batasBawahSelektif) {
-        predikat = "Cukup";
-      } else {
-        predikat = "Kurang";
-      }
-
-      if (needRemedialTPs.length === 0 && na >= interval.batasBawahTuntas) {
-        statusKetuntasan = completedRemedialCount > 0 ? "Tuntas Remedial" : "Tuntas";
-      } else {
-        statusKetuntasan = "Belum Tuntas";
-      }
+    if (
+      remedial &&
+      remedial.status === "Selesai"
+    ) {
+      if (remedial.nilaiBaru !== undefined) finalNilai = remedial.nilaiBaru;
+      if (remedial.levelBaru !== undefined) finalLevel = remedial.levelBaru;
+      if (remedial.statusBaru) finalStatus = remedial.statusBaru;
     }
 
-    // Catatan Penilaian Sumatif
-    let catatanSumatif = "";
-    if (customNotes.length > 0) {
-      catatanSumatif = customNotes.join("; ");
-    } else if (scoredCount > 0) {
-      const highStr =
-        highTPs.length > 0 ? `Sangat baik menguasai materi TP ${highTPs.join(", ")}.` : "";
-      const lowStr =
-        lowTPs.length > 0
-          ? `Perlu penguatan pemahaman pada materi TP ${lowTPs.join(", ")}.`
-          : "";
-      catatanSumatif = [highStr, lowStr].filter(Boolean).join(" ");
-      if (!catatanSumatif) {
-        catatanSumatif = "Menunjukkan pencapaian kompetensi materi dengan baik.";
-      }
-    } else {
-      catatanSumatif = "Belum ada penilaian sumatif tercatat.";
-    }
-
-    // Tindak Lanjut
-    let tindakLanjut = "";
-    let tindakLanjutType: "pengayaan" | "tuntas" | "remedial" | "pendampingan" | "belum" = "belum";
-
-    if (scoredCount === 0) {
-      tindakLanjut = "Menunggu Pelaksanaan Asesmen";
-      tindakLanjutType = "belum";
-    } else if (needRemedialTPs.length > 0) {
-      tindakLanjut = `Remedial TP ${needRemedialTPs.join(", ")} (Bimbingan Terfokus)`;
-      tindakLanjutType = "remedial";
-    } else if (completedRemedialCount > 0) {
-      tindakLanjut = "Remedial Selesai (Pemantapan Mandiri)";
-      tindakLanjutType = "tuntas";
-    } else if (na >= interval.batasAtasLanjut) {
-      tindakLanjut = "Program Pengayaan & Tutor Sebaya";
-      tindakLanjutType = "pengayaan";
-    } else {
-      tindakLanjut = "Tuntas (Penguatan Materi Mandiri)";
-      tindakLanjutType = "tuntas";
+    if (
+      record.status === "BELUM TUNTAS" &&
+      finalStatus === "TUNTAS" &&
+      remedial &&
+      remedial.status === "Selesai"
+    ) {
+      finalStatus = "TUNTAS REMEDIAL";
     }
 
     return {
-      na,
-      scoredCount,
-      tpDetails,
-      predikat,
-      statusKetuntasan,
-      catatanSumatif,
-      tindakLanjut,
-      tindakLanjutType,
-      needRemedialTPs,
-      completedRemedialCount,
+      isLocked: false,
+      level: finalLevel,
+      nilai: finalNilai,
+      status: finalStatus,
+      sumatifId: sumatif.id,
+      remedial,
     };
   };
 
-  // Compile full row data for every student
-  const recapData = useMemo(() => {
-    return allSiswaInKelas.map((siswa, idx) => {
-      const kehadiran = calculateKehadiran(siswa.id);
-      const sumatif = calculateSumatifData(siswa.id);
-      return {
-        no: idx + 1,
-        siswa,
-        kehadiran,
-        sumatif,
-      };
-    });
-  }, [allSiswaInKelas, selectedKelasId, selectedTaId, tpList, selectedTpId]);
-
-  // Class Summary Metrics
-  const classMetrics = useMemo(() => {
-    const totalSiswa = recapData.length;
-    if (totalSiswa === 0) {
-      return { totalSiswa: 0, avgNilai: 0, avgKehadiran: 0, tuntasCount: 0, remedialCount: 0 };
-    }
-
-    const scoredStudents = recapData.filter((r) => r.sumatif.scoredCount > 0);
-    const avgNilai =
-      scoredStudents.length > 0
-        ? Math.round(
-            scoredStudents.reduce((acc, r) => acc + r.sumatif.na, 0) /
-              scoredStudents.length
-          )
-        : 0;
-
-    const avgKehadiran = Math.round(
-      recapData.reduce((acc, r) => acc + r.kehadiran.percent, 0) / totalSiswa
-    );
-
-    const tuntasCount = recapData.filter(
-      (r) =>
-        r.sumatif.statusKetuntasan === "Tuntas" ||
-        r.sumatif.statusKetuntasan === "Tuntas Remedial"
-    ).length;
-
-    const remedialCount = recapData.filter(
-      (r) => r.sumatif.tindakLanjutType === "remedial"
-    ).length;
-
-    return {
-      totalSiswa,
-      avgNilai,
-      avgKehadiran,
-      tuntasCount,
-      remedialCount,
-    };
-  }, [recapData]);
-
-  // Dynamic page pagination for Print, Preview, and PDF
-  const pagesData = useMemo(() => {
-    const total = recapData.length;
-    if (total === 0) return [[]];
-
-    if (pageLayoutMode === "force1") {
-      return [recapData];
-    }
-
-    if (pageLayoutMode === "split2") {
-      const half = Math.ceil(total / 2);
-      return [recapData.slice(0, half), recapData.slice(half)];
-    }
-
-    if (pageLayoutMode === "split3") {
-      const perPage = Math.ceil(total / 3);
-      return [
-        recapData.slice(0, perPage),
-        recapData.slice(perPage, perPage * 2),
-        recapData.slice(perPage * 2),
-      ].filter((p) => p.length > 0);
-    }
-
-    // Default "auto":
-    // If student count <= 20 (or <= 22 with compact density), fits in 1 page cleanly!
-    const singlePageLimit = density === "ultra" ? 24 : density === "compact" ? 22 : 20;
-    if (total <= singlePageLimit) {
-      return [recapData];
-    }
-
-    // If total > singlePageLimit:
-    // Split dynamically into balanced pages (max ~20 students per page)
-    if (total <= 40) {
-      // 2 balanced pages!
-      const half = Math.ceil(total / 2);
-      return [recapData.slice(0, half), recapData.slice(half)];
-    } else {
-      // 3 or more balanced pages
-      const pageCount = Math.ceil(total / 20);
-      const perPage = Math.ceil(total / pageCount);
-      const pages: (typeof recapData)[] = [];
-      for (let i = 0; i < pageCount; i++) {
-        pages.push(recapData.slice(i * perPage, (i + 1) * perPage));
+  const calculateSimulasiRapor = (sId: string) => {
+    let total = 0;
+    let count = 0;
+    tpList.forEach((tp) => {
+      const res = calculateSumatifForTP(sId, tp.id);
+      if (res.status !== "BELUM DINILAI" && res.nilai > 0) {
+        total += res.nilai;
+        count++;
       }
-      return pages.filter((p) => p.length > 0);
+    });
+    const nilaiRapor = count > 0 ? Math.round(total / count) : 0;
+    const isTuntas = count > 0 && nilaiRapor >= interval.batasBawahTuntas;
+    let predikat = "-";
+    if (count > 0) {
+      if (nilaiRapor > interval.batasAtasLanjut) predikat = "Sangat Baik";
+      else if (nilaiRapor >= interval.batasBawahTuntas) predikat = "Baik";
+      else if (nilaiRapor >= interval.batasBawahSelektif) predikat = "Cukup";
+      else predikat = "Kurang";
     }
-  }, [recapData, density, pageLayoutMode]);
-
-  // Determine dynamic row density for Folio guarantee
-  const computedDensity = useMemo(() => {
-    if (density !== "auto") return density;
-    if (pageLayoutMode === "force1") {
-      const count = allSiswaInKelas.length;
-      if (count > 34) return "ultra";
-      if (count > 25) return "compact";
-      return "normal";
-    }
-    // With dynamic multi-page, average rows per page is <= 20
-    const rowsPerPage = Math.ceil(allSiswaInKelas.length / (pagesData.length || 1));
-    if (rowsPerPage > 22) return "compact";
-    return "normal";
-  }, [density, allSiswaInKelas.length, pagesData.length, pageLayoutMode]);
-
-  // Density CSS helper
-  const densityStyles = {
-    normal: {
-      tableText: "text-[11px]",
-      headerText: "text-[11px] py-1.5 px-2",
-      cellPadding: "py-1.5 px-2",
-      lineHeight: "leading-normal",
-    },
-    compact: {
-      tableText: "text-[9.5px]",
-      headerText: "text-[10px] py-1 px-1.5",
-      cellPadding: "py-1 px-1.5",
-      lineHeight: "leading-tight",
-    },
-    ultra: {
-      tableText: "text-[8.5px]",
-      headerText: "text-[9px] py-0.5 px-1",
-      cellPadding: "py-0.5 px-1",
-      lineHeight: "leading-none",
-    },
-  }[computedDensity];
-
-  // Browser print trigger
-  const handlePrint = () => {
-    window.print();
+    return { nilaiRapor, count, isTuntas, predikat };
   };
 
-  // Safe autoTable caller
-  const callAutoTable = (doc: jsPDF, options: any) => {
-    if (typeof autoTable === "function") {
-      autoTable(doc, options);
-    } else if (typeof (autoTable as any)?.default === "function") {
-      (autoTable as any).default(doc, options);
-    } else if (typeof (doc as any)?.autoTable === "function") {
-      (doc as any).autoTable(options);
-    }
-  };
+  const selectedSiswa = siswaList.find((s) => s.id === selectedSiswaId);
 
-  // Export Dynamic Folio Landscape PDF using jsPDF
-  const handleExportPdfFolio = async () => {
-    if (allSiswaInKelas.length === 0) {
-      showToast("Tidak ada data siswa untuk diekspor!", "error");
-      return;
-    }
+  const handleExportPDF = async () => {
+    if (!selectedSiswa) return;
+    setIsExporting(true);
 
-    setIsExportingPdf(true);
     try {
-      // Standar Folio / F4: 215 mm x 330 mm
-      // Landscape: width 330mm, height 215mm
       const doc = new jsPDF({
-        orientation: "landscape",
+        orientation: "portrait",
         unit: "mm",
-        format: [215, 330],
+        format: "a4",
       });
 
-      const schoolName =
-        state.agmp_pengaturan.sekolah?.trim() || "SMP NEGERI 1 BIAU";
-      const guruName =
-        state.agmp_pengaturan.guruNama?.trim() || "Guru Mata Pelajaran";
-      const mapelName =
-        state.agmp_mapel?.find((m) => m.id === state.agmp_pengaturan?.mapelId)?.nama ||
-        state.agmp_pengaturan.mapel ||
-        "Mata Pelajaran";
-      const kelasName = selectedKelas?.nama || "-";
-      const faseName = selectedKelas?.fase ? `Fase ${selectedKelas.fase}` : "-";
-      const taName = selectedTA
-        ? `${selectedTA.nama} - Semester ${selectedTA.semester}`
-        : "-";
+      const callAutoTable = (options: any) => {
+        if (typeof autoTable === "function") {
+          autoTable(doc, options);
+        } else if (typeof (autoTable as any)?.default === "function") {
+          (autoTable as any).default(doc, options);
+        } else if (typeof (doc as any)?.autoTable === "function") {
+          (doc as any).autoTable(options);
+        }
+      };
+
+      const getFinalY = (fallback: number) => {
+        return (doc as any).lastAutoTable?.finalY ?? fallback;
+      };
+
+      const kelas = state.agmp_kelas.find((k) => k.id === selectedSiswa.kelasId);
+      const hadir = calculateKehadiran(selectedSiswa.id);
+
+      let tuntas = 0;
+      let blmTuntas = 0;
+      let blmDinilai = 0;
+      tpList.forEach((tp) => {
+        const st = calculateSumatifForTP(selectedSiswa.id, tp.id).status;
+        if (st === "TUNTAS" || st === "TUNTAS REMEDIAL") tuntas++;
+        else if (st === "BELUM TUNTAS") blmTuntas++;
+        else blmDinilai++;
+      });
+
+      let statusAkhir = "SIAP NAIK KELAS";
+      if (blmTuntas > 0) statusAkhir = "PERLU PERHATIAN";
+      if (blmTuntas >= 3) statusAkhir = "PERLU REMEDIAL INTENSIF";
+
+      // --- 1. HEADER DOKUMEN ---
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(15);
+      doc.setTextColor(26, 54, 93); // Dark Navy
+      doc.text("LAPORAN HASIL BELAJAR PESERTA DIDIK", 105, 18, { align: "center" });
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9.5);
+      doc.setTextColor(100, 116, 139); // Slate
+      doc.text("Rekap Detail Capaian Belajar (Tab Umum, Formatif, & Sumatif) • Kurikulum Merdeka", 105, 23.5, { align: "center" });
+
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.4);
+      doc.line(14, 27, 196, 27);
+
+      let currentY = 33;
+
+      // --- 2. TAB UMUM: IDENTITAS & PROFIL SISWA ---
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10.5);
+      doc.setTextColor(30, 41, 59);
+      doc.text("I. INFORMASI UMUM & PROFIL PESERTA DIDIK", 14, currentY);
+      currentY += 3.5;
+
+      const profileData = [
+        [
+          "Nama Siswa",
+          `: ${selectedSiswa.nama}`,
+          "Kelas / Fase",
+          `: ${kelas?.nama || "-"} (Fase ${kelas?.fase || "-"})`,
+        ],
+        [
+          "NISN",
+          `: ${selectedSiswa.nisn || "-"}`,
+          "Tahun Ajaran",
+          `: ${selectedTA ? selectedTA.nama : "-"}`,
+        ],
+        [
+          "Jenis Kelamin",
+          `: ${selectedSiswa.jk === "L" ? "Laki-Laki" : "Perempuan"}`,
+          "Semester",
+          `: ${selectedTA ? `Semester ${selectedTA.semester}` : "-"}`,
+        ],
+      ];
+
+      callAutoTable({
+        startY: currentY,
+        body: profileData,
+        theme: "plain",
+        styles: {
+          fontSize: 8.5,
+          cellPadding: 1.2,
+          textColor: [30, 41, 59],
+        },
+        columnStyles: {
+          0: { cellWidth: 32, fontStyle: "bold" },
+          1: { cellWidth: 65 },
+          2: { cellWidth: 32, fontStyle: "bold" },
+          3: { cellWidth: 53 },
+        },
+        margin: { left: 14, right: 14 },
+      });
+
+      currentY = getFinalY(currentY) + 4;
+
+      // --- TAB UMUM: REKAPITULASI KEHADIRAN (H, S, I, A, B) & KETERCAPAIAN ---
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.text("Rekapitulasi Kehadiran & Status Ketercapaian TP:", 14, currentY);
+      currentY += 2.5;
+
+      const attendanceData = [
+        [
+          `${hadir.hadir}`,
+          `${hadir.sakit}`,
+          `${hadir.izin}`,
+          `${hadir.alpa}`,
+          `${hadir.bolos}`,
+          `${hadir.total}`,
+          `${hadir.percent}%`,
+          statusAkhir,
+        ],
+      ];
+
+      callAutoTable({
+        startY: currentY,
+        head: [
+          [
+            "Hadir (H)",
+            "Sakit (S)",
+            "Izin (I)",
+            "Alpa (A)",
+            "Bolos (B)",
+            "Total Pertemuan",
+            "Kehadiran (%)",
+            "Status Akhir",
+          ],
+        ],
+        body: attendanceData,
+        theme: "grid",
+        headStyles: {
+          fillColor: [30, 58, 138],
+          textColor: 255,
+          fontStyle: "bold",
+          fontSize: 8,
+          halign: "center",
+        },
+        bodyStyles: {
+          fontSize: 8,
+          halign: "center",
+          textColor: [30, 41, 59],
+          fontStyle: "bold",
+        },
+        columnStyles: {
+          7: {
+            fontStyle: "bold",
+            textColor:
+              statusAkhir === "SIAP NAIK KELAS"
+                ? [22, 101, 52]
+                : [180, 83, 9],
+          },
+        },
+        margin: { left: 14, right: 14 },
+      });
+
+      currentY = getFinalY(currentY) + 7;
+
+      // --- 3. TAB FORMATIF: ASESMEN FORMATIF & OBSERVASI ---
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10.5);
+      doc.setTextColor(30, 41, 59);
+      doc.text("II. DETAIL ASESMEN FORMATIF & OBSERVASI GURU", 14, currentY);
+      currentY += 3.5;
+
+      const studentFormatifs = state.agmp_formatif
+        .filter(
+          (f) =>
+            f.hasil &&
+            f.hasil[selectedSiswa.id] &&
+            (selectedTaId ? f.taId === selectedTaId || !f.taId : true),
+        )
+        .sort((a, b) => (a.tanggal || "").localeCompare(b.tanggal || ""));
+
+      const tpKodeMap: Record<string, string> = {};
+      state.agmp_tp.forEach((t) => (tpKodeMap[t.id] = t.kode));
+
+      const formatifBody = studentFormatifs.map((f, i) => {
+        const matchedTp = state.agmp_tp.find(
+          (t) =>
+            f.jurnalId === t.id ||
+            f.jurnalId.endsWith(`_${t.id}`) ||
+            f.jurnalId.includes(`_${t.id}`) ||
+            f.jurnalId.includes(t.id),
+        );
+        const tpKode =
+          matchedTp?.kode ||
+          tpKodeMap[f.jurnalId.split("_").slice(1).join("_")] ||
+          tpKodeMap[f.jurnalId] ||
+          "-";
+
+        const res = f.hasil[selectedSiswa.id];
+        const statusLabel = res.status
+          ? res.status.length <= 2
+            ? `Level ${res.status}`
+            : res.status
+          : "Anekdot";
+
+        // Extract and format all teacher notes from formative assessment
+        const teacherNotes: string[] = [];
+
+        // 1. Direct custom note in formative assessment
+        if (res.catatan && typeof res.catatan === "string" && res.catatan.trim()) {
+          teacherNotes.push(res.catatan.trim());
+        }
+
+        // 2. Formative anecdotes if present
+        if (Array.isArray(res.anekdots) && res.anekdots.length > 0) {
+          res.anekdots.forEach((an: any) => {
+            if (an?.teks && an.teks.trim()) {
+              const kat = an.kategori ? `[${an.kategori}] ` : "";
+              const tgl = an.tanggal
+                ? `(${new Date(an.tanggal).toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "short",
+                  })}) `
+                : "";
+              teacherNotes.push(`${kat}${tgl}${an.teks.trim()}`);
+            }
+          });
+        }
+
+        // 3. Evaluasi otomatis edukatif berdasarkan status / level
+        let evaluasiOtomatis = "";
+        const rawStatus = (res.status || "").toString().trim();
+        if (rawStatus === "Siap Belajar") {
+          evaluasiOtomatis = "Kesiapan belajar sangat baik, siap mengikuti materi inti.";
+        } else if (rawStatus === "Perlu Bimbingan") {
+          evaluasiOtomatis = "Perlu pendampingan belajar dan penguatan konsep dasar materi.";
+        } else if (rawStatus === "4" || rawStatus.toLowerCase().includes("level 4")) {
+          evaluasiOtomatis = "Sangat menguasai kompetensi materi, mandiri dan siap pengayaan.";
+        } else if (rawStatus === "3" || rawStatus.toLowerCase().includes("level 3")) {
+          evaluasiOtomatis = "Telah memahami kompetensi materi pembelajaran secara mandiri dan baik.";
+        } else if (rawStatus === "2" || rawStatus.toLowerCase().includes("level 2")) {
+          evaluasiOtomatis = "Mulai memahami sebagian konsep, perlu latihan terbimbing.";
+        } else if (rawStatus === "1" || rawStatus.toLowerCase().includes("level 1")) {
+          evaluasiOtomatis = "Tingkat pemahaman masih awal, membutuhkan bimbingan intensif.";
+        }
+
+        let catatanFinal = "-";
+        if (teacherNotes.length > 0 && evaluasiOtomatis) {
+          catatanFinal = `${teacherNotes.join("; ")}\n(Evaluasi: ${evaluasiOtomatis})`;
+        } else if (teacherNotes.length > 0) {
+          catatanFinal = teacherNotes.join("; ");
+        } else if (evaluasiOtomatis) {
+          catatanFinal = evaluasiOtomatis;
+        }
+
+        const jenisLabel =
+          f.jenis === "AWAL" ? "Diagnostik" : "Monitoring";
+        const tanggalLabel = f.tanggal
+          ? `\n(${new Date(f.tanggal).toLocaleDateString("id-ID", {
+              day: "numeric",
+              month: "short",
+            })})`
+          : "";
+
+        return [
+          (i + 1).toString(),
+          `TP ${tpKode}`,
+          `${jenisLabel}${tanggalLabel}`,
+          f.teknik || "Observasi",
+          statusLabel,
+          catatanFinal,
+        ];
+      });
+
+      if (formatifBody.length > 0) {
+        callAutoTable({
+          startY: currentY,
+          head: [
+            [
+              "No",
+              "TP",
+              "Jenis Asesmen",
+              "Teknik",
+              "Status / Level",
+              "Catatan Guru & Evaluasi",
+            ],
+          ],
+          body: formatifBody,
+          theme: "grid",
+          headStyles: {
+            fillColor: [15, 118, 110], // Teal
+            textColor: 255,
+            fontStyle: "bold",
+            fontSize: 8,
+          },
+          styles: {
+            fontSize: 8,
+            textColor: [51, 65, 85],
+            cellPadding: 2,
+          },
+          columnStyles: {
+            0: { cellWidth: 10, halign: "center" },
+            1: { cellWidth: 18, fontStyle: "bold", halign: "center" },
+            2: { cellWidth: 26 },
+            3: { cellWidth: 26 },
+            4: { cellWidth: 26, fontStyle: "bold" },
+            5: { cellWidth: 76 },
+          },
+          margin: { left: 14, right: 14 },
+        });
+        currentY = getFinalY(currentY) + 5;
+      } else {
+        callAutoTable({
+          startY: currentY,
+          head: [["Informasi Asesmen Formatif"]],
+          body: [["Belum ada data rekaman asesmen formatif untuk peserta didik ini."]],
+          theme: "grid",
+          headStyles: {
+            fillColor: [241, 245, 249],
+            textColor: [100, 116, 139],
+            fontStyle: "bold",
+            fontSize: 8,
+          },
+          bodyStyles: {
+            fontStyle: "italic",
+            textColor: [148, 163, 184],
+            fontSize: 8,
+            cellPadding: 2.5,
+          },
+          margin: { left: 14, right: 14 },
+        });
+        currentY = getFinalY(currentY) + 5;
+      }
+
+      // Catatan Anekdot Sikap / Perilaku jika ada
+      const anekdots = state.agmp_anekdot
+        .filter(
+          (a) =>
+            a.siswaId === selectedSiswa.id &&
+            (selectedTaId ? a.taId === selectedTaId : true),
+        )
+        .sort(
+          (a, b) =>
+            new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime(),
+        );
+
+      if (anekdots.length > 0) {
+        if (currentY > 235) {
+          doc.addPage();
+          currentY = 20;
+        }
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(71, 85, 105);
+        doc.text("Catatan Anekdot Sikap & Perilaku:", 14, currentY);
+        currentY += 2.5;
+
+        const anekdotBody = anekdots.map((a, i) => [
+          (i + 1).toString(),
+          new Date(a.tanggal).toLocaleDateString("id-ID", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          }),
+          a.kategori || "Perilaku",
+          a.teks || "-",
+        ]);
+
+        callAutoTable({
+          startY: currentY,
+          head: [["No", "Tanggal", "Kategori", "Catatan Observasi Perilaku"]],
+          body: anekdotBody,
+          theme: "grid",
+          headStyles: {
+            fillColor: [194, 65, 12], // Amber/Orange
+            textColor: 255,
+            fontStyle: "bold",
+            fontSize: 8,
+          },
+          styles: {
+            fontSize: 8,
+            textColor: [51, 65, 85],
+            cellPadding: 2,
+          },
+          columnStyles: {
+            0: { cellWidth: 10, halign: "center" },
+            1: { cellWidth: 26 },
+            2: { cellWidth: 26, fontStyle: "bold" },
+            3: { cellWidth: 120 },
+          },
+          margin: { left: 14, right: 14 },
+        });
+        currentY = getFinalY(currentY) + 7;
+      }
+
+      // --- 4. TAB SUMATIF: ASESMEN SUMATIF & KETUNTASAN TP ---
+      if (currentY > 215) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10.5);
+      doc.setTextColor(30, 41, 59);
+      doc.text("III. DETAIL ASESMEN SUMATIF & KETUNTASAN TUJUAN PEMBELAJARAN (TP)", 14, currentY);
+      currentY += 3.5;
+
+      const sumatifBody = tpList.map((tp, i) => {
+        const res = calculateSumatifForTP(selectedSiswa.id, tp.id);
+        const sumatifObj = state.agmp_sumatif.find((s) => s.id === res.sumatifId);
+        const record = sumatifObj?.records[selectedSiswa.id];
+
+        let catatanDesc = record?.catatan || "-";
+        if (res.remedial && res.remedial.status === "Selesai") {
+          catatanDesc += ` [Remedial: Nilai Awal ${record?.nilai || 0} -> Nilai Baru ${res.nilai}]`;
+        }
+
+        return [
+          (i + 1).toString(),
+          `TP ${tp.kode}`,
+          tp.deskripsi,
+          sumatifObj?.teknik || "Tes Tertulis",
+          res.level ? `Level ${res.level}` : "-",
+          res.nilai.toString(),
+          res.status,
+          catatanDesc,
+        ];
+      });
+
+      if (sumatifBody.length > 0) {
+        callAutoTable({
+          startY: currentY,
+          head: [
+            [
+              "No",
+              "Kode",
+              "Tujuan Pembelajaran",
+              "Teknik",
+              "Level",
+              "Nilai",
+              "Status",
+              "Catatan Guru & Remedial",
+            ],
+          ],
+          body: sumatifBody,
+          theme: "grid",
+          headStyles: {
+            fillColor: [30, 41, 59], // Slate 800
+            textColor: 255,
+            fontStyle: "bold",
+            fontSize: 8,
+          },
+          styles: {
+            fontSize: 7.5,
+            textColor: [51, 65, 85],
+            cellPadding: 2,
+          },
+          columnStyles: {
+            0: { cellWidth: 8, halign: "center" },
+            1: { cellWidth: 16, fontStyle: "bold", halign: "center" },
+            2: { cellWidth: 50 },
+            3: { cellWidth: 20 },
+            4: { cellWidth: 14, halign: "center" },
+            5: { cellWidth: 13, halign: "center", fontStyle: "bold" },
+            6: { cellWidth: 24, fontStyle: "bold", halign: "center" },
+            7: { cellWidth: 37 },
+          },
+          margin: { left: 14, right: 14 },
+        });
+        currentY = getFinalY(currentY) + 12;
+      }
+
+      // --- 5. TANDA TANGAN / PENGESAHAN ---
+      if (currentY > 240) {
+        doc.addPage();
+        currentY = 25;
+      }
 
       const todayStr = new Date().toLocaleDateString("id-ID", {
         day: "numeric",
@@ -519,1130 +669,973 @@ export default function RekapNilai({ onNavigate }: RekapNilaiProps) {
         year: "numeric",
       });
 
-      // Sizing configuration
-      let pdfFontSize = 7.5;
-      let pdfCellPadding = 1.1;
-      if (computedDensity === "ultra") {
-        pdfFontSize = 6.4;
-        pdfCellPadding = 0.7;
-      } else if (computedDensity === "compact") {
-        pdfFontSize = 7.0;
-        pdfCellPadding = 0.9;
-      }
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(51, 65, 85);
 
-      const totalPages = pagesData.length;
+      doc.text("Mengetahui,", 30, currentY);
+      doc.text(`Dicetak pada: ${todayStr}`, 135, currentY);
 
-      // Render each page cleanly
-      pagesData.forEach((pageRows, pageIdx) => {
-        if (pageIdx > 0) {
-          doc.addPage([215, 330], "landscape");
-        }
+      doc.text("Orang Tua / Wali Murid", 30, currentY + 5);
+      doc.text("Guru Mata Pelajaran / Wali Kelas", 135, currentY + 5);
 
-        let startTableY = 32;
+      doc.text("( ............................................ )", 30, currentY + 26);
+      doc.text("( ............................................ )", 135, currentY + 26);
 
-        if (pageIdx === 0) {
-          // --- 1. KOP SURAT RESMI (Page 1) ---
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(13);
-          doc.setTextColor(20, 35, 60);
-          doc.text(schoolName.toUpperCase(), 165, 12, { align: "center" });
-
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(11);
-          doc.setTextColor(30, 41, 59);
-          doc.text("REKAPITULASI HASIL BELAJAR PESERTA DIDIK (REKAP NILAI)", 165, 17, {
-            align: "center",
-          });
-
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(8);
-          doc.setTextColor(100, 116, 139);
-          doc.text(
-            `Kurikulum Merdeka • Rekapitulasi Presensi Kehadiran, Nilai Akhir Sumatif & Tindak Lanjut Pembelajaran`,
-            165,
-            21.5,
-            { align: "center" }
-          );
-
-          // Garis Kop Ganda
-          doc.setDrawColor(30, 58, 138);
-          doc.setLineWidth(0.6);
-          doc.line(10, 23.5, 320, 23.5);
-          doc.setDrawColor(148, 163, 184);
-          doc.setLineWidth(0.2);
-          doc.line(10, 24.3, 320, 24.3);
-
-          // --- 2. METADATA INFORMASI ---
-          const metaData = [
-            [
-              `Kelas / Fase: ${kelasName} (${faseName})`,
-              `Tahun Ajaran: ${taName}`,
-              `Mata Pelajaran: ${mapelName}`,
-              activeTp ? `Filter TP: TP ${activeTp.kode} (KKTP 75)` : `KKTP / KKM: 75`,
-            ],
-          ];
-
-          callAutoTable(doc, {
-            startY: 25.5,
-            body: metaData,
-            theme: "plain",
-            styles: {
-              fontSize: 8,
-              cellPadding: 0.8,
-              fontStyle: "bold",
-              textColor: [51, 65, 85],
-            },
-            columnStyles: {
-              0: { cellWidth: 75 },
-              1: { cellWidth: 85 },
-              2: { cellWidth: 100 },
-              3: { cellWidth: 50, halign: "right" },
-            },
-            margin: { left: 10, right: 10 },
-          });
-
-          startTableY = (doc as any).lastAutoTable?.finalY
-            ? (doc as any).lastAutoTable.finalY + 1.5
-            : 32;
-        } else {
-          // --- RUNNING HEADER (Page 2+) ---
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(9.5);
-          doc.setTextColor(20, 35, 60);
-          doc.text(
-            `${schoolName.toUpperCase()} • REKAP NILAI HASIL BELAJAR (Lanjutan Halaman ${pageIdx + 1})`,
-            165,
-            11,
-            { align: "center" }
-          );
-
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(7.5);
-          doc.setTextColor(100, 116, 139);
-          doc.text(
-            activeTp
-              ? `Kelas: ${kelasName} (${faseName}) • TA: ${taName} • TP: ${activeTp.kode} • Mapel: ${mapelName} • KKTP: 75`
-              : `Kelas: ${kelasName} (${faseName}) • Tahun Ajaran: ${taName} • Mata Pelajaran: ${mapelName} • KKTP: 75`,
-            165,
-            15,
-            { align: "center" }
-          );
-
-          doc.setDrawColor(148, 163, 184);
-          doc.setLineWidth(0.3);
-          doc.line(10, 16.5, 320, 16.5);
-
-          startTableY = 18.5;
-        }
-
-        // --- 3. TABLE BODY FOR THIS PAGE ---
-        const tableRows = pageRows.map((row) => {
-          const nisnText = row.siswa.nisn || "-";
-          const kehadiranText = `${row.kehadiran.percent}%\n(H:${row.kehadiran.hadir} S:${row.kehadiran.sakit} I:${row.kehadiran.izin} A:${row.kehadiran.alpa} B:${row.kehadiran.bolos})`;
-          const sumatifText =
-            row.sumatif.scoredCount > 0
-              ? `${row.sumatif.na} (${row.sumatif.predikat})\n[${row.sumatif.statusKetuntasan}]`
-              : "Belum Ada Nilai";
-          const catatanText = row.sumatif.catatanSumatif;
-          const tindakLanjutText = row.sumatif.tindakLanjut;
-
-          return [
-            row.no.toString(),
-            nisnText,
-            row.siswa.nama,
-            row.siswa.jk || "-",
-            kehadiranText,
-            sumatifText,
-            catatanText,
-            tindakLanjutText,
-          ];
-        });
-
-        callAutoTable(doc, {
-          startY: startTableY,
-          head: [
-            [
-              "No",
-              "NISN",
-              "Nama Peserta Didik",
-              "L/P",
-              "Rekap Kehadiran",
-              "Nilai Akhir Sumatif",
-              "Catatan Penilaian Sumatif",
-              "Tindak Lanjut",
-            ],
-          ],
-          body: tableRows,
-          theme: "grid",
-          headStyles: {
-            fillColor: [24, 43, 73], // Navy slate
-            textColor: 255,
-            fontStyle: "bold",
-            fontSize: pdfFontSize + 0.3,
-            halign: "center",
-            valign: "middle",
-            cellPadding: pdfCellPadding + 0.3,
-          },
-          bodyStyles: {
-            fontSize: pdfFontSize,
-            textColor: [30, 41, 59],
-            valign: "middle",
-            cellPadding: pdfCellPadding,
-            lineColor: [203, 213, 225],
-            lineWidth: 0.15,
-          },
-          columnStyles: {
-            0: { cellWidth: 8, halign: "center" },
-            1: { cellWidth: 24, halign: "center" },
-            2: { cellWidth: 62 },
-            3: { cellWidth: 9, halign: "center" },
-            4: { cellWidth: 42, halign: "center" },
-            5: { cellWidth: 38, halign: "center", fontStyle: "bold" },
-            6: { cellWidth: 75 },
-            7: { cellWidth: 52 },
-          },
-          margin: { left: 10, right: 10 },
-        });
-
-        // --- 4. SIGNATURES ON LAST PAGE ---
-        if (pageIdx === totalPages - 1 && showSignatures) {
-          const finalY = (doc as any).lastAutoTable?.finalY || 160;
-          const maxFolioHeight = 215;
-          let sigY = finalY + 4;
-          if (sigY + 22 > maxFolioHeight - 10) {
-            sigY = maxFolioHeight - 24;
-          }
-
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(7.5);
-          doc.setTextColor(51, 65, 85);
-
-          // Kiri: Mengetahui Kepala Sekolah
-          doc.text("Mengetahui,", 30, sigY);
-          doc.text("Kepala Sekolah,", 30, sigY + 3.5);
-          const kepsekName =
-            (state.agmp_pengaturan as any)?.kepalaSekolah ||
-            "( ..................................................... )";
-          doc.text(kepsekName, 30, sigY + 16);
-          doc.text(
-            `NIP. ${(state.agmp_pengaturan as any)?.nipKepalaSekolah || "....................................................."}`,
-            30,
-            sigY + 19.5
-          );
-
-          // Kanan: Guru Mata Pelajaran
-          const kotaSekolah = "Biau";
-          doc.text(`${kotaSekolah}, ${todayStr}`, 240, sigY);
-          doc.text("Guru Mata Pelajaran,", 240, sigY + 3.5);
-          doc.setFont("helvetica", "bold");
-          doc.text(guruName, 240, sigY + 16);
-          doc.setFont("helvetica", "normal");
-          doc.text(
-            `NIP. ${(state.agmp_pengaturan as any)?.nipGuru || "....................................................."}`,
-            240,
-            sigY + 19.5
-          );
-        }
-
-        // --- 5. PAGE FOOTER ---
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(7);
-        doc.setTextColor(148, 163, 184);
-        doc.text(
-          `Dokumen Resmi Rekap Nilai • ${schoolName} • Halaman ${pageIdx + 1} dari ${totalPages}`,
-          165,
-          210,
-          { align: "center" }
-        );
-      });
-
-      const sanitizedKelas = (selectedKelas?.nama || "Kelas").replace(
-        /[^a-zA-Z0-9]/g,
-        "_"
-      );
-      doc.save(`Rekap_Nilai_${sanitizedKelas}_Folio.pdf`);
-      showToast(
-        `Rekap Nilai Folio (${totalPages} Halaman) berhasil diunduh lengkap!`,
-        "success"
-      );
+      const sanitizedName = selectedSiswa.nama.replace(/[/\\?%*:|"<>]/g, "_");
+      doc.save(`Laporan_Lengkap_${sanitizedName}.pdf`);
+      showToast("Laporan PDF siswa berhasil diekspor!", "success");
     } catch (err) {
-      console.error("Gagal cetak rekap:", err);
-      showToast("Gagal menghasilkan file PDF. Silakan coba lagi.", "error");
+      console.error("Gagal mengekspor PDF:", err);
+      showToast("Gagal mengekspor PDF. Silakan coba lagi.", "error");
     } finally {
-      setIsExportingPdf(false);
+      setIsExporting(false);
     }
   };
 
+
   return (
-    <div className="space-y-6 pb-20 print:space-y-0 print:pb-0">
-      {/* Print CSS for Folio Landscape Dynamic Multi-Page */}
-      <style>{`
-        @media print {
-          @page {
-            size: 330mm 215mm landscape;
-            margin: 6mm 8mm;
-          }
-          body {
-            background: white !important;
-            color: black !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          header, nav, aside, .print\\:hidden, #main-sidebar, button, input {
-            display: none !important;
-          }
-          main {
-            padding: 0 !important;
-            margin: 0 !important;
-            max-width: 100% !important;
-          }
-          #print-folio-container {
-            display: block !important;
-            width: 100% !important;
-          }
-          .print-page-sheet {
-            width: 314mm !important;
-            min-height: 202mm !important;
-            max-height: 202mm !important;
-            page-break-after: always !important;
-            break-after: page !important;
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: space-between !important;
-            box-sizing: border-box !important;
-            overflow: hidden !important;
-            padding: 2mm 0 !important;
-          }
-          .print-page-sheet:last-child {
-            page-break-after: auto !important;
-            break-after: auto !important;
-          }
-          table {
-            width: 100% !important;
-            border-collapse: collapse !important;
-          }
-        }
-      `}</style>
-
-      {/* Main Header & Actions (Hidden in Print) */}
-      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
+    <div className="space-y-6 h-full flex flex-col pt-4 sm:pt-0 print:space-y-0 print:pt-0 print:block print:h-auto">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-shrink-0 print:hidden px-4 sm:px-0">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 bg-amber-500/10 text-amber-600 rounded-xl">
-              <Award className="w-6 h-6" />
-            </span>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
-                Rekap Nilai
-              </h2>
-              <p className="text-sm text-gray-500">
-                Rekapitulasi capaian nilai akhir sumatif, persentase kehadiran, catatan guru & tindak lanjut per kelas.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
-          <button
-            onClick={() => setShowPreviewModal(true)}
-            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all shadow-indigo-200 hover:shadow-indigo-300"
-          >
-            <Printer className="w-4 h-4" />
-            Cetak Rekap (Print Preview)
-          </button>
-
-          <button
-            onClick={handleExportPdfFolio}
-            disabled={isExportingPdf}
-            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold shadow-sm transition-all shadow-emerald-200"
-          >
-            <Download className="w-4 h-4" />
-            {isExportingPdf ? "Memproses PDF..." : "Unduh PDF Folio"}
-          </button>
+          <h2 className="text-2xl font-bold text-gray-900">
+            Rekap Akhir Semester
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Pantau ketercapaian TP dan kehadiran murid secara komprehensif.
+          </p>
         </div>
       </header>
 
-      {/* Filter Bar (Hidden in Print) */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 print:hidden space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {/* Filter Kelas */}
+      {/* FILTER SECTION */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 flex-shrink-0 print:hidden mx-4 sm:mx-0">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 text-blue-500" />
-              Pilih Kelas
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">
+              Kelas
             </label>
             <select
+              className="w-full text-sm font-semibold text-gray-900 p-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100"
               value={selectedKelasId}
               onChange={(e) => setSelectedKelasId(e.target.value)}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 font-medium text-gray-800"
             >
+              <option value="">Semua Kelas</option>
               {filteredKelas.map((k) => (
                 <option key={k.id} value={k.id}>
-                  {k.nama} {k.fase ? `(Fase ${k.fase})` : ""}
+                  {k.nama} (Fase {k.fase})
                 </option>
               ))}
             </select>
           </div>
-
-          {/* Filter Tahun Ajaran & Semester */}
           <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-amber-500" />
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">
               Tahun Ajaran & Semester
             </label>
             <select
+              className="w-full text-sm font-semibold text-gray-900 p-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-100"
               value={selectedTaId}
               onChange={(e) => setSelectedTaId(e.target.value)}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 font-medium text-gray-800"
             >
-              {state.agmp_tahun_ajaran.map((ta) => (
+              <option value="">Pilih Tahun Ajaran</option>
+              {state.agmp_tahun_ajaran.map(ta => (
                 <option key={ta.id} value={ta.id}>
-                  {ta.nama} - Semester {ta.semester} {ta.isActive ? "★ (Aktif)" : ""}
+                  {ta.nama} - Semester {ta.semester}
                 </option>
               ))}
             </select>
           </div>
-
-          {/* Filter Tujuan Pembelajaran (TP) */}
-          <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
-              Tujuan Pembelajaran
-            </label>
-            <select
-              value={selectedTpId}
-              onChange={(e) => setSelectedTpId(e.target.value)}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 font-medium text-gray-800"
-            >
-              <option value="">Semua TP (Rata-rata Komprehensif)</option>
-              {tpList.map((tp) => (
-                <option key={tp.id} value={tp.id}>
-                  TP {tp.kode} - {tp.deskripsi.substring(0, 36)}...
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Search Box */}
-          <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <Search className="w-3.5 h-3.5 text-indigo-500" />
-              Cari Siswa
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Cari berdasarkan nama atau NISN..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 text-gray-800"
-              />
-              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3 pointer-events-none" />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Active Filter TP Banner */}
-        {activeTp && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-blue-50/90 border border-blue-200 rounded-xl text-xs text-blue-900 shadow-2xs">
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold bg-blue-600 text-white px-2 py-0.5 rounded-md text-[11px] shrink-0">
-                Filter TP Aktif: TP {activeTp.kode}
-              </span>
-              <span className="font-semibold text-blue-950 line-clamp-1">{activeTp.deskripsi}</span>
-            </div>
-            <button
-              onClick={() => setSelectedTpId("")}
-              className="text-xs font-bold text-blue-700 hover:text-blue-900 underline shrink-0 self-start sm:self-auto"
-            >
-              Reset ke Semua TP
+          <div className="flex items-end gap-2">
+            <button className="flex-1 bg-[#007AFF] text-white px-4 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-blue-600 transition-colors">
+              <Search className="w-4 h-4" /> Tampilkan
             </button>
-          </div>
-        )}
-
-        {/* Info Badges & Metrics Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-gray-100">
-          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-            <span className="text-[11px] font-medium text-slate-500 block">Total Siswa</span>
-            <div className="text-xl font-bold text-slate-800 mt-0.5">
-              {classMetrics.totalSiswa} <span className="text-xs font-normal text-slate-500">Orang</span>
-            </div>
-          </div>
-
-          <div className="bg-blue-50/70 p-3 rounded-xl border border-blue-100">
-            <span className="text-[11px] font-medium text-blue-600 block">
-              {activeTp ? `Rata-rata TP ${activeTp.kode}` : "Rata-rata Nilai (Semua TP)"}
-            </span>
-            <div className="text-xl font-bold text-blue-900 mt-0.5">
-              {classMetrics.avgNilai} <span className="text-xs font-normal text-blue-600">/ 100</span>
-            </div>
-          </div>
-
-          <div className="bg-emerald-50/70 p-3 rounded-xl border border-emerald-100">
-            <span className="text-[11px] font-medium text-emerald-600 block">Rata-rata Kehadiran</span>
-            <div className="text-xl font-bold text-emerald-900 mt-0.5">
-              {classMetrics.avgKehadiran}%
-            </div>
-          </div>
-
-          <div className="bg-amber-50/70 p-3 rounded-xl border border-amber-100">
-            <span className="text-[11px] font-medium text-amber-700 block">
-              {activeTp ? `Ketuntasan TP ${activeTp.kode}` : "Ketuntasan Belajar"}
-            </span>
-            <div className="text-xl font-bold text-amber-900 mt-0.5">
-              {classMetrics.tuntasCount} <span className="text-xs font-normal text-amber-700">Tuntas</span>
-              {classMetrics.remedialCount > 0 && (
-                <span className="text-[10px] text-red-600 ml-1.5 font-semibold">
-                  ({classMetrics.remedialCount} Remedial)
-                </span>
-              )}
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Screen Table (Hidden in Print) */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden print:hidden">
-        <div className="p-4 bg-slate-50/70 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-          <div>
-            <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
-              Daftar Rekap Hasil Belajar: {selectedKelas?.nama || "Semua Kelas"}
-              <span className="text-xs font-normal text-gray-500">
-                ({siswaList.length} dari {allSiswaInKelas.length} siswa)
+      {/* REKAP TABLE */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex-1 flex flex-col min-h-[400px] overflow-hidden mx-4 sm:mx-0 print:border-none print:shadow-none print:min-h-0 print:m-0 print:rounded-none print:overflow-visible print:block">
+        <div className="p-4 border-b border-gray-100 flex flex-wrap justify-between items-center gap-3 bg-gray-50/50 print:hidden">
+          <h3 className="font-bold text-gray-900">Data Rekap Kelas</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowSimulasiRapor((prev) => !prev)}
+              className={`text-xs px-3 py-1.5 rounded-lg font-bold border flex items-center gap-2 transition-all shadow-2xs ${
+                showSimulasiRapor
+                  ? "bg-blue-50 text-blue-700 border-blue-300 ring-2 ring-blue-100"
+                  : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+              }`}
+              title="Aktifkan atau nonaktifkan tampilan kolom simulasi nilai rapor"
+            >
+              <Calculator className="w-3.5 h-3.5" />
+              <span>Simulasi Nilai Rapor:</span>
+              <span
+                className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-black ${
+                  showSimulasiRapor
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 text-gray-700"
+                }`}
+              >
+                {showSimulasiRapor ? "Aktif" : "Nonaktif"}
               </span>
-            </h3>
-          </div>
-
-          <div className="text-xs text-gray-500 flex items-center gap-2">
-            <span>
-              Orientasi Cetak: <span className="font-semibold text-gray-700">Landscape (Folio / F4)</span>
-            </span>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
-              Dinamis {pagesData.length} Halaman ({allSiswaInKelas.length} Siswa)
-            </span>
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="text-xs bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg font-bold hover:bg-gray-50 flex items-center gap-1.5"
+            >
+              <Printer className="w-3.5 h-3.5" /> Print Tabel
+            </button>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-slate-100/80 text-slate-700 border-b border-gray-200 font-bold uppercase tracking-wider text-[11px]">
-                <th className="py-3 px-3 w-12 text-center">No</th>
-                <th className="py-3 px-3 w-28">NISN</th>
-                <th className="py-3 px-4 min-w-[180px]">Nama Peserta Didik</th>
-                <th className="py-3 px-2 w-12 text-center">L/P</th>
-                <th className="py-3 px-3 min-w-[140px] text-center">Persentase Kehadiran</th>
-                <th className="py-3 px-3 min-w-[120px] text-center">
-                  {activeTp ? `Nilai TP ${activeTp.kode}` : "Nilai Akhir Sumatif"}
+        <div className="overflow-x-auto flex-1 p-0 print:p-0 print:overflow-visible print:block">
+          <style>{`
+            @media print {
+              @page { size: 215.9mm 330.2mm portrait; margin: 8mm 10mm; }
+              body { background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+              main { padding: 0 !important; margin: 0 !important; }
+              table.rekap-akhir-table {
+                width: 100% !important;
+                table-layout: auto !important;
+                word-wrap: break-word !important;
+                font-size: 8.5pt !important;
+                border-collapse: collapse !important;
+              }
+              table.rekap-akhir-table th,
+              table.rekap-akhir-table td {
+                padding: 3.5px 4px !important;
+                white-space: normal !important;
+                border: 1px solid #cbd5e1 !important;
+              }
+              table.rekap-akhir-table th {
+                background-color: #f1f5f9 !important;
+                color: #0f172a !important;
+                font-weight: bold !important;
+                -webkit-print-color-adjust: exact !important;
+              }
+              /* Lebar kolom nomor urut disesuaikan pas dengan ukuran nomor urut siswa */
+              th.col-no,
+              td.col-no {
+                width: 28px !important;
+                max-width: 32px !important;
+                min-width: 24px !important;
+                text-align: center !important;
+                padding-left: 2px !important;
+                padding-right: 2px !important;
+                white-space: nowrap !important;
+              }
+              /* Kolom nama siswa langsung rapat ke kolom nomor urut tanpa jarak berlebih */
+              th.col-nama,
+              td.col-nama {
+                text-align: left !important;
+                padding-left: 6px !important;
+                padding-right: 6px !important;
+                width: auto !important;
+              }
+              th.col-kehadiran,
+              td.col-kehadiran {
+                width: 65px !important;
+                text-align: center !important;
+              }
+              th.col-tp,
+              td.col-tp {
+                width: 52px !important;
+                min-width: 48px !important;
+                text-align: center !important;
+              }
+              th.col-rapor,
+              td.col-rapor {
+                width: 65px !important;
+                text-align: center !important;
+              }
+            }
+          `}</style>
+          
+          <div className="hidden print:block text-center mb-4">
+            <h2 className="text-lg font-bold uppercase tracking-wide text-gray-900">
+              REKAPITULASI HASIL BELAJAR SISWA (REKAP AKHIR SEMESTER)
+            </h2>
+            <p className="text-xs font-semibold text-gray-700 mt-0.5">
+              {state.agmp_pengaturan?.sekolah || "SMP NEGERI 1 BIAU"}
+            </p>
+            <div className="flex justify-between items-center text-[10px] text-gray-600 mt-2 px-1 border-t border-b border-gray-300 py-1 font-medium">
+              <span>
+                <strong>Kelas:</strong> {filteredKelas.find(k => k.id === selectedKelasId)?.nama || "-"}
+              </span>
+              <span>
+                <strong>Mata Pelajaran:</strong> {state.agmp_pengaturan?.mapel || "-"}
+              </span>
+              <span>
+                <strong>Semester:</strong> {selectedTA ? selectedTA.semester : "-"}
+              </span>
+              <span>
+                <strong>Tahun Ajaran:</strong> {selectedTA ? selectedTA.nama : "-"}
+              </span>
+              <span>
+                <strong>Guru:</strong> {state.agmp_pengaturan?.guruNama || "-"}
+              </span>
+            </div>
+          </div>
+
+          <table className="rekap-akhir-table w-full text-left border-collapse whitespace-nowrap min-w-max print:min-w-0">
+            <colgroup>
+              <col className="w-10 print:w-[28px]" style={{ width: "36px" }} />
+              <col className="w-auto" />
+              <col className="w-24 sm:w-28 print:w-[65px]" style={{ width: "90px" }} />
+              {tpList.map((tp) => (
+                <col
+                  key={tp.id}
+                  className="w-20 sm:w-24 print:w-[50px]"
+                  style={{ width: "75px" }}
+                />
+              ))}
+              {showSimulasiRapor && (
+                <col
+                  className="w-24 sm:w-28 print:w-[65px]"
+                  style={{ width: "95px" }}
+                />
+              )}
+              <col className="w-20 print:hidden" />
+            </colgroup>
+            <thead className="bg-gray-100 text-[10px] sm:text-xs text-gray-600 uppercase tracking-widest sticky top-0 z-10 print:static">
+              <tr>
+                <th className="col-no w-10 min-w-[32px] max-w-[42px] px-1 sm:px-2 py-3 font-bold border-b border-gray-200 text-center">
+                  No
                 </th>
-                <th className="py-3 px-4 min-w-[240px]">Catatan Penilaian Sumatif</th>
-                <th className="py-3 px-3 min-w-[170px]">Tindak Lanjut</th>
+                <th className="col-nama px-3 sm:px-4 py-3 font-bold border-b border-gray-200 text-left">
+                  Nama Siswa
+                </th>
+                <th className="col-kehadiran px-3 sm:px-4 py-3 font-bold border-b border-gray-200 text-center">
+                  % Kehadiran
+                </th>
+                {tpList.map((tp, i) => (
+                  <th
+                    key={tp.id}
+                    className="col-tp px-2 sm:px-3 py-3 font-bold border-b border-gray-200 text-center"
+                    title={tp.deskripsi}
+                  >
+                    TP {tp.kode}
+                  </th>
+                ))}
+                {showSimulasiRapor && (
+                  <th className="col-rapor px-2 sm:px-3 py-3 font-bold border-b border-gray-200 text-center text-blue-900 bg-blue-50/70 print:bg-slate-100">
+                    <div className="flex flex-col items-center">
+                      <span>Nilai Rapor</span>
+                      <span className="text-[9px] font-normal text-blue-600 print:text-gray-600 lowercase">(simulasi)</span>
+                    </div>
+                  </th>
+                )}
+                <th className="px-4 py-3 font-bold border-b border-gray-200 text-center print:hidden">
+                  Aksi
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 text-gray-800">
-              {siswaList.length > 0 ? (
-                siswaList.map((siswa, idx) => {
-                  const kehadiran = calculateKehadiran(siswa.id);
-                  const sumatif = calculateSumatifData(siswa.id);
-
-                  // Colors for badge
-                  const kehadiranBadgeColor =
-                    kehadiran.percent >= 90
-                      ? "bg-emerald-100 text-emerald-800"
-                      : kehadiran.percent >= 75
-                      ? "bg-amber-100 text-amber-800"
-                      : "bg-red-100 text-red-800";
-
-                  const nilaiBadgeColor =
-                    sumatif.na >= interval.batasAtasLanjut
-                      ? "bg-indigo-100 text-indigo-800 border-indigo-200"
-                      : sumatif.na >= interval.batasBawahTuntas
-                      ? "bg-blue-100 text-blue-800 border-blue-200"
-                      : sumatif.na >= interval.batasBawahSelektif
-                      ? "bg-amber-100 text-amber-800 border-amber-200"
-                      : "bg-rose-100 text-rose-800 border-rose-200";
-
-                  const tindakLanjutBadge = {
-                    pengayaan: "bg-purple-100 text-purple-800 border-purple-200",
-                    tuntas: "bg-emerald-100 text-emerald-800 border-emerald-200",
-                    remedial: "bg-rose-100 text-rose-800 border-rose-200",
-                    pendampingan: "bg-amber-100 text-amber-800 border-amber-200",
-                    belum: "bg-gray-100 text-gray-600 border-gray-200",
-                  }[sumatif.tindakLanjutType];
-
+            <tbody className="divide-y divide-gray-100 text-xs sm:text-sm">
+              {siswaList.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={tpList.length + 4 + (showSimulasiRapor ? 1 : 0)}
+                    className="p-8 text-center text-gray-400 font-medium italic"
+                  >
+                    Tidak ada data siswa untuk kelas ini.
+                  </td>
+                </tr>
+              ) : (
+                siswaList.map((s, idx) => {
+                  const keh = calculateKehadiran(s.id);
                   return (
-                    <tr key={siswa.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-2.5 px-3 text-center text-gray-500 font-medium">
+                    <tr
+                      key={s.id}
+                      className="hover:bg-blue-50/30 transition-colors group"
+                    >
+                      <td className="col-no w-10 min-w-[32px] max-w-[42px] px-1 sm:px-2 py-3 text-gray-500 font-medium text-center">
                         {idx + 1}
                       </td>
-
-                      <td className="py-2.5 px-3 font-mono text-[11px] text-gray-600">
-                        {siswa.nisn || "-"}
+                      <td className="col-nama px-3 sm:px-4 py-3 font-semibold text-gray-900 text-left">
+                        {s.nama}
+                        <span className="block text-[10px] text-gray-400 font-normal">
+                          {s.nisn}
+                        </span>
                       </td>
-
-                      <td className="py-2.5 px-4 font-semibold text-gray-900">
-                        {siswa.nama}
-                      </td>
-
-                      <td className="py-2.5 px-2 text-center text-gray-600 font-medium">
-                        {siswa.jk || "-"}
-                      </td>
-
-                      {/* Kehadiran */}
-                      <td className="py-2.5 px-3 text-center">
-                        <div className="inline-flex flex-col items-center">
+                      <td className="col-kehadiran px-3 sm:px-4 py-3 text-center align-middle">
+                        <div className="flex flex-col items-center gap-1">
                           <span
-                            className={`px-2 py-0.5 rounded-full text-xs font-bold ${kehadiranBadgeColor}`}
+                            className={`font-bold ${keh.percent >= 85 ? "text-[#34C759]" : keh.percent >= 70 ? "text-[#FF9500]" : "text-[#FF3B30]"}`}
                           >
-                            {kehadiran.percent}%
+                            {keh.percent}%
                           </span>
-                          <span className="text-[10px] text-gray-500 mt-0.5 whitespace-nowrap">
-                            H:{kehadiran.hadir} S:{kehadiran.sakit} I:{kehadiran.izin} A:{kehadiran.alpa} B:{kehadiran.bolos}
-                          </span>
+                          <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden print:hidden">
+                            <div
+                              className={`h-full ${keh.percent >= 85 ? "bg-[#34C759]" : keh.percent >= 70 ? "bg-[#FF9500]" : "bg-[#FF3B30]"}`}
+                              style={{ width: `${keh.percent}%` }}
+                            ></div>
+                          </div>
                         </div>
                       </td>
-
-                      {/* Nilai Akhir Sumatif */}
-                      <td className="py-2.5 px-3 text-center">
-                        {sumatif.scoredCount > 0 ? (
-                          <div className="inline-flex flex-col items-center">
-                            <span
-                              className={`px-2.5 py-0.5 rounded-lg border text-sm font-extrabold ${nilaiBadgeColor}`}
-                            >
-                              {sumatif.na}
-                            </span>
-                            <span className="text-[10px] text-gray-600 font-medium mt-0.5">
-                              {sumatif.predikat}
-                            </span>
-                            <span
-                              className={`text-[9px] font-semibold ${
-                                sumatif.statusKetuntasan === "Tuntas"
-                                  ? "text-emerald-600"
-                                  : sumatif.statusKetuntasan === "Tuntas Remedial"
-                                  ? "text-blue-600"
-                                  : "text-rose-600"
-                              }`}
-                            >
-                              {sumatif.statusKetuntasan}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 italic text-[11px]">
-                            Belum Dinilai
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Catatan Penilaian Sumatif */}
-                      <td className="py-2.5 px-4 text-gray-700 leading-relaxed">
-                        <p className="line-clamp-2" title={sumatif.catatanSumatif}>
-                          {sumatif.catatanSumatif}
-                        </p>
-                      </td>
-
-                      {/* Tindak Lanjut */}
-                      <td className="py-2.5 px-3">
-                        <span
-                          className={`inline-block px-2.5 py-1 rounded-lg text-[11px] font-semibold border ${tindakLanjutBadge}`}
+                      {tpList.map((tp) => {
+                        const res = calculateSumatifForTP(s.id, tp.id);
+                        return (
+                          <td
+                            key={tp.id}
+                            className="col-tp px-2 sm:px-3 py-3 text-center align-middle whitespace-nowrap"
+                          >
+                            {res.status === "BELUM DINILAI" ? (
+                              <span
+                                className="text-gray-300 font-bold text-xs"
+                                title="Belum Dinilai"
+                              >
+                                ➖
+                              </span>
+                            ) : res.status === "TUNTAS" ? (
+                              <span
+                                className="inline-flex items-center justify-center gap-1 font-bold text-xs text-emerald-700"
+                                title={`Tuntas: ${res.nilai}`}
+                              >
+                                <span>✅</span>
+                                <span className="font-extrabold">{res.nilai}</span>
+                              </span>
+                            ) : res.status === "TUNTAS REMEDIAL" ? (
+                              <span
+                                className="inline-flex items-center justify-center gap-1 font-bold text-xs text-emerald-700"
+                                title={`Tuntas Remedial: ${res.nilai}`}
+                              >
+                                <span className="text-[11px]">✅(R)</span>
+                                <span className="font-extrabold">{res.nilai}</span>
+                              </span>
+                            ) : (
+                              <span
+                                className="inline-flex items-center justify-center gap-1 font-bold text-xs text-rose-600"
+                                title={`Belum Tuntas: ${res.nilai}`}
+                              >
+                                <span>❌</span>
+                                <span className="font-extrabold">{res.nilai}</span>
+                              </span>
+                            )}
+                          </td>
+                        );
+                      })}
+                      {showSimulasiRapor && (
+                        <td className="col-rapor px-2 sm:px-3 py-3 text-center align-middle bg-blue-50/20 print:bg-transparent">
+                          {(() => {
+                            const rap = calculateSimulasiRapor(s.id);
+                            if (rap.count === 0) {
+                              return (
+                                <span className="text-gray-300 font-bold text-xs" title="Belum ada nilai sumatif">
+                                  ➖
+                                </span>
+                              );
+                            }
+                            return (
+                              <div className="flex flex-col items-center justify-center">
+                                <span
+                                  className={`font-black text-xs sm:text-sm ${
+                                    rap.isTuntas ? "text-blue-700" : "text-rose-600"
+                                  }`}
+                                >
+                                  {rap.nilaiRapor}
+                                </span>
+                                <span
+                                  className={`text-[9.5px] font-bold px-1.5 py-0.2 rounded ${
+                                    rap.isTuntas
+                                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                      : "bg-rose-50 text-rose-700 border border-rose-200"
+                                  }`}
+                                >
+                                  {rap.isTuntas ? "Tuntas" : "Blm Tuntas"}
+                                </span>
+                              </div>
+                            );
+                          })()}
+                        </td>
+                      )}
+                      <td className="px-4 py-3 text-center print:hidden">
+                        <button
+                          onClick={() => setSelectedSiswaId(s.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity px-3 py-1.5 bg-blue-50 text-blue-700 text-xs font-bold rounded-lg hover:bg-blue-100"
                         >
-                          {sumatif.tindakLanjut}
-                        </span>
+                          Detail
+                        </button>
                       </td>
                     </tr>
                   );
                 })
-              ) : (
-                <tr>
-                  <td colSpan={8} className="py-8 text-center text-gray-500 italic">
-                    {searchQuery
-                      ? "Tidak ada siswa yang sesuai dengan kata kunci pencarian."
-                      : "Belum ada data siswa di kelas yang dipilih."}
-                  </td>
-                </tr>
               )}
             </tbody>
           </table>
+
+          {/* Bagian Tanda Tangan Khusus Print */}
+          <div className="hidden print:block mt-6 text-xs text-gray-800">
+            <div className="flex justify-between items-start px-6">
+              <div className="text-center w-56">
+                <p>Mengetahui,</p>
+                <p className="font-semibold">Kepala Sekolah</p>
+                <div className="h-14"></div>
+                <p className="font-bold underline">( ............................................ )</p>
+                <p className="text-[10px] text-gray-500">NIP. ............................................</p>
+              </div>
+              <div className="text-center w-56">
+                <p>
+                  Dicetak: {new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                </p>
+                <p className="font-semibold">Guru Mata Pelajaran</p>
+                <div className="h-14"></div>
+                <p className="font-bold underline">{state.agmp_pengaturan?.guruNama ? `( ${state.agmp_pengaturan.guruNama} )` : "( ............................................ )"}</p>
+                <p className="text-[10px] text-gray-500">NIP. ............................................</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Footer Table for specific class */}
+        <div className="p-4 bg-gray-50 border-t border-gray-100 text-xs text-gray-600 print:hidden grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div>
+            <strong>Total Siswa:</strong> {siswaList.length} Anak
+          </div>
+          <div>
+            <strong>Total TP (Semester Ini):</strong> {tpList.length} TP
+          </div>
+          <div>
+            <strong>Tahun Ajaran:</strong> {selectedTA ? `${selectedTA.nama} (${selectedTA.semester})` : "Semua Tahun"}
+          </div>
         </div>
       </div>
 
-      {/* PRINT CONTAINER FOR BROWSER PRINT (Hidden on screen, Visible when window.print() is called) */}
-      <div id="print-folio-container" className="hidden print:block">
-        {pagesData.map((pRows, pageIdx) => (
-          <div key={pageIdx} className="print-page-sheet">
-            <PrintPaperPage
-              pageIndex={pageIdx}
-              totalPages={pagesData.length}
-              pageRows={pRows}
-              state={state}
-              selectedKelas={selectedKelas}
-              selectedTA={selectedTA}
-              densityStyles={densityStyles}
-              showSignatures={showSignatures}
-              activeTp={activeTp}
-            />
-          </div>
-        ))}
-      </div>
-
-      {/* PRINT PREVIEW MODAL */}
-      {showPreviewModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex flex-col justify-between overflow-hidden">
-          {/* Modal Header Controls */}
-          <div className="bg-slate-900 text-white px-5 py-3.5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-lg">
-                <Printer className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-base text-white flex items-center gap-2">
-                  Print Preview: Rekap Nilai Siswa
-                  <span className="text-xs bg-indigo-500/30 text-indigo-300 px-2 py-0.5 rounded-full font-mono">
-                    Folio Landscape (215 x 330 mm)
-                  </span>
-                  <span className="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-semibold border border-emerald-500/30">
-                    {pagesData.length} Halaman Kertas
-                  </span>
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Dinamis {pagesData.length} halaman ({allSiswaInKelas.length} siswa) • Semua data siswa termuat lengkap tanpa ada yang terpotong.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2.5">
-              {/* Layout Mode Setting */}
-              <div className="flex items-center gap-1.5 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 text-xs">
-                <span className="text-slate-400">Tata Letak:</span>
-                <select
-                  value={pageLayoutMode}
-                  onChange={(e) => setPageLayoutMode(e.target.value as any)}
-                  className="bg-transparent text-white font-medium focus:outline-none cursor-pointer"
-                >
-                  <option value="auto" className="bg-slate-800">
-                    Otomatis Dinamis ({pagesData.length} Hal)
-                  </option>
-                  <option value="force1" className="bg-slate-800">
-                    Muat 1 Halaman ({allSiswaInKelas.length} Siswa)
-                  </option>
-                  <option value="split2" className="bg-slate-800">
-                    Bagi 2 Halaman ({Math.ceil(allSiswaInKelas.length / 2)} Siswa/Hal)
-                  </option>
-                  {allSiswaInKelas.length > 30 && (
-                    <option value="split3" className="bg-slate-800">
-                      Bagi 3 Halaman
-                    </option>
-                  )}
-                </select>
-              </div>
-
-              {/* Page Tabs in Preview (if multi-page) */}
-              {pagesData.length > 1 && (
-                <div className="flex items-center bg-slate-800 p-0.5 rounded-xl border border-slate-700 text-xs">
-                  <button
-                    onClick={() => setPreviewTab("all")}
-                    className={`px-2.5 py-1 rounded-lg transition-colors font-medium ${
-                      previewTab === "all"
-                        ? "bg-indigo-600 text-white shadow-sm"
-                        : "text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    Semua ({pagesData.length})
-                  </button>
-                  {pagesData.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setPreviewTab(idx)}
-                      className={`px-2.5 py-1 rounded-lg transition-colors font-medium ${
-                        previewTab === idx
-                          ? "bg-indigo-600 text-white shadow-sm"
-                          : "text-slate-400 hover:text-white"
-                      }`}
-                    >
-                      Hal {idx + 1}
-                    </button>
-                  ))}
+      {/* DETAIL MODAL */}
+      {selectedSiswaId && selectedSiswa && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 print:hidden">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setSelectedSiswaId(null)}
+          ></div>
+          <div className="bg-[#F5F5F7] w-full sm:max-w-2xl sm:rounded-2xl h-[90vh] sm:h-[85vh] relative z-10 flex flex-col overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 rounded-t-2xl">
+            {/* Modal Header */}
+            <div className="bg-white p-5 sm:p-6 border-b border-gray-100 flex-shrink-0 flex items-start justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-xl font-black shadow-inner">
+                  {selectedSiswa.nama.substring(0, 2).toUpperCase()}
                 </div>
-              )}
-
-              {/* Density Setting */}
-              <div className="flex items-center gap-1.5 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 text-xs">
-                <span className="text-slate-400">Kerapatan:</span>
-                <select
-                  value={density}
-                  onChange={(e) => setDensity(e.target.value as any)}
-                  className="bg-transparent text-white font-medium focus:outline-none cursor-pointer"
-                >
-                  <option value="auto" className="bg-slate-800">Auto ({computedDensity})</option>
-                  <option value="normal" className="bg-slate-800">Normal</option>
-                  <option value="compact" className="bg-slate-800">Kompak</option>
-                  <option value="ultra" className="bg-slate-800">Sangat Rapat</option>
-                </select>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 leading-tight">
+                    {selectedSiswa.nama}
+                  </h2>
+                  <p className="text-sm text-gray-500 font-medium">
+                    NISN: {selectedSiswa.nisn} • Kelas{" "}
+                    {
+                      filteredKelas.find((k) => k.id === selectedKelasId)
+                        ?.nama
+                    }
+                  </p>
+                </div>
               </div>
-
-              {/* Toggle Signatures */}
-              <label className="flex items-center gap-1.5 text-xs text-slate-300 bg-slate-800 px-3 py-2 rounded-xl border border-slate-700 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showSignatures}
-                  onChange={(e) => setShowSignatures(e.target.checked)}
-                  className="rounded text-indigo-500"
-                />
-                Tanda Tangan
-              </label>
-
-              {/* Action Buttons */}
               <button
-                onClick={handlePrint}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                Cetak Sekarang
-              </button>
-
-              <button
-                onClick={handleExportPdfFolio}
-                disabled={isExportingPdf}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-sm"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Unduh PDF ({pagesData.length} Hal)
-              </button>
-
-              <button
-                onClick={() => setShowPreviewModal(false)}
-                className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors ml-1"
-                title="Tutup Preview"
+                onClick={() => setSelectedSiswaId(null)}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-          </div>
 
-          {/* Modal Preview Canvas (Simulating Folio Landscape Paper 330mm x 215mm) */}
-          <div className="flex-1 overflow-auto p-4 sm:p-8 bg-slate-950 flex flex-col items-center">
-            {pagesData.map((pRows, pageIdx) => {
-              if (previewTab !== "all" && previewTab !== pageIdx) return null;
-              return (
-                <div
-                  key={pageIdx}
-                  className="bg-white text-black shadow-2xl rounded-sm p-6 sm:p-7 transition-all mb-8 last:mb-2 relative"
-                  style={{
-                    width: "100%",
-                    maxWidth: "1150px",
-                    minHeight: "720px",
-                    aspectRatio: "330 / 215",
-                  }}
+            {/* Modal Tabs */}
+            <div className="bg-white px-6 flex items-center gap-6 border-b border-gray-100 flex-shrink-0">
+              {[
+                { id: "umum", icon: UserCircle, label: "Info Umum" },
+                { id: "formatif", icon: Target, label: "Formatif" },
+                { id: "sumatif", icon: Award, label: "Sumatif" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() =>
+                    setActiveTab(tab.id as "umum" | "formatif" | "sumatif")
+                  }
+                  className={`flex items-center gap-2 py-4 text-sm font-bold border-b-2 transition-colors ${activeTab === tab.id ? "border-blue-600 text-blue-700" : "border-transparent text-gray-500 hover:text-gray-700"}`}
                 >
-                  <div className="absolute top-2 right-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                    Halaman {pageIdx + 1} dari {pagesData.length}
-                  </div>
-                  <PrintPaperPage
-                    pageIndex={pageIdx}
-                    totalPages={pagesData.length}
-                    pageRows={pRows}
-                    state={state}
-                    selectedKelas={selectedKelas}
-                    selectedTA={selectedTA}
-                    densityStyles={densityStyles}
-                    showSignatures={showSignatures}
-                    activeTp={activeTp}
-                  />
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Modal Footer Info */}
-          <div className="bg-slate-900 px-5 py-2.5 text-center text-xs text-slate-400 border-t border-slate-800 flex justify-between items-center flex-shrink-0">
-            <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
-              <CheckCircle className="w-4 h-4" />
-              Format Dinamis {pagesData.length} Halaman Siap Cetak (Folio Landscape 330 x 215 mm)
-            </span>
-            <span>
-              Total {allSiswaInKelas.length} Siswa • Kelas {selectedKelas?.nama || "-"}
-            </span>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Subcomponent: The Print Paper Page (supports single and multi-page layouts)
-function PrintPaperPage({
-  pageIndex,
-  totalPages,
-  pageRows,
-  state,
-  selectedKelas,
-  selectedTA,
-  densityStyles,
-  showSignatures,
-  activeTp,
-}: {
-  pageIndex: number;
-  totalPages: number;
-  pageRows: any[];
-  state: any;
-  selectedKelas: any;
-  selectedTA: any;
-  densityStyles: {
-    tableText: string;
-    headerText: string;
-    cellPadding: string;
-    lineHeight: string;
-  };
-  showSignatures: boolean;
-  activeTp?: any;
-}) {
-  const schoolName = state.agmp_pengaturan.sekolah?.trim() || "SMP NEGERI 1 BIAU";
-  const guruName = state.agmp_pengaturan.guruNama?.trim() || "Guru Mata Pelajaran";
-  const mapelName =
-    state.agmp_mapel?.find((m: any) => m.id === state.agmp_pengaturan?.mapelId)?.nama ||
-    state.agmp_pengaturan.mapel ||
-    "Mata Pelajaran";
-  const kelasName = selectedKelas?.nama || "-";
-  const faseName = selectedKelas?.fase ? `Fase ${selectedKelas.fase}` : "-";
-  const taName = selectedTA
-    ? `${selectedTA.nama} - Semester ${selectedTA.semester}`
-    : "-";
-
-  const todayStr = new Date().toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-
-  const isLastPage = pageIndex === totalPages - 1;
-
-  return (
-    <div className="w-full flex flex-col justify-between h-full font-sans text-black">
-      {/* 1. HEADER (KOP SURAT on Page 1, RUNNING HEADER on Page 2+) */}
-      {pageIndex === 0 ? (
-        <div className="border-b-2 border-slate-900 pb-2 mb-2">
-          <div className="flex items-center justify-between gap-4">
-            <div className="w-14 h-14 flex items-center justify-center flex-shrink-0">
-              {/* School / Education Emblem SVG */}
-              <svg
-                className="w-12 h-12 text-slate-800"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-                <path d="M6 12v5c3 3 9 3 12 0v-5" />
-              </svg>
+                  <tab.icon className="w-4 h-4" /> {tab.label}
+                </button>
+              ))}
             </div>
 
-            <div className="text-center flex-1">
-              <h1 className="text-base sm:text-lg font-extrabold uppercase tracking-wide text-slate-900 leading-tight">
-                {schoolName}
-              </h1>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800 mt-0.5">
-                REKAPITULASI HASIL BELAJAR PESERTA DIDIK (REKAP NILAI)
-              </h2>
-              <p className="text-[10px] text-slate-600 mt-0.5">
-                Kurikulum Merdeka • Rekapitulasi Presensi Kehadiran, Nilai Akhir Sumatif & Tindak Lanjut Pembelajaran
-              </p>
-            </div>
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 p-safe space-y-6">
+              {activeTab === "umum" &&
+                (() => {
+                  const keh = calculateKehadiran(selectedSiswa.id);
+                  let tuntas = 0,
+                    blmTuntas = 0,
+                    blmDinilai = 0;
+                  tpList.forEach((tp) => {
+                    const st = calculateSumatifForTP(
+                      selectedSiswa.id,
+                      tp.id,
+                    ).status;
+                    if (st === "TUNTAS" || st === "TUNTAS REMEDIAL") tuntas++;
+                    else if (st === "BELUM TUNTAS") blmTuntas++;
+                    else blmDinilai++;
+                  });
 
-            <div className="w-14 flex-shrink-0" />
-          </div>
+                  let statusAkhir = "SIAP NAIK KELAS";
+                  if (blmTuntas > 0) statusAkhir = "PERLU PERHATIAN";
+                  if (blmTuntas >= 3) statusAkhir = "PERLU REMEDIAL INTENSIF";
 
-          {/* Double underline decoration */}
-          <div className="w-full border-t border-slate-400 mt-1" />
-        </div>
-      ) : (
-        <div className="border-b-2 border-slate-900 pb-1.5 mb-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xs font-bold uppercase tracking-wide text-slate-900">
-                {schoolName} • REKAP NILAI HASIL BELAJAR PESERTA DIDIK (Lanjutan)
-              </h2>
-              <p className="text-[9.5px] text-slate-600">
-                Kelas: <span className="font-semibold text-slate-800">{kelasName} ({faseName})</span> • Tahun Ajaran: <span className="font-semibold text-slate-800">{taName}</span> • Mata Pelajaran: <span className="font-semibold text-slate-800">{mapelName}</span>
-                {activeTp ? ` • TP: TP ${activeTp.kode} (KKTP 75)` : ` • KKTP: 75`}
-              </p>
-            </div>
-            <div className="text-right text-[9.5px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
-              Halaman {pageIndex + 1} dari {totalPages}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 2. METADATA TABLE (Page 1 Only) */}
-      {pageIndex === 0 && (
-        <div className="grid grid-cols-4 gap-2 text-[10px] font-semibold text-slate-800 mb-2 px-1">
-          <div>
-            Kelas / Fase: <span className="font-bold">{kelasName} ({faseName})</span>
-          </div>
-          <div>
-            Tahun Ajaran: <span className="font-bold">{taName}</span>
-          </div>
-          <div>
-            Mata Pelajaran: <span className="font-bold">{mapelName}</span>
-          </div>
-          <div className="text-right">
-            {activeTp ? (
-              <span>Filter TP: <span className="font-bold text-blue-700">TP {activeTp.kode}</span> (KKTP 75)</span>
-            ) : (
-              <span>KKTP / KKM: <span className="font-bold">75</span></span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 3. TABEL DATA SISWA */}
-      <div className="flex-1 w-full overflow-hidden">
-        <table className={`w-full border-collapse border border-slate-900 text-left ${densityStyles.tableText}`}>
-          <thead>
-            <tr className="bg-slate-200/90 text-slate-900 font-bold uppercase border-b border-slate-900 text-center">
-              <th className={`border border-slate-900 w-8 ${densityStyles.headerText}`}>No</th>
-              <th className={`border border-slate-900 w-24 ${densityStyles.headerText}`}>NISN</th>
-              <th className={`border border-slate-900 text-left min-w-[150px] ${densityStyles.headerText}`}>
-                Nama Peserta Didik
-              </th>
-              <th className={`border border-slate-900 w-8 ${densityStyles.headerText}`}>L/P</th>
-              <th className={`border border-slate-900 min-w-[120px] ${densityStyles.headerText}`}>
-                Rekap Kehadiran
-              </th>
-              <th className={`border border-slate-900 min-w-[100px] ${densityStyles.headerText}`}>
-                {activeTp ? `Nilai TP ${activeTp.kode}` : "Nilai Akhir Sumatif"}
-              </th>
-              <th className={`border border-slate-900 text-left min-w-[200px] ${densityStyles.headerText}`}>
-                Catatan Penilaian Sumatif
-              </th>
-              <th className={`border border-slate-900 text-left min-w-[140px] ${densityStyles.headerText}`}>
-                Tindak Lanjut
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {pageRows.length > 0 ? (
-              pageRows.map((row) => (
-                <tr
-                  key={row.siswa.id}
-                  className={`border-b border-slate-400 ${densityStyles.lineHeight}`}
-                >
-                  <td className={`border border-slate-900 text-center font-medium ${densityStyles.cellPadding}`}>
-                    {row.no}
-                  </td>
-                  <td className={`border border-slate-900 text-center font-mono ${densityStyles.cellPadding}`}>
-                    {row.siswa.nisn || "-"}
-                  </td>
-                  <td className={`border border-slate-900 font-semibold ${densityStyles.cellPadding}`}>
-                    {row.siswa.nama}
-                  </td>
-                  <td className={`border border-slate-900 text-center ${densityStyles.cellPadding}`}>
-                    {row.siswa.jk || "-"}
-                  </td>
-                  <td className={`border border-slate-900 text-center ${densityStyles.cellPadding}`}>
-                    <span className="font-bold">{row.kehadiran.percent}%</span>{" "}
-                    <span className="text-[9px] text-slate-700 block whitespace-nowrap">
-                      (H:{row.kehadiran.hadir} S:{row.kehadiran.sakit} I:{row.kehadiran.izin} A:{row.kehadiran.alpa} B:{row.kehadiran.bolos})
-                    </span>
-                  </td>
-                  <td className={`border border-slate-900 text-center ${densityStyles.cellPadding}`}>
-                    {row.sumatif.scoredCount > 0 ? (
-                      <div>
-                        <span className="font-extrabold text-[12px]">{row.sumatif.na}</span>{" "}
-                        <span className="text-[9px] font-semibold text-slate-800">
-                          ({row.sumatif.predikat})
-                        </span>
-                        <div className="text-[8.5px] font-bold text-slate-600 leading-none">
-                          [{row.sumatif.statusKetuntasan}]
+                  return (
+                    <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                      {/* Identitas Card */}
+                      <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                        <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">
+                          Profil Singkat
+                        </h4>
+                        <div className="grid grid-cols-2 gap-y-4 text-sm">
+                          <div>
+                            <span className="block text-gray-500 font-medium">
+                              Jenis Kelamin
+                            </span>
+                            <span className="font-bold text-gray-900">
+                              {selectedSiswa.jk === "L"
+                                ? "Laki-Laki"
+                                : "Perempuan"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="block text-gray-500 font-medium">
+                              Thn Ajaran / Semester
+                            </span>
+                            <span className="font-bold text-gray-900">
+                              {selectedTA ? `${selectedTA.nama} / ${selectedTA.semester}` : 'Semua Tahun'}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    ) : (
-                      <span className="italic text-slate-400 text-[10px]">-</span>
-                    )}
-                  </td>
-                  <td className={`border border-slate-900 ${densityStyles.cellPadding}`}>
-                    <p className="line-clamp-2 leading-tight">
-                      {row.sumatif.catatanSumatif}
-                    </p>
-                  </td>
-                  <td className={`border border-slate-900 font-medium ${densityStyles.cellPadding}`}>
-                    <span className="leading-tight block">
-                      {row.sumatif.tindakLanjut}
-                    </span>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={8} className="border border-slate-900 text-center py-4 italic text-slate-500">
-                  Belum ada data siswa di halaman ini.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
 
-      {/* 4. TANDA TANGAN (SIGNATURES - Last Page Only) */}
-      {isLastPage && showSignatures && (
-        <div className="grid grid-cols-2 gap-4 mt-2 pt-2 text-[10px] leading-snug">
-          {/* Kolom Kiri: Mengetahui Kepala Sekolah */}
-          <div className="text-left pl-6">
-            <p>Mengetahui,</p>
-            <p className="font-semibold">Kepala Sekolah</p>
-            <div className="h-10" />
-            <p className="font-bold underline">
-              {(state.agmp_pengaturan as any)?.kepalaSekolah || "( ..................................................... )"}
-            </p>
-            <p className="text-[9px] text-slate-600">
-              NIP. {(state.agmp_pengaturan as any)?.nipKepalaSekolah || "....................................................."}
-            </p>
-          </div>
+                      {/* Kehadiran Card */}
+                      <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center gap-6">
+                        <div className="shrink-0 w-24 h-24 rounded-full border-4 border-gray-50 flex items-center justify-center relative">
+                          <svg className="absolute inset-0 w-full h-full -rotate-90">
+                            <circle
+                              className="text-gray-100"
+                              strokeWidth="6"
+                              stroke="currentColor"
+                              fill="transparent"
+                              r="42"
+                              cx="48"
+                              cy="48"
+                            />
+                            <circle
+                              className={`${keh.percent >= 85 ? "text-[#34C759]" : keh.percent >= 70 ? "text-[#FF9500]" : "text-[#FF3B30]"} drop-shadow-sm transition-all duration-1000`}
+                              strokeWidth="6"
+                              strokeDasharray={`${(keh.percent / 100) * 264} 264`}
+                              strokeLinecap="round"
+                              stroke="currentColor"
+                              fill="transparent"
+                              r="42"
+                              cx="48"
+                              cy="48"
+                            />
+                          </svg>
+                          <span className="text-xl font-black text-gray-800">
+                            {keh.percent}%
+                          </span>
+                        </div>
+                        <div className="flex-1 grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-sm">
+                          <div className="bg-green-50 rounded-lg py-2">
+                            <span className="block font-black text-green-700 text-lg">
+                              {keh.hadir}
+                            </span>
+                            <span className="text-[10px] font-bold text-green-600 uppercase">
+                              Hadir
+                            </span>
+                          </div>
+                          <div className="bg-blue-50 rounded-lg py-2">
+                            <span className="block font-black text-blue-700 text-lg">
+                              {keh.sakit}
+                            </span>
+                            <span className="text-[10px] font-bold text-blue-600 uppercase">
+                              Sakit
+                            </span>
+                          </div>
+                          <div className="bg-orange-50 rounded-lg py-2">
+                            <span className="block font-black text-orange-700 text-lg">
+                              {keh.izin}
+                            </span>
+                            <span className="text-[10px] font-bold text-orange-600 uppercase">
+                              Izin
+                            </span>
+                          </div>
+                          <div className="bg-red-50 rounded-lg py-2">
+                            <span className="block font-black text-red-700 text-lg">
+                              {keh.alpa}
+                            </span>
+                            <span className="text-[10px] font-bold text-red-600 uppercase">
+                              Alpa
+                            </span>
+                          </div>
+                          <div className="bg-amber-50 rounded-lg py-2">
+                            <span className="block font-black text-amber-700 text-lg">
+                              {keh.bolos}
+                            </span>
+                            <span className="text-[10px] font-bold text-amber-600 uppercase">
+                              Bolos
+                            </span>
+                          </div>
+                        </div>
+                      </div>
 
-          {/* Kolom Kanan: Guru Mata Pelajaran */}
-          <div className="text-left pl-24">
-            <p>Biau, {todayStr}</p>
-            <p className="font-semibold">Guru Mata Pelajaran</p>
-            <div className="h-10" />
-            <p className="font-bold underline">{guruName}</p>
-            <p className="text-[9px] text-slate-600">
-              NIP. {(state.agmp_pengaturan as any)?.nipGuru || "....................................................."}
-            </p>
+                      {/* Ringkasan TP Card */}
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div className="p-5 border-b border-gray-100 grid grid-cols-4 text-center divide-x divide-gray-100">
+                          <div>
+                            <span className="block text-2xl font-black text-gray-800">
+                              {tpList.length}
+                            </span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase">
+                              Total TP
+                            </span>
+                          </div>
+                          <div>
+                            <span className="block text-2xl font-black text-[#34C759]">
+                              {tuntas}
+                            </span>
+                            <span className="text-[10px] font-bold text-[#34C759] uppercase">
+                              Tuntas
+                            </span>
+                          </div>
+                          <div>
+                            <span className="block text-2xl font-black text-[#FF3B30]">
+                              {blmTuntas}
+                            </span>
+                            <span className="text-[10px] font-bold text-[#FF3B30] uppercase">
+                              Blm Tuntas
+                            </span>
+                          </div>
+                          <div>
+                            <span className="block text-2xl font-black text-gray-400">
+                              {blmDinilai}
+                            </span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase">
+                              Blm Dinilai
+                            </span>
+                          </div>
+                        </div>
+                        <div
+                          className={`p-4 text-center font-bold text-sm tracking-widest ${statusAkhir === "SIAP NAIK KELAS" ? "bg-green-600 text-white" : statusAkhir === "PERLU PERHATIAN" ? "bg-[#FF9500] text-white" : "bg-red-600 text-white"}`}
+                        >
+                          {statusAkhir}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+              {activeTab === "formatif" &&
+                (() => {
+                  const studentFormatifs = state.agmp_formatif.filter(
+                    (f) => f.hasil[selectedSiswa.id],
+                  );
+                  const tpKodeMap: Record<string, string> = {};
+                  state.agmp_tp.forEach((t) => (tpKodeMap[t.id] = t.kode));
+
+                  if (studentFormatifs.length === 0)
+                    return (
+                      <div className="text-center py-10">
+                        <p className="text-gray-400 font-medium italic mb-2">
+                          Belum ada data formatif untuk siswa ini.
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Cek berkala untuk update dari guru.
+                        </p>
+                      </div>
+                    );
+
+                  return (
+                    <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                      {studentFormatifs.map((f) => {
+                        const matchedTp = state.agmp_tp.find(
+                          (t) =>
+                            f.jurnalId === t.id ||
+                            f.jurnalId.endsWith(`_${t.id}`) ||
+                            f.jurnalId.includes(`_${t.id}`) ||
+                            f.jurnalId.includes(t.id),
+                        );
+                        const tpKode =
+                          matchedTp?.kode ||
+                          tpKodeMap[f.jurnalId.split("_").slice(1).join("_")] ||
+                          tpKodeMap[f.jurnalId] ||
+                          "?";
+                        const res = f.hasil[selectedSiswa.id];
+
+                        let badgeColor = "bg-gray-100 text-gray-700";
+                        if (
+                          res.status === "Siap Belajar" ||
+                          res.status === "4" ||
+                          res.status === "3"
+                        )
+                          badgeColor = "bg-green-100 text-green-700";
+                        if (
+                          res.status === "Perlu Bimbingan" ||
+                          res.status === "1" ||
+                          res.status === "2"
+                        )
+                          badgeColor = "bg-orange-100 text-orange-700";
+
+                        return (
+                          <div
+                            key={f.id}
+                            className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 relative overflow-hidden"
+                          >
+                            <div
+                              className={`absolute top-0 left-0 w-1.5 h-full ${badgeColor.split(" ")[0].replace("100", "500")}`}
+                            />
+                            <div className="flex justify-between items-start mb-3 pl-3">
+                              <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded uppercase">
+                                    TP {tpKode}
+                                  </span>
+                                  <span className="text-[10px] font-bold text-gray-400 uppercase">
+                                    •{" "}
+                                    {f.jenis === "AWAL"
+                                      ? "Diagnostic"
+                                      : "Monitoring"}
+                                  </span>
+                                </div>
+                                <h4 className="font-bold text-gray-900 text-sm">
+                                  Teknik: {f.teknik}
+                                </h4>
+                              </div>
+                              <span
+                                className={`px-2.5 py-1 rounded-lg text-xs font-bold ${badgeColor}`}
+                              >
+                                {res.status ? (res.status.length <= 2
+                                  ? `Level ${res.status}`
+                                  : res.status) : "Anekdot"}
+                              </span>
+                            </div>
+                            <div className="pl-3 mt-2 space-y-2">
+                              {res.catatan && (
+                                <p className="text-sm text-gray-600 leading-relaxed italic border-l-2 border-gray-200 pl-2">
+                                  &quot;{res.catatan}&quot;
+                                </p>
+                              )}
+                              {!res.catatan && (!res.anekdots || res.anekdots.length === 0) && (
+                                <p className="text-sm text-gray-500 leading-relaxed italic border-l-2 border-blue-200 pl-2">
+                                  {res.status === "Siap Belajar"
+                                    ? "Evaluasi: Kesiapan belajar sangat baik, siap mengikuti materi inti."
+                                    : res.status === "Perlu Bimbingan"
+                                    ? "Evaluasi: Perlu pendampingan belajar dan penguatan konsep dasar."
+                                    : res.status === "4"
+                                    ? "Evaluasi: Sangat menguasai materi, mandiri dan siap pengayaan."
+                                    : res.status === "3"
+                                    ? "Evaluasi: Memahami materi pembelajaran dengan baik dan mandiri."
+                                    : res.status === "2"
+                                    ? "Evaluasi: Mulai memahami konsep, memerlukan latihan terbimbing."
+                                    : res.status === "1"
+                                    ? "Evaluasi: Pemahaman masih awal, butuh bimbingan intensif."
+                                    : "Telah diobservasi dalam proses pembelajaran."}
+                                </p>
+                              )}
+                              {res.anekdots && res.anekdots.length > 0 && (
+                                <div className="space-y-2 mt-2">
+                                  {res.anekdots.map((anekdot: any) => (
+                                    <div key={anekdot.id} className="text-sm bg-gray-50 border border-gray-100 rounded p-2">
+                                      {anekdot.tanggal && (
+                                        <span className="inline-block px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded text-[10px] mr-2">
+                                          {new Date(anekdot.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}
+                                        </span>
+                                      )}
+                                      <span className="text-[10px] uppercase font-bold text-blue-600 mr-2">{anekdot.kategori}</span>
+                                      <span className="text-gray-700">{anekdot.teks}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      
+                      {state.agmp_anekdot.filter(a => a.siswaId === selectedSiswa.id && (selectedTaId ? a.taId === selectedTaId : true)).length > 0 && (
+                        <div className="mt-6">
+                            <h4 className="font-bold text-gray-900 text-sm mb-3 px-1">Catatan Anekdot Global (Sikap/Perilaku)</h4>
+                            <div className="space-y-3">
+                              {state.agmp_anekdot.filter(a => a.siswaId === selectedSiswa.id && (selectedTaId ? a.taId === selectedTaId : true)).sort((a,b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime()).map((anet) => (
+                                 <div key={anet.id} className="bg-orange-50 border border-orange-100 p-4 rounded-xl shadow-sm">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <span className="px-2 py-0.5 bg-orange-200 text-orange-800 text-[10px] font-bold rounded uppercase">
+                                        Perilaku
+                                      </span>
+                                      <span className="text-[10px] font-bold text-gray-500 uppercase">
+                                        • {new Date(anet.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'})}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm text-gray-700">{anet.teks}</p>
+                                 </div>
+                              ))}
+                            </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+              {activeTab === "sumatif" && (
+                <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                  {tpList.map((tp) => {
+                    const res = calculateSumatifForTP(selectedSiswa.id, tp.id);
+                    const sumatifObj = state.agmp_sumatif.find(
+                      (s) => s.id === res.sumatifId,
+                    );
+                    const record = sumatifObj?.records[selectedSiswa.id];
+
+                    return (
+                      <div
+                        key={tp.id}
+                        className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+                      >
+                        {/* Header TP */}
+                        <div className="p-4 bg-gray-50 border-b border-gray-100 flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <h4 className="font-bold text-gray-900 text-sm">
+                              TP {tp.kode}
+                            </h4>
+                            <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                              {tp.deskripsi}
+                            </p>
+                          </div>
+                          <span
+                            className={`shrink-0 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${res.status === "TUNTAS" || res.status === "TUNTAS REMEDIAL" ? "bg-[#E8F5E9] text-[#34C759] border border-[#34C759]/20" : res.status === "BELUM TUNTAS" ? "bg-[#FFEBEE] text-[#FF3B30] border border-[#FF3B30]/20" : "bg-[#F5F5F7] text-[#8E8E93] border border-[#E5E5EA]"}`}
+                          >
+                            {res.status}
+                          </span>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-4 sm:p-5">
+                          {res.status === "BELUM DINILAI" ? (
+                            <div className="text-center py-6">
+                              <p className="text-gray-400 text-sm font-medium mb-3">
+                                Belum ada penilaian sumatif untuk TP
+                                ini.
+                              </p>
+                              <button
+                                onClick={() => onNavigate("sumatif")}
+                                className="mx-auto block px-4 py-2 bg-white border border-gray-200 text-gray-700 text-xs font-bold rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+                              >
+                                Buka Modul Sumatif
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col sm:flex-row gap-6">
+                              {/* Nilai Besar Center */}
+                              <div className="flex flex-col items-center justify-center shrink-0">
+                                <div
+                                  className={`w-24 h-24 rounded-full border-4 flex items-center justify-center text-3xl font-black ${res.nilai >= interval.batasAtasLanjut ? "border-blue-100 text-blue-600 bg-blue-50/50" : res.nilai >= interval.batasBawahTuntas ? "border-green-100 text-green-600 bg-green-50/50" : res.nilai >= interval.batasBawahSelektif ? "border-yellow-100 text-yellow-600 bg-yellow-50/50" : "border-red-100 text-red-600 bg-red-50/50"}`}
+                                >
+                                  {res.nilai}
+                                </div>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-3 whitespace-nowrap">
+                                  Nilai Akhir TP
+                                </p>
+                              </div>
+
+                              {/* Detail */}
+                              <div className="flex-1 space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">
+                                      Teknik & Instrumen
+                                    </span>
+                                    <p className="text-sm font-semibold text-gray-900">
+                                      {sumatifObj?.teknik || "Tertulis"}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">
+                                      Level Dicapai
+                                    </span>
+                                    <p className="text-sm font-semibold text-gray-900">
+                                      {res.level ? `Level ${res.level}` : "-"}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">
+                                    Catatan Guru
+                                  </span>
+                                  <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-700 italic border border-gray-100">
+                                    &quot;
+                                    {record?.catatan ||
+                                      "Telah dievaluasi berdasarkan rubrik/kriteria."}
+                                    &quot;
+                                  </div>
+                                </div>
+
+                                {/* Block Remedial if any */}
+                                {res.remedial && (
+                                  <div className="bg-orange-50/50 border border-orange-100 p-4 rounded-xl mt-4">
+                                    <h5 className="text-[10px] font-bold text-orange-800 uppercase tracking-widest mb-3 border-b border-orange-100 pb-2">
+                                      Riwayat Program Remedial
+                                    </h5>
+                                    <div className="grid grid-cols-2 gap-y-3 text-xs">
+                                      <div>
+                                        <span className="text-orange-600/70 block mb-0.5">
+                                          Jenis Program
+                                        </span>
+                                        <strong className="text-orange-900">
+                                          {res.remedial.jenis}
+                                        </strong>
+                                      </div>
+                                      <div>
+                                        <span className="text-orange-600/70 block mb-0.5">
+                                          Status Program
+                                        </span>
+                                        <strong className="text-orange-900">
+                                          {res.remedial.status}
+                                        </strong>
+                                      </div>
+                                      <div>
+                                        <span className="text-orange-600/70 block mb-0.5">
+                                          Nilai Awal Sumatif
+                                        </span>
+                                        <strong className="text-red-600">
+                                          {record?.nilai}
+                                        </strong>
+                                      </div>
+                                      <div>
+                                        <span className="text-orange-600/70 block mb-0.5">
+                                          Nilai Hasil Remedial
+                                        </span>
+                                        <strong className="text-orange-900">
+                                          {res.remedial.nilaiBaru}
+                                        </strong>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="bg-white p-4 border-t border-gray-100 flex gap-3 flex-shrink-0">
+              <button
+                onClick={handleExportPDF}
+                disabled={isExporting}
+                className="flex-1 bg-white border border-gray-200 text-gray-700 py-3 rounded-xl text-sm font-bold flex justify-center items-center gap-2 hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <Download className="w-4 h-4" /> {isExporting ? "Mengekspor PDF..." : "Export PDF Siswa"}
+              </button>
+              <button className="flex-1 bg-green-600 text-white py-3 rounded-xl text-sm font-bold flex justify-center items-center gap-2 hover:bg-green-700 transition-colors shadow-sm">
+                Kirim Info ke Ortu (Simulasi)
+              </button>
+            </div>
           </div>
         </div>
       )}
-
-      {/* 5. FOOTER */}
-      <div className="border-t border-slate-300 pt-1 mt-1 flex justify-between items-center text-[8.5px] text-slate-500">
-        <span>{schoolName} • Rekapitulasi Hasil Belajar</span>
-        <span>Kurikulum Merdeka • KKTP 75</span>
-        <span className="font-semibold">
-          Halaman {pageIndex + 1} dari {totalPages}
-        </span>
-      </div>
     </div>
-  );
-}
-
-// Subcomponent: The Print Paper Sheet (kept for backward compatibility)
-function PrintPaperSheet(props: any) {
-  return (
-    <PrintPaperPage
-      pageIndex={0}
-      totalPages={1}
-      pageRows={props.recapData || []}
-      {...props}
-    />
   );
 }
