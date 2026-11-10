@@ -11,6 +11,8 @@ import {
   UserCircle,
   Target,
   Award,
+  Sliders,
+  Calculator,
 } from "lucide-react";
 import { TabId } from "@/components/Shell";
 import jsPDF from "jspdf";
@@ -36,6 +38,7 @@ export default function RekapAkhir({
     "umum",
   );
   const [isExporting, setIsExporting] = useState(false);
+  const [showSimulasiRapor, setShowSimulasiRapor] = useState(true);
 
   const selectedTA = state.agmp_tahun_ajaran.find(ta => ta.id === selectedTaId);
   const selectedSemester = selectedTA?.semester || "Ganjil";
@@ -150,6 +153,28 @@ export default function RekapAkhir({
       sumatifId: sumatif.id,
       remedial,
     };
+  };
+
+  const calculateSimulasiRapor = (sId: string) => {
+    let total = 0;
+    let count = 0;
+    tpList.forEach((tp) => {
+      const res = calculateSumatifForTP(sId, tp.id);
+      if (res.status !== "BELUM DINILAI" && res.nilai > 0) {
+        total += res.nilai;
+        count++;
+      }
+    });
+    const nilaiRapor = count > 0 ? Math.round(total / count) : 0;
+    const isTuntas = count > 0 && nilaiRapor >= interval.batasBawahTuntas;
+    let predikat = "-";
+    if (count > 0) {
+      if (nilaiRapor > interval.batasAtasLanjut) predikat = "Sangat Baik";
+      else if (nilaiRapor >= interval.batasBawahTuntas) predikat = "Baik";
+      else if (nilaiRapor >= interval.batasBawahSelektif) predikat = "Cukup";
+      else predikat = "Kurang";
+    }
+    return { nilaiRapor, count, isTuntas, predikat };
   };
 
   const selectedSiswa = siswaList.find((s) => s.id === selectedSiswaId);
@@ -729,9 +754,31 @@ export default function RekapAkhir({
 
       {/* REKAP TABLE */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex-1 flex flex-col min-h-[400px] overflow-hidden mx-4 sm:mx-0 print:border-none print:shadow-none print:min-h-0 print:m-0 print:rounded-none print:overflow-visible print:block">
-        <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 print:hidden">
+        <div className="p-4 border-b border-gray-100 flex flex-wrap justify-between items-center gap-3 bg-gray-50/50 print:hidden">
           <h3 className="font-bold text-gray-900">Data Rekap Kelas</h3>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowSimulasiRapor((prev) => !prev)}
+              className={`text-xs px-3 py-1.5 rounded-lg font-bold border flex items-center gap-2 transition-all shadow-2xs ${
+                showSimulasiRapor
+                  ? "bg-blue-50 text-blue-700 border-blue-300 ring-2 ring-blue-100"
+                  : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+              }`}
+              title="Aktifkan atau nonaktifkan tampilan kolom simulasi nilai rapor"
+            >
+              <Calculator className="w-3.5 h-3.5" />
+              <span>Simulasi Nilai Rapor:</span>
+              <span
+                className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-black ${
+                  showSimulasiRapor
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 text-gray-700"
+                }`}
+              >
+                {showSimulasiRapor ? "Aktif" : "Nonaktif"}
+              </span>
+            </button>
             <button
               onClick={() => window.print()}
               className="text-xs bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg font-bold hover:bg-gray-50 flex items-center gap-1.5"
@@ -792,7 +839,13 @@ export default function RekapAkhir({
               }
               th.col-tp,
               td.col-tp {
-                width: 40px !important;
+                width: 52px !important;
+                min-width: 48px !important;
+                text-align: center !important;
+              }
+              th.col-rapor,
+              td.col-rapor {
+                width: 65px !important;
                 text-align: center !important;
               }
             }
@@ -832,10 +885,16 @@ export default function RekapAkhir({
               {tpList.map((tp) => (
                 <col
                   key={tp.id}
-                  className="w-16 sm:w-20 print:w-[40px]"
-                  style={{ width: "65px" }}
+                  className="w-20 sm:w-24 print:w-[50px]"
+                  style={{ width: "75px" }}
                 />
               ))}
+              {showSimulasiRapor && (
+                <col
+                  className="w-24 sm:w-28 print:w-[65px]"
+                  style={{ width: "95px" }}
+                />
+              )}
               <col className="w-20 print:hidden" />
             </colgroup>
             <thead className="bg-gray-100 text-[10px] sm:text-xs text-gray-600 uppercase tracking-widest sticky top-0 z-10 print:static">
@@ -858,6 +917,14 @@ export default function RekapAkhir({
                     TP {tp.kode}
                   </th>
                 ))}
+                {showSimulasiRapor && (
+                  <th className="col-rapor px-2 sm:px-3 py-3 font-bold border-b border-gray-200 text-center text-blue-900 bg-blue-50/70 print:bg-slate-100">
+                    <div className="flex flex-col items-center">
+                      <span>Nilai Rapor</span>
+                      <span className="text-[9px] font-normal text-blue-600 print:text-gray-600 lowercase">(simulasi)</span>
+                    </div>
+                  </th>
+                )}
                 <th className="px-4 py-3 font-bold border-b border-gray-200 text-center print:hidden">
                   Aksi
                 </th>
@@ -867,7 +934,7 @@ export default function RekapAkhir({
               {siswaList.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={tpList.length + 4}
+                    colSpan={tpList.length + 4 + (showSimulasiRapor ? 1 : 0)}
                     className="p-8 text-center text-gray-400 font-medium italic"
                   >
                     Tidak ada data siswa untuk kelas ini.
@@ -910,40 +977,77 @@ export default function RekapAkhir({
                         return (
                           <td
                             key={tp.id}
-                            className="col-tp px-2 sm:px-3 py-3 text-center align-middle"
+                            className="col-tp px-2 sm:px-3 py-3 text-center align-middle whitespace-nowrap"
                           >
                             {res.status === "BELUM DINILAI" ? (
                               <span
-                                className="text-gray-300 font-bold"
+                                className="text-gray-300 font-bold text-xs"
                                 title="Belum Dinilai"
                               >
                                 ➖
                               </span>
                             ) : res.status === "TUNTAS" ? (
                               <span
-                                className="text-green-500 font-bold"
+                                className="inline-flex items-center justify-center gap-1 font-bold text-xs text-emerald-700"
                                 title={`Tuntas: ${res.nilai}`}
                               >
-                                ✅
+                                <span>✅</span>
+                                <span className="font-extrabold">{res.nilai}</span>
                               </span>
                             ) : res.status === "TUNTAS REMEDIAL" ? (
                               <span
-                                className="text-green-600 font-bold"
+                                className="inline-flex items-center justify-center gap-1 font-bold text-xs text-emerald-700"
                                 title={`Tuntas Remedial: ${res.nilai}`}
                               >
-                                ✅ (R)
+                                <span className="text-[11px]">✅(R)</span>
+                                <span className="font-extrabold">{res.nilai}</span>
                               </span>
                             ) : (
                               <span
-                                className="text-red-500 font-bold"
+                                className="inline-flex items-center justify-center gap-1 font-bold text-xs text-rose-600"
                                 title={`Belum Tuntas: ${res.nilai}`}
                               >
-                                ❌
+                                <span>❌</span>
+                                <span className="font-extrabold">{res.nilai}</span>
                               </span>
                             )}
                           </td>
                         );
                       })}
+                      {showSimulasiRapor && (
+                        <td className="col-rapor px-2 sm:px-3 py-3 text-center align-middle bg-blue-50/20 print:bg-transparent">
+                          {(() => {
+                            const rap = calculateSimulasiRapor(s.id);
+                            if (rap.count === 0) {
+                              return (
+                                <span className="text-gray-300 font-bold text-xs" title="Belum ada nilai sumatif">
+                                  ➖
+                                </span>
+                              );
+                            }
+                            return (
+                              <div className="flex flex-col items-center justify-center">
+                                <span
+                                  className={`font-black text-xs sm:text-sm ${
+                                    rap.isTuntas ? "text-blue-700" : "text-rose-600"
+                                  }`}
+                                >
+                                  {rap.nilaiRapor}
+                                </span>
+                                <span
+                                  className={`text-[9.5px] font-bold px-1.5 py-0.2 rounded ${
+                                    rap.isTuntas
+                                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                      : "bg-rose-50 text-rose-700 border border-rose-200"
+                                  }`}
+                                >
+                                  {rap.isTuntas ? "Tuntas" : "Blm Tuntas"}
+                                </span>
+                              </div>
+                            );
+                          })()}
+                        </td>
+                      )}
                       <td className="px-4 py-3 text-center print:hidden">
                         <button
                           onClick={() => setSelectedSiswaId(s.id)}
