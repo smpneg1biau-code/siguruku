@@ -103,13 +103,19 @@ export default function Rapor() {
     };
   };
 
-  // Generate data for report & recap for a specific student
-  const generateStudentReportData = (siswaId: string, currentUseBobot: boolean) => {
-    const tps = state.agmp_tp.filter(
+  // Memoized configured TPs for current class & semester
+  const tpsKelas = useMemo(() => {
+    return state.agmp_tp.filter(
       (tp) =>
         tp.kelasIds.includes(kelasId) &&
         (selectedTA ? tp.semester === selectedTA.semester || tp.semester === tpSemesterToMatch : true),
     );
+  }, [state.agmp_tp, kelasId, selectedTA, tpSemesterToMatch]);
+
+  // Generate data for report & recap for a specific student
+  const generateStudentReportData = (siswaId: string, currentUseBobot: boolean) => {
+    const tps = tpsKelas;
+    const jumlahTP = tps.length;
 
     let scores: {
       tp: string;
@@ -166,7 +172,9 @@ export default function Rapor() {
       }
     });
 
-    const avgSumatif = allNilai.length > 0 ? Math.round(allNilai.reduce((a, b) => a + b, 0) / allNilai.length) : 0;
+    const totalNilaiSumatif = allNilai.reduce((a, b) => a + b, 0);
+    // Sesuai aturan: Rata-rata dihitung dari jumlah nilai setiap TP dibagi jumlah TP yang telah dikonfigurasi
+    const avgSumatif = jumlahTP > 0 ? Math.round(totalNilaiSumatif / jumlahTP) : 0;
     const keh = calculateKehadiran(siswaId);
     const kehadiranPercent = keh.percent;
 
@@ -240,6 +248,8 @@ export default function Rapor() {
     return {
       scores,
       allNilai,
+      totalNilaiSumatif,
+      jumlahTP,
       avgSumatif,
       kehadiranPercent,
       keh,
@@ -262,7 +272,7 @@ export default function Rapor() {
         ...data,
       };
     });
-  }, [siswaList, useBobot, selectedTaId, kelasId, state.agmp_sumatif, state.agmp_remedial, state.agmp_absensi]);
+  }, [siswaList, useBobot, selectedTaId, kelasId, tpsKelas, state.agmp_sumatif, state.agmp_remedial, state.agmp_absensi]);
 
   // Filtered recap data for search
   const filteredRecapData = useMemo(() => {
@@ -329,8 +339,8 @@ export default function Rapor() {
       const taText = `Tahun Ajaran: ${selectedTA ? `${selectedTA.nama} Semester ${selectedTA.semester}` : "-"}`;
       const guruText = `Guru Mapel: ${state.agmp_pengaturan?.guruNama || "-"}`;
       const rumusText = useBobot
-        ? "Komposisi Bobot: 40% Kehadiran + 60% Rata-rata Sumatif"
-        : "Komposisi: 100% Rata-rata Nilai Sumatif Murni (Tanpa Bobot Kehadiran)";
+        ? `Komposisi Bobot: 40% Kehadiran + 60% Rata-rata Sumatif (Total Nilai TP dibagi ${tpsKelas.length} TP Dikonfigurasi)`
+        : `Komposisi: 100% Rata-rata Nilai Sumatif Murni (Total Nilai TP dibagi ${tpsKelas.length} TP Dikonfigurasi)`;
 
       doc.text(`${kelasText}  •  Mata Pelajaran: ${mapelNama}  •  ${taText}  •  ${guruText}`, 148.5, 24.5, {
         align: "center",
@@ -358,7 +368,7 @@ export default function Rapor() {
           item.siswa.nisn || "-",
           item.siswa.nama,
           `${item.kehadiranPercent}%`,
-          item.avgSumatif > 0 ? item.avgSumatif.toString() : "-",
+          item.avgSumatif > 0 ? `${item.avgSumatif}` : "-",
           item.nilaiAkhirRapor > 0 ? item.nilaiAkhirRapor.toString() : "-",
           item.predikatRapor,
           item.isTuntas ? "TUNTAS" : item.allNilai.length > 0 ? "BELUM TUNTAS" : "-",
@@ -375,7 +385,7 @@ export default function Rapor() {
             "NISN",
             "Nama Peserta Didik",
             "Kehadiran",
-            "Rata-rata Sumatif",
+            `Rata-rata Sumatif\n(÷ ${tpsKelas.length} TP)`,
             "Nilai Akhir",
             "Predikat",
             "Status",
@@ -466,7 +476,7 @@ export default function Rapor() {
       "NISN",
       "Nama Siswa",
       "Kehadiran (%)",
-      "Rata-rata Sumatif",
+      `Rata-rata Sumatif (Dibagi ${tpsKelas.length} TP Dikonfigurasi)`,
       useBobot ? "Nilai Akhir Rapor (40% Hadir + 60% Sumatif)" : "Nilai Akhir Rapor (Sumatif 100%)",
       "Predikat",
       "Status",
@@ -663,10 +673,13 @@ export default function Rapor() {
               {useBobot ? (
                 <>
                   <span className="text-indigo-700 font-bold">40% Kehadiran</span> +{" "}
-                  <span className="text-blue-700 font-bold">60% Rata-rata Nilai Sumatif</span>
+                  <span className="text-blue-700 font-bold">60% Rata-rata Nilai Sumatif</span>{" "}
+                  <span className="text-blue-600 font-mono text-[11px]">(Total Nilai ÷ {tpsKelas.length} TP Dikonfigurasi)</span>
                 </>
               ) : (
-                <span className="text-gray-800 font-bold">Rata-rata Nilai Sumatif (100% tanpa bobot absensi)</span>
+                <span className="text-gray-800 font-bold">
+                  Rata-rata Nilai Sumatif (Total Nilai seluruh TP ÷ {tpsKelas.length} TP yang telah dikonfigurasi)
+                </span>
               )}
             </span>
           </div>
@@ -749,8 +762,8 @@ export default function Rapor() {
               <div className="text-[10px] text-blue-800 italic mt-1 text-center bg-blue-50/50 py-0.5 rounded">
                 *Ketentuan Nilai Akhir:{" "}
                 {useBobot
-                  ? "Bobot Aktif (40% Kehadiran + 60% Rata-rata Sumatif)"
-                  : "Murni Rata-rata Nilai Sumatif (100% Tanpa Bobot Kehadiran)"}
+                  ? `Bobot Aktif (40% Kehadiran + 60% Rata-rata Sumatif ÷ ${tpsKelas.length} TP Dikonfigurasi)`
+                  : `Murni Rata-rata Nilai Sumatif (Total Nilai seluruh TP ÷ ${tpsKelas.length} TP yang telah dikonfigurasi)`}
               </div>
             </div>
 
@@ -785,7 +798,12 @@ export default function Rapor() {
                     <th className="p-3 text-center w-24">NISN</th>
                     <th className="p-3 w-44">Nama Peserta Didik</th>
                     <th className="p-3 text-center w-20">Kehadiran</th>
-                    <th className="p-3 text-center w-24">Rata-rata Sumatif</th>
+                    <th className="p-3 text-center w-28">
+                      <div>Rata-rata Sumatif</div>
+                      <div className="text-[9px] font-normal text-slate-500 lowercase">
+                        (÷ {tpsKelas.length} TP)
+                      </div>
+                    </th>
                     <th className="p-3 text-center w-28 bg-blue-50/80 text-blue-900 border-x border-blue-200">
                       <div>Nilai Akhir</div>
                       <div className="text-[9px] font-normal text-blue-600 lowercase">
@@ -831,8 +849,17 @@ export default function Rapor() {
                             {item.kehadiranPercent}%
                           </span>
                         </td>
-                        <td className="p-3 text-center font-bold text-gray-700">
-                          {item.avgSumatif > 0 ? item.avgSumatif : <span className="text-gray-300">-</span>}
+                        <td className="p-3 text-center">
+                          {item.avgSumatif > 0 ? (
+                            <div>
+                              <span className="font-bold text-gray-800">{item.avgSumatif}</span>
+                              <span className="block text-[10px] text-gray-400 font-mono">
+                                ({item.totalNilaiSumatif} ÷ {item.jumlahTP})
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-300">-</span>
+                          )}
                         </td>
                         <td className="p-3 text-center bg-blue-50/40 border-x border-blue-100">
                           <div className="flex flex-col items-center justify-center">
@@ -924,7 +951,7 @@ export default function Rapor() {
                   <p>Mengetahui,</p>
                   <p className="font-bold">Kepala Sekolah</p>
                   <div className="h-16"></div>
-                  <p className="font-bold underline">( ............................................ )</p>
+                  <p className="font-bold underline">( Marlinda, S.Pd )</p>
                   <p className="text-[10px] text-gray-500">NIP. ............................................</p>
                 </div>
                 <div className="text-center w-64">
@@ -936,7 +963,7 @@ export default function Rapor() {
                   <p className="font-bold underline">
                     {state.agmp_pengaturan?.guruNama ? `( ${state.agmp_pengaturan.guruNama} )` : "( ............................................ )"}
                   </p>
-                  <p className="text-[10px] text-gray-500">NIP. ............................................</p>
+                  <p className="text-[10px] text-gray-500">NIP. 198808172019031014</p>
                 </div>
               </div>
             </div>
@@ -1034,7 +1061,10 @@ export default function Rapor() {
                   <span>Daftar Nilai Sumatif per Tujuan Pembelajaran (TP)</span>
                 </h4>
                 <span className="text-xs text-gray-500 font-medium">
-                  Rata-rata Nilai: <strong>{currentStudentData.avgSumatif}</strong>
+                  Rata-rata Nilai Sumatif: <strong className="text-blue-700 font-bold">{currentStudentData.avgSumatif}</strong>{" "}
+                  <span className="text-gray-400 font-mono text-[11px]">
+                    (Total: {currentStudentData.totalNilaiSumatif} ÷ {currentStudentData.jumlahTP} TP Dikonfigurasi)
+                  </span>
                 </span>
               </div>
 
