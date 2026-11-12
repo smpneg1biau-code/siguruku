@@ -165,16 +165,18 @@ export default function RekapAkhir({
         count++;
       }
     });
-    const nilaiRapor = count > 0 ? Math.round(total / count) : 0;
-    const isTuntas = count > 0 && nilaiRapor >= interval.batasBawahTuntas;
+    const jumlahTP = tpList.length;
+    // Rata-rata dihitung berdasarkan jumlah TP yang telah dikonfigurasi
+    const nilaiRapor = jumlahTP > 0 ? Math.round(total / jumlahTP) : 0;
+    const isTuntas = jumlahTP > 0 && nilaiRapor >= interval.batasBawahTuntas;
     let predikat = "-";
-    if (count > 0) {
+    if (count > 0 && jumlahTP > 0) {
       if (nilaiRapor > interval.batasAtasLanjut) predikat = "Sangat Baik";
       else if (nilaiRapor >= interval.batasBawahTuntas) predikat = "Baik";
       else if (nilaiRapor >= interval.batasBawahSelektif) predikat = "Cukup";
       else predikat = "Kurang";
     }
-    return { nilaiRapor, count, isTuntas, predikat };
+    return { nilaiRapor, total, count, jumlahTP, isTuntas, predikat };
   };
 
   const selectedSiswa = siswaList.find((s) => s.id === selectedSiswaId);
@@ -654,6 +656,17 @@ export default function RekapAkhir({
           },
           margin: { left: 14, right: 14 },
         });
+
+        const rapSim = calculateSimulasiRapor(selectedSiswa.id);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.5);
+        doc.setTextColor(30, 41, 59);
+        doc.text(
+          `*Nilai Rapor (Simulasi): ${rapSim.nilaiRapor} (Total Nilai: ${rapSim.total} ÷ ${tpList.length} TP Dikonfigurasi) • Predikat: ${rapSim.predikat} • Status: ${rapSim.isTuntas ? "TUNTAS" : "BELUM TUNTAS"}`,
+          14,
+          getFinalY(currentY) + 5
+        );
+
         currentY = getFinalY(currentY) + 12;
       }
 
@@ -788,6 +801,20 @@ export default function RekapAkhir({
           </div>
         </div>
 
+        {showSimulasiRapor && (
+          <div className="px-4 py-2.5 bg-blue-50/70 border-b border-blue-200/60 flex flex-wrap items-center justify-between gap-2 text-xs text-blue-900 print:hidden">
+            <div className="flex items-center gap-2">
+              <Calculator className="w-4 h-4 text-blue-600 shrink-0" />
+              <span>
+                <strong>Rumus Simulasi Nilai Rapor:</strong> Rata-rata dihitung dari total nilai yang diperoleh pada setiap TP dibagi <strong className="text-blue-800">{tpList.length} TP yang telah dikonfigurasi</strong>.
+              </span>
+            </div>
+            <span className="text-[11px] font-mono text-blue-700 bg-white px-2 py-0.5 rounded-md border border-blue-200">
+              Denominator: {tpList.length} TP Dikonfigurasi
+            </span>
+          </div>
+        )}
+
         <div className="overflow-x-auto flex-1 p-0 print:p-0 print:overflow-visible print:block">
           <style>{`
             @media print {
@@ -875,6 +902,11 @@ export default function RekapAkhir({
                 <strong>Guru:</strong> {state.agmp_pengaturan?.guruNama || "-"}
               </span>
             </div>
+            {showSimulasiRapor && (
+              <div className="text-[8.5pt] text-gray-700 italic mt-1 text-center bg-gray-50/50 py-0.5 rounded border-t border-gray-200">
+                *Simulasi Nilai Rapor dihitung dari jumlah nilai yang diperoleh pada setiap TP dibagi {tpList.length} TP yang telah dikonfigurasi.
+              </div>
+            )}
           </div>
 
           <table className="rekap-akhir-table w-full text-left border-collapse whitespace-nowrap min-w-max print:min-w-0">
@@ -921,7 +953,9 @@ export default function RekapAkhir({
                   <th className="col-rapor px-2 sm:px-3 py-3 font-bold border-b border-gray-200 text-center text-blue-900 bg-blue-50/70 print:bg-slate-100">
                     <div className="flex flex-col items-center">
                       <span>Nilai Rapor</span>
-                      <span className="text-[9px] font-normal text-blue-600 print:text-gray-600 lowercase">(simulasi)</span>
+                      <span className="text-[9px] font-normal text-blue-600 print:text-gray-600 lowercase">
+                        (÷ {tpList.length} TP)
+                      </span>
                     </div>
                   </th>
                 )}
@@ -1018,7 +1052,7 @@ export default function RekapAkhir({
                         <td className="col-rapor px-2 sm:px-3 py-3 text-center align-middle bg-blue-50/20 print:bg-transparent">
                           {(() => {
                             const rap = calculateSimulasiRapor(s.id);
-                            if (rap.count === 0) {
+                            if (rap.count === 0 && rap.total === 0) {
                               return (
                                 <span className="text-gray-300 font-bold text-xs" title="Belum ada nilai sumatif">
                                   ➖
@@ -1034,8 +1068,11 @@ export default function RekapAkhir({
                                 >
                                   {rap.nilaiRapor}
                                 </span>
+                                <span className="text-[9px] text-gray-400 font-mono">
+                                  ({rap.total} ÷ {rap.jumlahTP})
+                                </span>
                                 <span
-                                  className={`text-[9.5px] font-bold px-1.5 py-0.2 rounded ${
+                                  className={`text-[9px] font-bold px-1.5 py-0.2 rounded mt-0.5 ${
                                     rap.isTuntas
                                       ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                       : "bg-rose-50 text-rose-700 border border-rose-200"
@@ -1319,6 +1356,44 @@ export default function RekapAkhir({
                           {statusAkhir}
                         </div>
                       </div>
+
+                      {/* Simulasi Nilai Rapor Card */}
+                      {(() => {
+                        const rap = calculateSimulasiRapor(selectedSiswa.id);
+                        return (
+                          <div className="bg-white p-5 rounded-xl shadow-sm border border-blue-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div>
+                              <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest block mb-1">
+                                Simulasi Nilai Rapor
+                              </span>
+                              <div className="flex items-baseline gap-2">
+                                <span
+                                  className={`text-3xl font-black ${
+                                    rap.isTuntas ? "text-blue-700" : "text-rose-600"
+                                  }`}
+                                >
+                                  {rap.nilaiRapor}
+                                </span>
+                                <span className="text-xs text-gray-500 font-mono">
+                                  (Total Nilai: {rap.total} ÷ {rap.jumlahTP} TP Dikonfigurasi)
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-gray-500 mt-1">
+                                Predikat: <strong>{rap.predikat}</strong> • Keterangan: {rap.isTuntas ? "Tuntas KKTP" : "Belum Tuntas KKTP"}
+                              </p>
+                            </div>
+                            <span
+                              className={`px-3 py-1.5 rounded-xl text-xs font-black self-start sm:self-auto ${
+                                rap.isTuntas
+                                  ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                  : "bg-rose-100 text-rose-800 border border-rose-200"
+                              }`}
+                            >
+                              {rap.isTuntas ? "✓ TUNTAS KKTP" : "BELUM TUNTAS"}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })()}
@@ -1476,6 +1551,31 @@ export default function RekapAkhir({
 
               {activeTab === "sumatif" && (
                 <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                  {(() => {
+                    const rap = calculateSimulasiRapor(selectedSiswa.id);
+                    return (
+                      <div className="p-4 bg-blue-50/80 border border-blue-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-blue-900 shadow-2xs">
+                        <span className="flex items-center gap-2">
+                          <Award className="w-4 h-4 text-blue-600 shrink-0" />
+                          <span>
+                            <strong>Nilai Rapor (Simulasi): <span className={rap.isTuntas ? "text-blue-700" : "text-rose-600"}>{rap.nilaiRapor}</span></strong>{" "}
+                            <span className="text-gray-500 font-mono text-[11px]">
+                              (Total Nilai: {rap.total} ÷ {rap.jumlahTP} TP Dikonfigurasi)
+                            </span>
+                          </span>
+                        </span>
+                        <span
+                          className={`px-2.5 py-0.5 rounded text-[10.5px] font-bold self-start sm:self-auto ${
+                            rap.isTuntas
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                              : "bg-rose-100 text-rose-800 border border-rose-200"
+                          }`}
+                        >
+                          {rap.isTuntas ? "✓ TUNTAS KKTP" : "BELUM TUNTAS"}
+                        </span>
+                      </div>
+                    );
+                  })()}
                   {tpList.map((tp) => {
                     const res = calculateSumatifForTP(selectedSiswa.id, tp.id);
                     const sumatifObj = state.agmp_sumatif.find(
